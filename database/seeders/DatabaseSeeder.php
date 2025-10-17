@@ -23,5 +23,9 @@ class DatabaseSeeder extends Seeder
             SpecializationsTableSeeder::class,
             UserSeeder::class
         ]);
+
+        $this->call([
+        UserSeeder::class,
+    ]);
     }
 }

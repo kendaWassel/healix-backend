@@ -9,7 +9,7 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
-        health: '/up',
+        health: '/up'
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
@@ -20,5 +20,6 @@ return Application::configure(basePath: dirname(__DIR__))
         
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
-    })->create();
+        // يمكن تركه فارغًا أو تعريف استثناءات مخصصة لاحقًا
+    })
+    ->create();
