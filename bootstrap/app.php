@@ -12,11 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up'
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // تعريف aliases بشكل مصفوفة لتجنب تحذيرات IDE
         $middleware->alias([
-            'auth:sanctum' => \Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,
+            'auth:sanctum' => \Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,  
             'api' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
+
+        
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // يمكن تركه فارغًا أو تعريف استثناءات مخصصة لاحقًا

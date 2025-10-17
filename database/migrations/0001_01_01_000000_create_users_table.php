@@ -15,13 +15,12 @@ return new class extends Migration
             $table->id();
             $table->string('full_name');
             $table->string('email')->unique();
-            $table->string('phone')->unique();
+            $table->string('phone')->unique()->nullable();
             $table->enum('role', [
                 'patient',
                 'doctor',
                 'pharmacist',
-                'nurse',
-                'physiotherapist',
+                'care_provider',
                 'delivery',
                 'admin'
             ]);

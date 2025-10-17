@@ -57,16 +57,11 @@ class User extends Authenticatable
     public function pharmacist() { 
         return $this->hasOne(Pharmacist::class); 
     }
-    // public function nurse() { 
-    //     return $this->hasOne(Nurse::class); 
-    // }
-    // public function physiotherapist() { 
-    //     return $this->hasOne(Physiotherapist::class); 
-    // }
-    // public function delivery() { 
-    //     return $this->hasOne(Delivery::class); 
-    // }
-    // public function admin() { 
-    //     return $this->hasOne(Admin::class); 
-    // }
+    public function care_provider() { 
+        return $this->hasOne(CareProvider::class); 
+    }
+    public function delivery() { 
+        return $this->hasOne(Delivery::class); 
+    }
+
 }

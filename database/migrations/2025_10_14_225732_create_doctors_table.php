@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Models\Specialization;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
@@ -15,11 +16,14 @@ return new class extends Migration
         Schema::create('doctors', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(User::class)->constrained()->cascadeOnDelete()->cascadeOnUpdate();
-            $table->string('specialization');
-            $table->string('working_hours')->nullable();
+            $table->foreignIdFor(Specialization::class)->constrained()->cascadeOnDelete()->cascadeOnUpdate();
+            $table->enum('gender', ['male', 'female'])->nullable();
+            $table->unsignedBigInteger('doctor_image_id')->nullable();
+            $table->string('from')->nullable();
+            $table->string('to')->nullable();
+            $table->string('certificate_file_id')->nullable();
             $table->decimal('consultation_fee', 10, 2)->nullable();
             $table->string('bank_account')->nullable();
-            $table->unsignedBigInteger('certificate_file_id')->nullable();
             $table->decimal('rating_avg', 2, 1)->default(0);
             $table->timestamps();
         });

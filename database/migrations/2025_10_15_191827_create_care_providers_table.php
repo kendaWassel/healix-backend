@@ -12,17 +12,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pharmacists', function (Blueprint $table) {
+        Schema::create('care_providers', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(User::class)->constrained()->cascadeOnDelete()->cascadeOnUpdate();
-            $table->string('pharmacy_name');
-            $table->integer('cr_number')->unique();
-            $table->string('address')->nullable();
-            $table->string('license_file_id')->nullable();
-            $table->string('from')->nullable();
-            $table->string('to')->nullable();
-            $table->decimal('latitude', 9, 6)->nullable();
-            $table->decimal('longitude', 9, 6)->nullable();
+            $table->unsignedBigInteger('care_provider_image_id')->nullable();
+            $table->unsignedBigInteger('license_file_id')->nullable();            
+            $table->decimal('session_fee', 10, 2);
+            $table->enum('type', ['nurse', 'physiotherapist'])->nullable();
             $table->string('bank_account')->nullable();
             $table->decimal('rating_avg', 2, 1)->default(0);
             $table->timestamps();
@@ -34,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('pharmacists');
+        Schema::dropIfExists('care_providers');
     }
 };
