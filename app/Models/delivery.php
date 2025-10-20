@@ -3,18 +3,21 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class delivery extends Model
+class Delivery extends Model
 {
-    use HasFactory;
-
     protected $table = 'deliveries';
-    protected $primaryKey = 'delivery_id';
-    protected $fillable = [
-        'full_name', 'email', 'phone', 'photo', 'vehicle_type',
-        'plate_number', 'bank_account', 'status', 'password'
+    protected $fillable=[
+        'user_id',
+        'delivery_image_id',
+        'vehicle_type',
+        'plate_number',
+        'bank_account',
+        'driving_license_id',
+        'rating_avg'
     ];
-
-    protected $hidden = ['password'];
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
