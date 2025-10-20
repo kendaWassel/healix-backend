@@ -2,19 +2,22 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class careProvider extends Model
+class CareProvider extends Model
 {
-    use HasFactory;
-
-    protected $table = 'careProvider';
-    protected $primaryKey = 'careprovider_id';
-    protected $fillable = [
-        'full_name', 'type', 'age', 'certificate', 'email',
-        'phone', 'photo', 'bank_account', 'session_fee', 'rating_avg', 'password'
+    protected $fillable=[
+        'user_id',
+        'care_provider_image_id',
+        'license_file_id',
+        'session_fee',
+        'bank_account',
+        'type',
+        'rating_avg'
     ];
+    
 
-    protected $hidden = ['password'];
+    public function user(){
+        return $this->belongsTo(User::class);
+    }
 }
