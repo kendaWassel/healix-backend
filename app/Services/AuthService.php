@@ -13,9 +13,10 @@ use Illuminate\Http\Request;
 use App\Models\Specialization;
 use App\Mail\VerificationEmail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\URL;
 
 class AuthService
 {
@@ -106,6 +107,10 @@ class AuthService
 
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Registration failed in AuthService', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             throw $e;
         }
     }
@@ -160,17 +165,20 @@ class AuthService
 
     private function createDoctor(User $user, array $data): void
     {
+        // Handle specialization - create if it doesn't exist
         $specialization = Specialization::where('name', $data['specialization'])->first();
         if (!$specialization) {
-            throw new \Exception('Specialization not found');
+            $specialization = Specialization::create([
+                'name' => $data['specialization']
+            ]);
         }
 
         Doctor::create([
             'user_id' => $user->id,
             'specialization_id' => $specialization->id,
             'gender' => $data['gender'],
-            'doctor_image_id' => $data['doctor_image_id'],
-            'certificate_file_id' => $data['certificate_file_id'],
+            'doctor_image_id' => $data['doctor_image_id'] ?? null,
+            'certificate_file_id' => $data['certificate_file_id'] ?? null,
             'from' => $data['from'],
             'to' => $data['to'],
             'consultation_fee' => $data['consultation_fee'],
@@ -198,20 +206,14 @@ class AuthService
     {
         CareProvider::create([
             'user_id' => $user->id,
-            'care_provider_image_id' => $data['care_provider_image_id'],
-            'license_file_id' => $data['license_file_id'],
+            'care_provider_image_id' => $data['care_provider_image_id'] ?? null,
+            'license_file_id' => $data['license_file_id'] ?? null,
             'session_fee' => $data['session_fee'],
             'type' => $data['type'],
         ]);
     }
 
-    /**
-     * Create delivery profile
-     *
-     * @param User $user
-     * @param array $data
-     * @return void
-     */
+
     private function createDelivery(User $user, array $data): void
     {
         Delivery::create([
@@ -271,6 +273,16 @@ class AuthService
             ['id' => $user->id, 'hash' => sha1($user->email)]
         );
 
-        Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
+        try {
+            Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
+        } catch (\Exception $e) {
+            // Log and continue so registration doesn't fail silently without trace
+            Log::error('Failed to send verification email', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
     }
 }

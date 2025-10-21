@@ -34,9 +34,9 @@ class RegisterRequest extends FormRequest
                     'longitude' => 'required|numeric',
                 ],
                 'doctor' => [
-                    'specialization' => 'string',
-                    'certificate_file_id' => 'required|exists:uploads,id',
-                    'doctor_image_id' => 'required|exists:uploads,id',
+                    'specialization' => 'required|string',
+                    'certificate_file_id' => 'nullable|exists:uploads,id',
+                    'doctor_image_id' => 'nullable|exists:uploads,id',
                     'gender' => 'required|string|in:male,female',
                     'from' => 'required|string',
                     'to' => 'required|string',
@@ -53,8 +53,8 @@ class RegisterRequest extends FormRequest
                     'longitude' => 'required|numeric',
                 ],
                 'care_provider' => [
-                    'care_provider_image_id' => 'required|exists:uploads,id',
-                    'license_file_id' => 'required|exists:uploads,id',
+                    'care_provider_image_id' => 'nullable|exists:uploads,id',
+                    'license_file_id' => 'nullable|exists:uploads,id',
                     'session_fee' => 'required|numeric|min:0',
                     'type' => 'required|string|in:nurse,physiotherapist',
                 ],
