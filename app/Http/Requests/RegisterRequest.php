@@ -34,7 +34,7 @@ class RegisterRequest extends FormRequest
                     'longitude' => 'required|numeric',
                 ],
                 'doctor' => [
-                    'specialization' => 'required|string',
+                    'specialization' => 'string',
                     'certificate_file_id' => 'required|exists:uploads,id',
                     'doctor_image_id' => 'required|exists:uploads,id',
                     'gender' => 'required|string|in:male,female',

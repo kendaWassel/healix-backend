@@ -12,7 +12,7 @@ class SpecializationController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $specializations = Specialization::select('id', 'name', 'description')
+            $specializations = Specialization::select('id', 'name')
                 ->orderBy('name', 'asc')
                 ->get();
 
@@ -31,3 +31,4 @@ class SpecializationController extends Controller
         }
     }
 }
+
