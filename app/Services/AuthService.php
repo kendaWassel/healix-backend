@@ -4,26 +4,23 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\Doctor;
+use App\Models\Upload;
 use App\Models\Patient;
+use App\Models\Delivery;
 use App\Models\Pharmacist;
 use App\Models\CareProvider;
-use App\Models\Delivery;
+use Illuminate\Http\Request;
 use App\Models\Specialization;
-use App\Models\Upload;
+use App\Mail\VerificationEmail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 
 class AuthService
 {
-    /**
-     * Authenticate user with email and password
-     *
-     * @param string $email
-     * @param string $password
-     * @return array|null
-     */
-    public function authenticate(string $email, string $password): ?array
+
+    public function authenticate(string $email, string $password): ?array //
     {
         $user = User::where('email', $email)->first();
 
@@ -34,19 +31,14 @@ class AuthService
         $token = $user->createToken('API Token')->plainTextToken;
 
         return [
-            'user' => $user,
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'role' => $user->role
+            // 'user' => $user,
+            'token' => $token,
+            // 'token_type' => 'Bearer',
+            'role' => $user->role,
+            'email_verified' => $user->hasVerifiedEmail()
         ];
     }
 
-    /**
-     * Logout user by revoking current access token
-     *
-     * @param Request $request
-     * @return bool
-     */
     public function logout(Request $request): bool
     {
         $token = $request->user()->currentAccessToken;
@@ -88,14 +80,6 @@ class AuthService
 
         return null;
     }
-
-    /**
-     * Register a new user with role-specific data
-     *
-     * @param array $data
-     * @return array
-     * @throws \Exception
-     */
     public function register(array $data): array
     {
         DB::beginTransaction();
@@ -109,11 +93,14 @@ class AuthService
             // Handle file uploads
             $this->handleFileUploads($user, $data);
 
+            // Send verification email
+            $this->sendVerificationEmail($user);
+
             DB::commit();
 
             return [
                 'status' => 'success',
-                'message' => 'User registered successfully',
+                'message' => 'User registered successfully. Please check your email for verification.',
                 'user_id' => $user->id
             ];
 
@@ -123,12 +110,7 @@ class AuthService
         }
     }
 
-    /**
-     * Create base user record
-     *
-     * @param array $data
-     * @return User
-     */
+
     private function createUser(array $data): User
     {
         return User::create([
@@ -140,14 +122,6 @@ class AuthService
         ]);
     }
 
-    /**
-     * Create role-specific profile based on user role
-     *
-     * @param User $user
-     * @param array $data
-     * @return void
-     * @throws \Exception
-     */
     private function createRoleProfile(User $user, array $data): void
     {
         switch ($data['role']) {
@@ -171,13 +145,6 @@ class AuthService
         }
     }
 
-    /**
-     * Create patient profile
-     *
-     * @param User $user
-     * @param array $data
-     * @return void
-     */
     private function createPatient(User $user, array $data): void
     {
         Patient::create([
@@ -190,14 +157,7 @@ class AuthService
         ]);
     }
 
-    /**
-     * Create doctor profile
-     *
-     * @param User $user
-     * @param array $data
-     * @return void
-     * @throws \Exception
-     */
+
     private function createDoctor(User $user, array $data): void
     {
         $specialization = Specialization::where('name', $data['specialization'])->first();
@@ -217,13 +177,7 @@ class AuthService
         ]);
     }
 
-    /**
-     * Create pharmacist profile
-     *
-     * @param User $user
-     * @param array $data
-     * @return void
-     */
+
     private function createPharmacist(User $user, array $data): void
     {
         Pharmacist::create([
@@ -239,13 +193,7 @@ class AuthService
         ]);
     }
 
-    /**
-     * Create care provider profile
-     *
-     * @param User $user
-     * @param array $data
-     * @return void
-     */
+
     private function createCareProvider(User $user, array $data): void
     {
         CareProvider::create([
@@ -307,5 +255,22 @@ class AuthService
             'delivery_image_id',
             'driving_license_id',
         ])->filter()->values();
+    }
+
+    /**
+     * Send verification email to user
+     *
+     * @param User $user
+     * @return void
+     */
+    private function sendVerificationEmail(User $user): void
+    {
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $user->id, 'hash' => sha1($user->email)]
+        );
+
+        Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
     }
 }

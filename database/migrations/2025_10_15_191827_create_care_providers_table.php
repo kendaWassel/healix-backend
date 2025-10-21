@@ -18,6 +18,7 @@ return new class extends Migration
             $table->unsignedBigInteger('care_provider_image_id')->nullable();
             $table->unsignedBigInteger('license_file_id')->nullable();            
             $table->decimal('session_fee', 10, 2);
+            $table->enum('gender', ['male', 'female'])->nullable();
             $table->enum('type', ['nurse', 'physiotherapist'])->nullable();
             $table->string('bank_account')->nullable();
             $table->decimal('rating_avg', 2, 1)->default(0);
@@ -25,9 +26,7 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
+
     public function down(): void
     {
         Schema::dropIfExists('care_providers');
