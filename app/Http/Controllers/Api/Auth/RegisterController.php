@@ -18,8 +18,6 @@ class RegisterController extends Controller
     public function register(RegisterRequest $request)
     {
         try {
-            // Debug: Log the incoming data
-            Log::info('Registration attempt', $request->validated());
             
             $result = $this->authService->register($request->validated());
 
@@ -27,12 +25,6 @@ class RegisterController extends Controller
             
             
         } catch (\Exception $e) {
-            // Debug: Log the error
-            Log::error('Registration failed', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage()

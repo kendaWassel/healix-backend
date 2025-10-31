@@ -12,7 +12,7 @@ class UploadController extends Controller
     public function uploadFile(Request $request)
     {
         $request->validate([
-            'file' => 'file|max:10240', // max 10MB
+            'file' => 'required|file|max:10240', // max 10MB
             'category' => 'string|in:certificate,report,document,prescription,profile'
         ]);
 
@@ -32,8 +32,8 @@ class UploadController extends Controller
 
         return response()->json([
             'file_id' => $upload->id,
-            // 'url' => asset('/' . $upload->file_path),
-            // 'status' => 'uploaded'
+            'url' => asset('/' . $upload->file_path),
+            'status' => 'uploaded'
         ]);
     }
 
@@ -41,7 +41,7 @@ class UploadController extends Controller
     public function uploadImage(Request $request)
     {
         $request->validate([
-            'image' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
             'category' => 'string|in:profile,prescription,report'
         ]);
 

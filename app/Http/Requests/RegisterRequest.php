@@ -3,6 +3,11 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Contracts\Validation\Validator as ValidatorContract;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class RegisterRequest extends FormRequest
 {
@@ -17,13 +22,14 @@ class RegisterRequest extends FormRequest
         $rules = [
             'full_name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8',
+            'password' => 'required|string|min:6',
             'phone' => 'required|string|unique:users,phone',
             'role' => 'required|string|in:patient,doctor,pharmacist,care_provider,delivery,admin'
         ];
 
         // Add role-specific rules based on the role field
         $role = request()->get('role');
+        
         if ($role) {
             $roleRules = match ($role) {
                 'patient' => [
@@ -32,11 +38,21 @@ class RegisterRequest extends FormRequest
                     'address' => 'required|string',
                     'latitude' => 'required|numeric',
                     'longitude' => 'required|numeric',
+
+                    // Medical record fields (all optional)
+                    'medical_record' => 'nullable|array',
+                    'medical_record.diagnosis' => 'nullable|string',
+                    'medical_record.chronic_diseases' => 'nullable|string',
+                    'medical_record.previous_surgeries' => 'nullable|string',
+                    'medical_record.allergies' => 'nullable|string',
+                    'medical_record.current_medications' => 'nullable|string',
+                    'medical_record.attachments' => 'nullable|array',
+                    'medical_record.attachments.*' => 'nullable|integer|exists:uploads,id',
                 ],
                 'doctor' => [
-                    'specialization' => 'required|string',
-                    'certificate_file_id' => 'nullable|exists:uploads,id',
-                    'doctor_image_id' => 'nullable|exists:uploads,id',
+                    'specialization' => 'required|string|max:255',
+                    'certificate_file_id' => 'required|exists:uploads,id',
+                    'doctor_image_id' => 'required|exists:uploads,id',
                     'gender' => 'required|string|in:male,female',
                     'from' => 'required|string',
                     'to' => 'required|string',
@@ -53,8 +69,8 @@ class RegisterRequest extends FormRequest
                     'longitude' => 'required|numeric',
                 ],
                 'care_provider' => [
-                    'care_provider_image_id' => 'nullable|exists:uploads,id',
-                    'license_file_id' => 'nullable|exists:uploads,id',
+                    'care_provider_image_id' => 'required|exists:uploads,id',
+                    'license_file_id' => 'required|exists:uploads,id',
                     'session_fee' => 'required|numeric|min:0',
                     'type' => 'required|string|in:nurse,physiotherapist',
                 ],
@@ -84,6 +100,5 @@ class RegisterRequest extends FormRequest
             'type.in' => 'Care provider type must be either nurse or physiotherapist',
         ];
     }
-
 
 }
