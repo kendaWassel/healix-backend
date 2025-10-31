@@ -15,9 +15,10 @@ return new class extends Migration
         Schema::create('uploads', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId('patient_id')->nullable()->constrained()->cascadeOnDelete();
             $table->string('category', 50);
             $table->string('file'); // original filename
-            $table->string('file_path'); // storage path (public/category/filename)
+            $table->string('file_path'); 
             $table->string('mime', 100)->nullable();
             $table->timestamps();
         });

@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Models\Specialization;
-use Illuminate\Http\JsonResponse;
+use App\Http\Controllers\Controller;
+
 
 class SpecializationController extends Controller
 {
 
-    public function index(): JsonResponse
+    public function index()
     {
         try {
             $specializations = Specialization::select('id', 'name')
@@ -19,7 +19,6 @@ class SpecializationController extends Controller
             return response()->json([
                 'status' => 'success',
                 'data' => $specializations,
-                'message' => 'Specializations retrieved successfully'
             ], 200);
 
         } catch (\Exception $e) {
@@ -30,5 +29,10 @@ class SpecializationController extends Controller
             ], 500);
         }
     }
+    
+
+    
+
+
 }
 

@@ -10,6 +10,7 @@ use App\Models\Delivery;
 use App\Models\Pharmacist;
 use App\Models\CareProvider;
 use Illuminate\Http\Request;
+use App\Models\MedicalRecord;
 use App\Models\Specialization;
 use App\Mail\VerificationEmail;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +22,7 @@ use Illuminate\Support\Facades\Mail;
 class AuthService
 {
 
-    public function authenticate(string $email, string $password): ?array //
+    public function authenticate(string $email, string $password)
     {
         $user = User::where('email', $email)->first();
 
@@ -32,15 +33,13 @@ class AuthService
         $token = $user->createToken('API Token')->plainTextToken;
 
         return [
-            // 'user' => $user,
             'token' => $token,
-            // 'token_type' => 'Bearer',
             'role' => $user->role,
             'email_verified' => $user->hasVerifiedEmail()
         ];
     }
 
-    public function logout(Request $request): bool
+    public function logout(Request $request)
     {
         $token = $request->user()->currentAccessToken;
         
@@ -52,35 +51,6 @@ class AuthService
         return false;
     }
 
-    /**
-     * Generate token for user
-     *
-     * @param User $user
-     * @param string $tokenName
-     * @return string
-     */
-    public function generateToken(User $user, string $tokenName = 'API Token'): string
-    {
-        return $user->createToken($tokenName)->plainTextToken;
-    }
-
-    /**
-     * Verify user credentials
-     *
-     * @param string $email
-     * @param string $password
-     * @return User|null
-     */
-    public function verifyCredentials(string $email, string $password): ?User
-    {
-        $user = User::where('email', $email)->first();
-
-        if ($user && Hash::check($password, $user->password)) {
-            return $user;
-        }
-
-        return null;
-    }
     public function register(array $data): array
     {
         DB::beginTransaction();
@@ -94,15 +64,16 @@ class AuthService
             // Handle file uploads
             $this->handleFileUploads($user, $data);
 
-            // Send verification email
-            $this->sendVerificationEmail($user);
+            // Send verification email (capture success/failure)
+            $emailSent = $this->sendVerificationEmail($user);
 
             DB::commit();
 
             return [
                 'status' => 'success',
                 'message' => 'User registered successfully. Please check your email for verification.',
-                'user_id' => $user->id
+                'user_id' => $user->id,
+                'email_sent' => $emailSent,
             ];
 
         } catch (\Exception $e) {
@@ -152,7 +123,7 @@ class AuthService
 
     private function createPatient(User $user, array $data): void
     {
-        Patient::create([
+        $patient = Patient::create([
             'user_id' => $user->id,
             'birth_date' => $data['birth_date'],
             'gender' => $data['gender'],
@@ -160,19 +131,38 @@ class AuthService
             'latitude' => $data['latitude'],
             'longitude' => $data['longitude'],
         ]);
+
+        $medical = $data['medical_record'] ?? $data;
+        if (
+            isset($medical['treatment_plan']) || isset($medical['diagnosis']) || isset($medical['attachments']) || isset($medical['chronic_diseases']) || isset($medical['previous_surgeries']) || isset($medical['allergies']) || isset($medical['current_medications'])
+        ) {
+            
+            MedicalRecord::create([
+                'patient_id' => $patient->id,
+                'treatment_plan' => $medical['treatment_plan'] ?? '',
+                'diagnosis' => $medical['diagnosis'] ?? '',
+                'attachments' => is_array($medical['attachments']) ? implode(',', $medical['attachments']) : ($medical['attachments'] ?? ''),
+                'chronic_diseases' => $medical['chronic_diseases'] ?? '',
+                'previous_surgeries' => $medical['previous_surgeries'] ?? '',
+                'allergies' => $medical['allergies'] ?? '',
+                'current_medications' => $medical['current_medications'] ?? '',
+            ]);
+        }
+        if (!empty($medical['attachments']) && is_array($medical['attachments'])) {
+        Upload::whereIn('id', $medical['attachments'])
+            ->update([
+                'user_id' => $user->id,
+                'patient_id' => $patient->id,
+            ]);
     }
+    }
+
 
 
     private function createDoctor(User $user, array $data): void
     {
-        // Handle specialization - create if it doesn't exist
+        // Handle specialization
         $specialization = Specialization::where('name', $data['specialization'])->first();
-        if (!$specialization) {
-            $specialization = Specialization::create([
-                'name' => $data['specialization']
-            ]);
-        }
-
         Doctor::create([
             'user_id' => $user->id,
             'specialization_id' => $specialization->id,
@@ -225,13 +215,6 @@ class AuthService
         ]);
     }
 
-    /**
-     * Handle file uploads by linking them to the user
-     *
-     * @param User $user
-     * @param array $data
-     * @return void
-     */
     private function handleFileUploads(User $user, array $data): void
     {
         $fileIds = $this->getFileIds($data);
@@ -241,15 +224,10 @@ class AuthService
         }
     }
 
-    /**
-     * Extract file IDs from data
-     *
-     * @param array $data
-     * @return \Illuminate\Support\Collection
-     */
     private function getFileIds(array $data): \Illuminate\Support\Collection
     {
         return collect($data)->only([
+            'medical_record.attachments',
             'certificate_file_id',
             'doctor_image_id',
             'license_file_id',
@@ -259,13 +237,7 @@ class AuthService
         ])->filter()->values();
     }
 
-    /**
-     * Send verification email to user
-     *
-     * @param User $user
-     * @return void
-     */
-    private function sendVerificationEmail(User $user): void
+    private function sendVerificationEmail(User $user): bool
     {
         $verificationUrl = URL::temporarySignedRoute(
             'verification.verify',
@@ -275,14 +247,9 @@ class AuthService
 
         try {
             Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
+            return true;
         } catch (\Exception $e) {
-            // Log and continue so registration doesn't fail silently without trace
-            Log::error('Failed to send verification email', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
+            return false;
         }
     }
 }

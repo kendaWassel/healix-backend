@@ -8,6 +8,7 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
 
+
 class LoginController extends Controller
 {
     
@@ -27,12 +28,21 @@ public function __construct(AuthService $authService)
             return response()->json(['error' => 'Invalid credentials'], 401);
         }
         
-        return response()->json($result);
+        return response()->json($result, 200);
     }
     
     public function logout(Request $request)
     {
-        return $this->authService->logout($request);
+        $result = $this->authService->logout($request);
+        if (!$result) {
+            return response()->json([
+                'error' => 'Logout failed'
+            ], 400);
+        }
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Logged out successfully'
+        ], 200);
     }
 }
 

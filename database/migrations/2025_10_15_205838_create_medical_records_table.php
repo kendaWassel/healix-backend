@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Doctor;
+use App\Models\Upload;
 use App\Models\Patient;
 use PhpParser\Comment\Doc;
 use Illuminate\Support\Facades\Schema;
@@ -17,10 +18,9 @@ return new class extends Migration
         Schema::create('medical_records', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(Patient::class)->constrained()->cascadeOnDelete()->cascadeOnUpdate();
-            $table->foreignIdFor(Doctor::class)->constrained()->cascadeOnDelete()->cascadeOnUpdate();
             $table->text('treatment_plan');
             $table->text('diagnosis');
-            $table->string('attachments', 255);
+            $table->json('attachments')->nullable();// file IDs
             $table->text('chronic_diseases');
             $table->text('previous_surgeries');
             $table->text('allergies');
