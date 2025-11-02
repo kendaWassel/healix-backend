@@ -82,4 +82,4 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //patients
 });
-
+Route::middleware('auth:sanctum')->post('/consultations', [ConsultationController::class, 'store']);
