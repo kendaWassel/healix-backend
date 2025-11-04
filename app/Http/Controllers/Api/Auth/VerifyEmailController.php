@@ -71,19 +71,21 @@ class VerifyEmailController extends Controller
             event(new Verified($user));
             
             // Create an authentication token
-            $token = $user->createToken('API Token')->plainTextToken;
+            $token = $user->createToken('Email Verification Token')->plainTextToken;
             
-            return response()->json([
-                'message' => 'Email verified successfully',
+            // Redirect to frontend with success parameters
+            return redirect(env('FRONTEND_URL') . '/login?' . http_build_query([
+                'verified' => 'true',
                 'token' => $token,
-                'token_type' => 'Bearer',
-                'user' => $user
-            ], 200);
+                'email' => $user->email,
+                'message' => 'Email verified successfully'
+            ]));
         }
 
-        return response()->json([
+        return redirect(env('FRONTEND_URL') . '/login?' . http_build_query([
+            'verified' => 'false',
             'message' => 'Failed to verify email'
-        ], 500);
+        ]));
     }
 
     
