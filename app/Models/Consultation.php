@@ -10,7 +10,7 @@ class Consultation extends Model
     protected $fillable = [
         'patient_id',
         'doctor_id',
-        'type',
+        'call_type',
         'status',
         'scheduled_at',
     ];
