@@ -7,5 +7,7 @@ use App\Http\Controllers\Controller;
 
 class MedicalRecordController extends Controller
 {
-    //
+    public function updateMedicalRecord(){
+        //
+    }
 }
