@@ -4,16 +4,16 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
-use App\Http\Controllers\Api\CareProviderController;
-use App\Http\Controllers\Api\HomeVisitController;
-use App\Http\Controllers\Api\OrdersController;
-
-
-use App\Http\Controllers\Api\UploadController;
+use App\Http\Controllers\Api\NurseController;
+use App\Http\Controllers\Api\PhysiotherapistController;
 use App\Http\Controllers\Api\SpecializationController;
+use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\DoctorController;
 use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\RatingController;
+use App\Http\Controllers\Api\CareProviderController;
+
+
 
 //public APIs (no auth required)
 Route::prefix('auth')->group(function () {
@@ -61,7 +61,6 @@ use App\Http\Controllers\Api\AppointmentController;
 
 
 
-Route::middleware('auth')->get('/care-provider/requests', [CareProviderController::class, 'requests']);
 
 // Route::middleware('auth:sanctum')->get('/provider/nurse/schedules', [NurseScheduleController::class, 'index']);
 
@@ -74,35 +73,26 @@ Route::middleware('auth')->get('/care-provider/requests', [CareProviderControlle
     Route::post('/orders/{id}/reject', [CareProviderOrderController::class, 'reject']);
 });*/
 
-Route::middleware('auth:sanctum')->get('/careprovider/schedules', [CareProviderController::class, 'requests']);
 
 
-Route::middleware('auth:sanctum')->group(function () {
-    // عرض الطلبات
-    Route::get('/careprovider/orders', [OrdersController::class, 'index']);
-
-    // قبول طلب
-    Route::post('/careprovider/orders/{id}/accept', [OrdersController::class, 'accept']);
-
-    // رفض طلب
-    Route::post('/careprovider/orders/{id}/reject', [OrdersController::class, 'reject']);
-});
-    
 
 
-    // Ratings
-    Route::prefix('patient/ratings')->group(function () {
-        Route::post('doctors/{doctor_id}', [RatingController::class, 'rateDoctor']);
-        Route::get('doctors/{doctor_id}', [RatingController::class, 'getMyRatingForDoctor']);
+
+Route::middleware('auth:sanctum')->prefix('careprovider')->group(function () {
+     // ==== Nurse ====
+    Route::prefix('nurse')->group(function () {
+        Route::get('/schedules', [NurseController::class, 'schedules']);
+        Route::get('/orders', [NurseController::class, 'orders']);
+        Route::post('/orders/{id}/accept', [NurseController::class, 'accept']);
+        
     });
-    Route::get('doctors/{doctor_id}/ratings', [RatingController::class, 'getDoctorRatings']);
 
-    // Ratings
-    Route::prefix('patient/ratings')->group(function () {
-        Route::post('doctors/{doctorId}', [RatingController::class, 'rateDoctor']);
-        Route::get('doctors/{doctorId}', [RatingController::class, 'getMyRatingForDoctor']);
+
+    // ==== Physiotherapist ====
+    Route::prefix('physiotherapist')->group(function () {
+        Route::get('/schedules', [PhysiotherapistController::class, 'schedules']);
+        Route::get('/orders', [PhysiotherapistController::class, 'orders']);
+        Route::post('/orders/{id}/accept', [PhysiotherapistController::class, 'accept']);
+        
     });
-    
-    // Doctor ratings (public)
-    Route::get('doctors/{doctorId}/ratings', [RatingController::class, 'getDoctorRatings']);
 });
