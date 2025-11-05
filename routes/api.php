@@ -4,6 +4,11 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
+use App\Http\Controllers\Api\CareProviderController;
+use App\Http\Controllers\Api\HomeVisitController;
+use App\Http\Controllers\Api\OrdersController;
+
+
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\SpecializationController;
 use App\Http\Controllers\Api\DoctorController;
@@ -49,6 +54,39 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
     });
 
+    //patients
+});
+Route::middleware('auth:sanctum')->post('/consultations', [ConsultationController::class, 'store']);
+use App\Http\Controllers\Api\AppointmentController;
+
+
+
+Route::middleware('auth')->get('/care-provider/requests', [CareProviderController::class, 'requests']);
+
+// Route::middleware('auth:sanctum')->get('/provider/nurse/schedules', [NurseScheduleController::class, 'index']);
+
+ // Route::middleware('auth:sanctum')->get('/provider/nurse/orders', [NurseOrderController::class, 'index']);
+
+
+/*Route::middleware(['auth:sanctum'])->prefix('care-provider')->group(function () {
+    Route::get('/orders', [CareProviderOrderController::class, 'index']);
+    Route::post('/orders/{id}/accept', [CareProviderOrderController::class, 'accept']);
+    Route::post('/orders/{id}/reject', [CareProviderOrderController::class, 'reject']);
+});*/
+
+Route::middleware('auth:sanctum')->get('/careprovider/schedules', [CareProviderController::class, 'requests']);
+
+
+Route::middleware('auth:sanctum')->group(function () {
+    // عرض الطلبات
+    Route::get('/careprovider/orders', [OrdersController::class, 'index']);
+
+    // قبول طلب
+    Route::post('/careprovider/orders/{id}/accept', [OrdersController::class, 'accept']);
+
+    // رفض طلب
+    Route::post('/careprovider/orders/{id}/reject', [OrdersController::class, 'reject']);
+});
     
 
 

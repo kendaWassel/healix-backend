@@ -64,4 +64,8 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(Delivery::class); 
     }
 
+    public function careProvider()
+{
+    return $this->hasOne(\App\Models\CareProvider::class);
+}
 }
