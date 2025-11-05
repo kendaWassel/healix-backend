@@ -11,48 +11,9 @@ use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\DoctorController;
 use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\RatingController;
+use App\Http\Controllers\Api\CareProviderController;
 
 
-
-
-
-
-// Test email verification (remove in production)
-// Route::get('/test-email/{email}', function($email) {
-//     try {
-//         $user =User::where('email', $email)->first();
-//         if (!$user) {
-//             return response()->json(['message' => 'User not found'], 404);
-//         }
-        
-//         $verificationUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
-//             'verification.verify',
-//             now()->addMinutes(60),
-//             ['id' => $user->id, 'hash' => sha1($user->email)]
-//         );
-        
-//         \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\VerificationEmail($user, $verificationUrl));
-        
-//         return response()->json([
-//             'message' => 'Test email sent successfully',
-//             'verification_url' => $verificationUrl
-//         ]);
-//     } catch (\Exception $e) {
-//         return response()->json([
-//             'message' => 'Failed to send test email',
-//             'error' => $e->getMessage()
-//         ], 500);
-//     }
-// });
-
-
-
-// Specializations endpoints
-Route::get('/specializations', [SpecializationController::class, 'index']);
-
-// Uploads endpoints
-Route::post('/uploads', [UploadController::class, 'uploadFile']);
-Route::post('/uploads/image', [UploadController::class, 'uploadImage']);
 
 //public APIs (no auth required)
 Route::prefix('auth')->group(function () {
@@ -101,17 +62,31 @@ use App\Http\Controllers\Api\AppointmentController;
 
 
 
+// Route::middleware('auth:sanctum')->get('/provider/nurse/schedules', [NurseScheduleController::class, 'index']);
+
+ // Route::middleware('auth:sanctum')->get('/provider/nurse/orders', [NurseOrderController::class, 'index']);
+
+
+/*Route::middleware(['auth:sanctum'])->prefix('care-provider')->group(function () {
+    Route::get('/orders', [CareProviderOrderController::class, 'index']);
+    Route::post('/orders/{id}/accept', [CareProviderOrderController::class, 'accept']);
+    Route::post('/orders/{id}/reject', [CareProviderOrderController::class, 'reject']);
+});*/
+
+
+
+
 
 
 Route::middleware('auth:sanctum')->prefix('careprovider')->group(function () {
-
-    // ==== Nurse ====
+     // ==== Nurse ====
     Route::prefix('nurse')->group(function () {
         Route::get('/schedules', [NurseController::class, 'schedules']);
         Route::get('/orders', [NurseController::class, 'orders']);
         Route::post('/orders/{id}/accept', [NurseController::class, 'accept']);
         
     });
+
 
     // ==== Physiotherapist ====
     Route::prefix('physiotherapist')->group(function () {
@@ -121,22 +96,3 @@ Route::middleware('auth:sanctum')->prefix('careprovider')->group(function () {
         
     });
 });
-    
-
-
-    // Ratings
-    Route::prefix('patient/ratings')->group(function () {
-        Route::post('doctors/{doctor_id}', [RatingController::class, 'rateDoctor']);
-        Route::get('doctors/{doctor_id}', [RatingController::class, 'getMyRatingForDoctor']);
-    });
-    Route::get('doctors/{doctor_id}/ratings', [RatingController::class, 'getDoctorRatings']);
-
-    // Ratings
-    Route::prefix('patient/ratings')->group(function () {
-        Route::post('doctors/{doctorId}', [RatingController::class, 'rateDoctor']);
-        Route::get('doctors/{doctorId}', [RatingController::class, 'getMyRatingForDoctor']);
-    });
-    
-    // Doctor ratings (public)
-    Route::get('doctors/{doctorId}/ratings', [RatingController::class, 'getDoctorRatings']);
-
