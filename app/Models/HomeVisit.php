@@ -3,35 +3,38 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class HomeVisit extends Model
 {
-    protected $primaryKey = 'visit_id';
-
+    use HasFactory;
     protected $fillable = [
         'patient_id',
-        'requested_by_doctor_id',
+        'doctor_id',
         'careprovider_id',
         'scheduled_at',
-        'start_time',
-        'end_time',
         'service_type',
+        'service',
         'status',
-        'fee',
     ];
 
+    protected $casts = [
+        'scheduled_at' => 'datetime',
+    ];
+    protected $table = 'home_visits';
+
     public function patient()
-{
-    return $this->belongsTo(User::class, 'patient_id');
-}
+    {
+        return $this->belongsTo(Patient::class, 'patient_id');
+    }
 
     public function careProvider()
     {
-        return $this->belongsTo(\App\Models\CareProvider::class, 'careprovider_id');
+        return $this->belongsTo(CareProvider::class, 'careprovider_id');
     }
 
     public function doctor()
     {
-        return $this->belongsTo(\App\Models\Doctor::class, 'requested_by_doctor_id');
+        return $this->belongsTo(Doctor::class);
     }
 }

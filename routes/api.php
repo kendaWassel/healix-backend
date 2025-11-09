@@ -11,7 +11,6 @@ use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\DoctorController;
 use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\RatingController;
-use App\Http\Controllers\Api\CareProviderController;
 
 
 
@@ -33,66 +32,65 @@ Route::get('/specializations', [SpecializationController::class, 'listForRegistr
 
 
 
+
+// Protected APIs (auth required) and verified email
+
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
     // Auth actions
     Route::post('/auth/logout', [LoginController::class, 'logout']);
 
-    // Specializations for Consultation
-    Route::get('/patient/specializations', [SpecializationController::class, 'listForConsultation']);
 
-    // Doctors related
-    Route::get('/patient/doctors/by-specialization', [DoctorController::class, 'getDoctorsBySpecialization']);
-    Route::get('/patient/doctors/{id}/available-slots', [DoctorController::class, 'getAvailableSlots']);
+    // Patient
+    Route::prefix('patient')->group(function () {
+
+        // Specializations for Consultation
+        Route::get('/specializations', [SpecializationController::class, 'listForConsultation']);
+
+        // Doctors related
+        Route::get('/doctors/by-specialization', [DoctorController::class, 'getDoctorsBySpecialization']);
+        Route::get('/doctors/{id}/available-slots', [DoctorController::class, 'getAvailableSlots']);
 
 
-    // Consultations 
-    Route::prefix('patient/consultations')->group(function () {
-        Route::post('/book', [ConsultationController::class, 'bookConsultation']);
-        Route::get('/myschedules', [ConsultationController::class, 'getPatientScheduledConsultations']);
-        Route::post('/{id}/call', [ConsultationController::class, 'startCall']);
+        // Consultations
+        Route::post('/consultations/book', [ConsultationController::class, 'bookConsultation']);
+        Route::get('/consultations/my-schedules', [ConsultationController::class, 'getPatientScheduledConsultations']);
+        Route::post('/consultations/{id}/call', [ConsultationController::class, 'startCall']);
+
+        // Ratings
+        Route::post('ratings/doctors/{doctor_id}', [RatingController::class, 'rateDoctor']);
+        Route::get('ratings/doctors/{doctor_id}', [RatingController::class, 'getMyRatingForDoctor']);
+    
+
+    });
+    
+    // Doctor
+    Route::prefix('doctor')->group(function () {
+        Route::get('/my-schedules', [DoctorController::class, 'getDoctorSchedules']);
+        
+        Route::post('/consultations/{id}/call', [ConsultationController::class, 'startCall']);
+        Route::get('patients/{patient_id}/medical-record', [DoctorController::class, 'viewPatientMedicalRecord']);
 
     });
 
-    //patients
-});
-Route::middleware('auth:sanctum')->post('/consultations', [ConsultationController::class, 'store']);
-use App\Http\Controllers\Api\AppointmentController;
 
 
-
-
-// Route::middleware('auth:sanctum')->get('/provider/nurse/schedules', [NurseScheduleController::class, 'index']);
-
- // Route::middleware('auth:sanctum')->get('/provider/nurse/orders', [NurseOrderController::class, 'index']);
-
-
-/*Route::middleware(['auth:sanctum'])->prefix('care-provider')->group(function () {
-    Route::get('/orders', [CareProviderOrderController::class, 'index']);
-    Route::post('/orders/{id}/accept', [CareProviderOrderController::class, 'accept']);
-    Route::post('/orders/{id}/reject', [CareProviderOrderController::class, 'reject']);
-});*/
-
-
-
-
-
-
-Route::middleware('auth:sanctum')->prefix('careprovider')->group(function () {
-     // ==== Nurse ====
-    Route::prefix('nurse')->group(function () {
+    // Provider Nurse
+    Route::prefix('provider/nurse')->group(function () {
         Route::get('/schedules', [NurseController::class, 'schedules']);
         Route::get('/orders', [NurseController::class, 'orders']);
         Route::post('/orders/{id}/accept', [NurseController::class, 'accept']);
-        
+
     });
-
-
-    // ==== Physiotherapist ====
-    Route::prefix('physiotherapist')->group(function () {
+    // Provider Physiotherapist
+    Route::prefix('provider/physiotherapist')->group(function () {
         Route::get('/schedules', [PhysiotherapistController::class, 'schedules']);
         Route::get('/orders', [PhysiotherapistController::class, 'orders']);
         Route::post('/orders/{id}/accept', [PhysiotherapistController::class, 'accept']);
         
     });
+
 });
+
+
+

@@ -2,15 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Pharmacist extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'user_id',
         'pharmacy_name',
         'cr_number',
-        'license_file',
+        'license_file_id',
         'address',
         'latitude',
         'longitude',
