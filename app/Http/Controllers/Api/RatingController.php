@@ -22,7 +22,6 @@ class RatingController extends Controller
         try {
             DB::beginTransaction();
 
-            // Get the authenticated user's patient record
             $patient = Patient::where('user_id', Auth::id())->firstOrFail();
             
             // Check if patient has already rated this doctor
@@ -127,40 +126,6 @@ class RatingController extends Controller
     }
 
     
-    // Get current patient's rating for a specific doctor
      
-    public function getMyRatingForDoctor($doctorId)
-    {
-        try {
-            $patient = Patient::where('user_id', Auth::id())->firstOrFail();
-            
-            $rating = Rating::where('doctor_id', $doctorId)
-                ->where('patient_id', $patient->id)
-                ->first();
 
-            if (!$rating) {
-                return response()->json([
-                    'status' => 'success',
-                    'message' => 'No rating found',
-                    'data' => null
-                ], 200);
-            }
-
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'rating' => $rating->stars,
-                   'created_at' => $rating->created_at->format('Y-m-d H:i:s'),
-                    'updated_at' => $rating->updated_at->format('Y-m-d H:i:s')
-                ]
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to retrieve rating',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
 }
