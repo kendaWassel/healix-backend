@@ -53,7 +53,9 @@ class PatientController extends Controller
                     'doctor_image' => $doctorImage,
                     'type' => $consultation->call_type,
                     'scheduled_at' => $consultation->scheduled_at ? $consultation->scheduled_at->toIso8601String() : null,
+                    'fee' => $doctor ? $doctor->consultation_fee : null,
                     'status' => $consultation->status,
+                    
                 ];
             });
             $meta = [

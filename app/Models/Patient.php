@@ -35,4 +35,8 @@ class Patient extends Model
     {
         return $this->hasMany(HomeVisit::class);
     }
+    public function prescriptions()
+    {
+        return $this->hasOne(Prescription::class);
+    }
 }

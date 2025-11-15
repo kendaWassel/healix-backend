@@ -92,8 +92,8 @@ class NurseController extends Controller
                 'patient_name' => $patient?->user?->full_name,
                 'service' => $visit->service,
                 'address' => $patient?->address,
-                'scheduled_at' => $visit->scheduled_at->toIso8601String(),
                 'status' => $visit->status,
+                'scheduled_at' => $visit->scheduled_at->toIso8601String(),
             ];
         })->values();
 

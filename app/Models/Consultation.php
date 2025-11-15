@@ -13,7 +13,7 @@ class Consultation extends Model
     protected $fillable = [
         'patient_id',
         'doctor_id',
-        'call_type',
+        'type',
         'status',
         'scheduled_at',
     ];
@@ -30,6 +30,10 @@ class Consultation extends Model
     public function doctor(): BelongsTo
     {
         return $this->belongsTo(Doctor::class, 'doctor_id');
+    }
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
     }
 
 }

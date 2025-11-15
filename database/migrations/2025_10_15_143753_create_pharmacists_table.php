@@ -18,9 +18,9 @@ return new class extends Migration
             $table->string('pharmacy_name');
             $table->integer('cr_number')->unique();
             $table->string('address')->nullable();
-            $table->string('license_file_id')->nullable();
-            $table->string('from')->nullable();
-            $table->string('to')->nullable();
+            $table->unsignedBigInteger('license_file_id')->nullable();
+            $table->time('from')->nullable();
+            $table->time('to')->nullable();
             $table->decimal('latitude', 9, 6)->nullable();
             $table->decimal('longitude', 9, 6)->nullable();
             $table->string('bank_account')->nullable();
