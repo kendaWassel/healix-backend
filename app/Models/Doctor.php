@@ -32,4 +32,12 @@ class Doctor extends Model
     {
         return $this->hasMany(HomeVisit::class);
     }
+    public function consultations()
+    {
+        return $this->hasMany(Consultation::class);
+    }
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
+    }
 }

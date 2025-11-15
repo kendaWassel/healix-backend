@@ -9,12 +9,13 @@ class HomeVisit extends Model
 {
     use HasFactory;
     protected $fillable = [
+        'consultation_id',
         'patient_id',
-        'doctor_id',
         'careprovider_id',
-        'scheduled_at',
         'service_type',
-        'service',
+        'reason',
+        'scheduled_at',
+        'address',
         'status',
     ];
 
@@ -37,4 +38,9 @@ class HomeVisit extends Model
     {
         return $this->belongsTo(Doctor::class);
     }
+    public function consultation()
+    {
+        return $this->belongsTo(Consultation::class);
+    }
+
 }
