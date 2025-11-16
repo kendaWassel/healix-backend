@@ -36,6 +36,7 @@ class DatabaseSeeder extends Seeder
             CareProviderSeeder::class,
             DeliverySeeder::class,
             HomeVisitTestSeeder::class,
+            ConsultationSeeder::class,
         ]);
 
     }

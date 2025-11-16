@@ -1,18 +1,18 @@
 <?php
 
+use App\Models\Patient;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Auth\RegisterController;
-use App\Http\Controllers\Api\Auth\LoginController;
-use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\NurseController;
-use App\Http\Controllers\Api\PhysiotherapistController;
-use App\Http\Controllers\Api\SpecializationController;
-use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\DoctorController;
-use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\RatingController;
-
-
+use App\Http\Controllers\Api\UploadController;
+use App\Http\Controllers\Api\PatientController;
+use App\Http\Controllers\Api\Auth\LoginController;
+use App\Http\Controllers\Api\ConsultationController;
+use App\Http\Controllers\Api\Auth\RegisterController;
+use App\Http\Controllers\Api\SpecializationController;
+use App\Http\Controllers\Api\PhysiotherapistController;
+use App\Http\Controllers\Api\Auth\VerifyEmailController;
 
 //public APIs (no auth required)
 Route::prefix('auth')->group(function () {
@@ -35,7 +35,7 @@ Route::get('/specializations', [SpecializationController::class, 'listForRegistr
 
 // Protected APIs (auth required) and verified email
 
-Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+Route::middleware(['auth:sanctum'])->group(function () {
 
     // Auth actions
     Route::post('/auth/logout', [LoginController::class, 'logout']);
@@ -47,19 +47,28 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         // Specializations for Consultation
         Route::get('/specializations', [SpecializationController::class, 'listForConsultation']);
 
-        // Doctors related
+        
+        Route::get('/my-schedules', [PatientController::class, 'getPatientScheduledConsultations']);
+
+        // related to Doctors
         Route::get('/doctors/by-specialization', [DoctorController::class, 'getDoctorsBySpecialization']);
         Route::get('/doctors/{id}/available-slots', [DoctorController::class, 'getAvailableSlots']);
+
+        // Notifications
+        Route::get('/notifications', [PatientController::class, 'getNotifications']);
 
 
         // Consultations
         Route::post('/consultations/book', [ConsultationController::class, 'bookConsultation']);
-        Route::get('/consultations/my-schedules', [ConsultationController::class, 'getPatientScheduledConsultations']);
         Route::post('/consultations/{id}/call', [ConsultationController::class, 'startCall']);
+        Route::post('/consultations/{id}/end', [ConsultationController::class,'endConsultation']);
 
         // Ratings
         Route::post('ratings/doctors/{doctor_id}', [RatingController::class, 'rateDoctor']);
         Route::get('ratings/doctors/{doctor_id}', [RatingController::class, 'getMyRatingForDoctor']);
+
+        //Prescription
+        
     
 
     });
@@ -67,9 +76,10 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Doctor
     Route::prefix('doctor')->group(function () {
         Route::get('/my-schedules', [DoctorController::class, 'getDoctorSchedules']);
-        
         Route::post('/consultations/{id}/call', [ConsultationController::class, 'startCall']);
-        Route::get('patients/{patient_id}/medical-record', [DoctorController::class, 'viewPatientMedicalRecord']);
+        Route::get('/patients/{patient_id}/medical-record', [DoctorController::class, 'viewDetails']);
+        Route::post('/consultations/{id}/end', [ConsultationController::class, 'endConsultation']);
+        Route::post('/home-visit/request', [DoctorController::class,'requestHomeVisit']);
 
     });
 

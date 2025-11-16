@@ -23,4 +23,11 @@ class Pharmacist extends Model
     {
         return $this->belongsTo(User::class);
     }
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
+    }
+    public function orders(){
+        return $this->hasMany(Order::class);
+    }
 }

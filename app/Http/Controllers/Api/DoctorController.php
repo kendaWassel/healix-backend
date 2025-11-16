@@ -10,6 +10,7 @@ use Carbon\CarbonPeriod;
 use App\Models\Consultation;
 use Illuminate\Http\Request;
 use App\Models\Specialization;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 
@@ -135,15 +136,26 @@ class DoctorController extends Controller
     public  function getDoctorSchedules(Request $request){
 
         $validated = $request->validate([
-            'status' => 'sometimes|string|in:pending,in_progress,completed,cancelled',
+            'status' => 'sometimes|string|in:pending,scheduled,in_progress,completed,cancelled',
             'date' => 'sometimes|date',
             'page' => 'sometimes|integer|min:1',
             'per_page' => 'sometimes|integer|min:1|max:100',
         ]);
 
-        $doctorId = Auth::id();
+        // Get the authenticated user's doctor record
+        $user = Auth::user();
+        $doctor = $user->doctor;
 
-        $query = Consultation::with(['patient.user'])
+        if (!$doctor) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Doctor profile not found. Please complete your doctor profile.',
+            ], 404);
+        }
+
+        $doctorId = $doctor->id;
+
+        $query = Consultation::with(['patient', 'doctor'])
             ->where('doctor_id', $doctorId)
             ->orderBy('scheduled_at', 'asc');
 
@@ -160,16 +172,12 @@ class DoctorController extends Controller
         $consultations = $query->paginate($perPage)->appends($request->query());
 
         $data = $consultations->getCollection()->map(function ($consultation) {
-            $patient = $consultation->patient?->user;
+            $patient = $consultation->patient;
 
             return [
                 'id' => $consultation->id,
-                'patient_name' => $patient->full_name,
-                'patient_phone' => $patient->phone,
+                'patient_name' => $patient?->full_name,
                 'scheduled_at' => optional($consultation->scheduled_at)->format('Y-m-d H:i'),
-                'status' => $consultation->status,
-                'call_type' => $consultation->call_type,
-                'consultation_fee' => $consultation->doctor?->consultation_fee,
             ];
         })->values();
 
@@ -183,15 +191,13 @@ class DoctorController extends Controller
                 'total' => $consultations->total(), 
             ],
         ], 200);
-    }
-
-    
-    public function viewPatientMedicalRecored($patientId){
+    }        
+    public function viewDetails($patientId){
         $doctor = Auth::user()->doctor;
         if (!$doctor) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized access – only doctors can view medical records.'
+                'message' => 'Unauthorized access - only doctors can view medical records.'
             ], 403);
         }
 
@@ -203,7 +209,7 @@ class DoctorController extends Controller
                     'message' => 'Patient not found.'
                 ], 404);
             }
-        $record = $patient->medicalRecord;
+        $record = $patient->medicalRecords;
 
             return response()->json([
                 'status' => 'success',
@@ -212,7 +218,6 @@ class DoctorController extends Controller
                     'patient_name' => $patient->user->full_name,
                     'gender' => $patient->user->gender,
                     'birth_date' => $patient->user->birth_date,
-                    'address' => $patient->user->address,
                     'medical_record' => [
                         'diagnosis' => $record->diagnosis ?? null,
                         'treatment_plan' => $record->treatment_plan ?? null,
@@ -231,6 +236,57 @@ class DoctorController extends Controller
                 ]
             ], 200);
     }
+
+    public function requestHomeVisit(Request $request)
+    {
+        $validated = $request->validate([
+            'consultation_id' => 'required|exists:consultations,id',
+            'patient_id' => 'required|exists:patients,id',
+            'service_type' => 'required|in:nurse,physio',
+            'reason' => 'nullable|string|max:255',
+            'scheduled_at' => 'required|date',
+            'address' => 'required|string|max:255'
+        ]);
+
+        $doctor = auth()->user()->doctor;
+
+        if (!$doctor) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not authorized.'
+            ], 403);
+        }
+
+        // Ensure consultation belongs to the doctor
+        $consultation = Consultation::where('id', $validated['consultation_id'])
+            ->where('doctor_id', $doctor->id)
+            ->first();
+
+        if (!$consultation) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Consultation does not belong to this doctor.'
+            ], 403);
+        }
+
+        $homeVisit = HomeVisit::create([
+            'consultation_id' => $validated['consultation_id'],
+            'patient_id' => $validated['patient_id'],
+            'service_type' => $validated['service_type'],
+            'reason' => $validated['reason'],
+            'scheduled_at' => $validated['scheduled_at'],
+            'address' => $validated['address'],
+            'status' => 'pending'
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Home visit request created successfully.',
+            'data' => $homeVisit
+        ]);
+    }
+
+
 
 }
     

@@ -32,8 +32,7 @@ class RatingController extends Controller
             if ($existingRating) {
                 // Update existing rating
                 $existingRating->update([
-                    'stars' => $validated['stars'],
-                    'comment' => $validated['comment'] ?? null
+                    'stars' => $validated['stars']
                 ]);
                 $rating = $existingRating;
             } else {
@@ -120,6 +119,40 @@ class RatingController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to retrieve ratings',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+        public function getMyRatingForDoctor($doctorId)
+    {
+        try {
+            $patient = Patient::where('user_id', Auth::id())->firstOrFail();
+            
+            $rating = Rating::where('doctor_id', $doctorId)
+                ->where('patient_id', $patient->id)
+                ->first();
+
+            if (!$rating) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'No rating found',
+                    'data' => null
+                ], 200);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'rating' => $rating->stars,
+                   'created_at' => $rating->created_at->format('Y-m-d H:i:s'),
+                    'updated_at' => $rating->updated_at->format('Y-m-d H:i:s')
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to retrieve rating',
                 'error' => $e->getMessage()
             ], 500);
         }

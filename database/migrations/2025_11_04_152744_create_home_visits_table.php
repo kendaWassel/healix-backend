@@ -12,11 +12,22 @@ return new class extends Migration
             $table->id();
             $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
             $table->foreignId('doctor_id')->constrained('doctors')->cascadeOnDelete();
-            $table->foreignId('careprovider_id')->constrained('care_providers')->cascadeOnDelete();
+            $table->foreignId('careprovider_id')
+            ->constrained('care_providers')
+            ->cascadeOnDelete()
+            ->nullable();// This will be NULL until a nurse/physio accepts the request
+            $table->foreignId('consultation_id')->constrained('')->cascadeOnDelete();
             $table->dateTime('scheduled_at');
             $table->enum('service_type', ['nurse', 'physiotherapist']);
-            $table->text('service');
-            $table->enum('status', ['pending', 'accepted', 'rejected', 'completed', 'cancelled']);
+            $table->string('reason')->nullable();
+            $table->enum('status', [
+                'pending',  // waiting for nurse to accept
+                'accepted', 
+                'rejected', 
+                'completed', 
+                'cancelled'
+            ])->default('pending');
+            $table->string('address')->nullable();
             $table->timestamps();
         });
     }

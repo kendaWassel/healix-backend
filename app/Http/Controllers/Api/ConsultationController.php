@@ -137,11 +137,9 @@ class ConsultationController extends Controller
         }
     }
 
-    //Return doctor's phone number so patient can call externally.
     public function startCall($id)
     {
-        $consultation = Consultation::with('doctor.user')
-            ->where('id', $id)
+        $consultation = Consultation::where('id', $id)
             ->where('patient_id', auth()->id())
             ->first();
 
@@ -152,14 +150,19 @@ class ConsultationController extends Controller
             ], 404);
         }
 
-        $doctor = $consultation->doctor;
-        $user = $doctor->user;
+        if ($consultation->status !== 'scheduled') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Consultation is not in a state to start a call.'
+            ], 409);
+        }
+
+        $consultation->status = 'in_progress';
+        $consultation->save();
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Call started successfully.',
-            'doctor_name' => 'Dr. ' . $user->full_name,
-            'doctor_phone' => $user->phone,
+            'message' => 'Call started for consultation.'
         ]);
     }
     public function completeConsultation($id)
@@ -174,6 +177,12 @@ class ConsultationController extends Controller
                 'message' => 'Consultation not found or not authorized.'
             ], 404);
         }
+        if ($consultation->status !== 'in_progress') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Consultation is not in a state to be completed.'
+            ], 409);
+        }
 
         $consultation->status = 'completed';
         $consultation->save();
@@ -184,4 +193,5 @@ class ConsultationController extends Controller
         ]);
         
     }
+
 }

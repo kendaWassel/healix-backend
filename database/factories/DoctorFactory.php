@@ -17,7 +17,7 @@ class DoctorFactory extends Factory
     {
         return [
             'user_id' => User::factory()->state(fn () => [ 'role' => 'doctor' ]),
-            'specialization_id' => null, // Will be set in seeder
+            'specialization_id' => null, //cannot be null
             'gender' => fake()->randomElement(['male', 'female']),
             'doctor_image_id' => null,
             'from' => '09:00:00',
