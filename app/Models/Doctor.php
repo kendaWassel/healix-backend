@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Doctor extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'doctor_image_id', 
         'from',
@@ -25,5 +27,9 @@ class Doctor extends Model
     }
     public function ratings(){
         return $this->hasMany(Rating::class);
+    }
+    public function homeVisits()
+    {
+        return $this->hasMany(HomeVisit::class);
     }
 }

@@ -40,7 +40,6 @@ class SpecializationController extends Controller
         // Get specializations without doctor count (all specializations)
         $query = Specialization::query();
 
-        // Pagination
         $perPage = $request->get('per_page');
         $specializationsPaginated = $query->paginate($perPage)
             ->appends($request->query());
@@ -58,7 +57,6 @@ class SpecializationController extends Controller
                 'id' => $specialization->id,
                 'name' => $specialization->name,
                 'doctors_count' => $specialization->doctors_count,
-                // 'has_doctors' => $specialization->doctors_count > 0
             ];
         })->values();
 

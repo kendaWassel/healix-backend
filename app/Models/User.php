@@ -57,15 +57,10 @@ class User extends Authenticatable implements MustVerifyEmail
     public function pharmacist() { 
         return $this->hasOne(Pharmacist::class); 
     }
-    public function care_provider() { 
+    public function careProvider() { 
         return $this->hasOne(CareProvider::class); 
     }
     public function delivery() { 
         return $this->hasOne(Delivery::class); 
     }
-
-    public function careProvider()
-{
-    return $this->hasOne(\App\Models\CareProvider::class);
-}
 }
