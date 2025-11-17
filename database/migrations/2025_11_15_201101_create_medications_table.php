@@ -14,10 +14,8 @@ return new class extends Migration
         Schema::create('medications', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('dosage');
-            $table->string('duration');
-            $table->decimal('price',10,2);
-            $table->string('notes');
+            $table->string('dosage');       // 500mg, 10mg/ml
+            $table->string('form');         // tablet, syrup, injection...
             $table->timestamps();
         });
     }
