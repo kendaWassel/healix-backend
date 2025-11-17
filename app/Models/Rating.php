@@ -9,6 +9,9 @@ class Rating extends Model
     protected $fillable = [
         'doctor_id',
         'patient_id',
+        'order_id',
+        'pharmacist_id',
+        'consultation_id',
         'stars'
     ];
     
