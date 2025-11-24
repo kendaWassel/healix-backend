@@ -19,8 +19,8 @@ return new class extends Migration
             $table->foreignIdFor(Specialization::class)->constrained()->cascadeOnDelete()->cascadeOnUpdate();
             $table->enum('gender', ['male', 'female'])->nullable();
             $table->unsignedBigInteger('doctor_image_id')->nullable();
-            $table->time('from')->nullable();
-            $table->time('to')->nullable();
+            $table->time('from');
+            $table->time('to');
             $table->unsignedBigInteger('certificate_file_id')->nullable();
             $table->decimal('consultation_fee', 10, 2)->nullable();
             $table->string('bank_account')->nullable();

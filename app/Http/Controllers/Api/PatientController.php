@@ -25,10 +25,13 @@ class PatientController extends Controller
             'page' => 'sometimes|integer|min:1',
             'per_page' => 'sometimes|integer|min:1|max:100',
         ]);
+        //get patient ID from authenticated user
+        $user = Auth::user();
+        $patientId = $user->patient ? $user->patient->id : null;
 
         try {
             $perPage = $request->get('per_page', 10);
-            $consultations = Consultation::where('patient_id', Auth::id())->paginate($perPage)->appends($request->query());
+            $consultations = Consultation::where('patient_id', $patientId)->paginate($perPage)->appends($request->query());
             if ($consultations->isEmpty()) {
                 return response()->json([
                     'status' => 'empty',
@@ -36,7 +39,7 @@ class PatientController extends Controller
                     'data' => []
                 ], 200);
             }
-            $consultations->getCollection()->map(function ($consultation) {
+            $data = $consultations->getCollection()->map(function ($consultation) {
                 $doctor = $consultation->doctor;
                 $doctorImage = null;
                 if ($doctor && !empty($doctor->doctor_image_id)) {
@@ -50,9 +53,11 @@ class PatientController extends Controller
                     'id' => $consultation->id,
                     'doctor_id' => $doctor ? $doctor->id : null,
                     'doctor_name' => $doctor ? 'Dr. ' . $doctor->user?->full_name : null,
+                    'doctor_phone' => $doctor->user->phone,
                     'doctor_image' => $doctorImage,
-                    'type' => $consultation->call_type,
+                    'type' => $consultation->type,
                     'scheduled_at' => $consultation->scheduled_at ? $consultation->scheduled_at->toIso8601String() : null,
+                    'specialization' => $doctor && $doctor->specialization ? $doctor->specialization->name : null,
                     'fee' => $doctor ? $doctor->consultation_fee : null,
                     'status' => $consultation->status,
                     
@@ -67,7 +72,7 @@ class PatientController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data' => $consultations->getCollection()->toArray(),
+                'data' => $data,
                 'meta' => $meta
             ], 200);
 

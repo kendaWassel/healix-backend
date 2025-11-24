@@ -28,7 +28,7 @@ class HomeVisitFactory extends Factory
             'careprovider_id' => CareProvider::factory()->state(fn () => [ 'type' => $serviceType ]),
             'scheduled_at' => fake()->dateTimeBetween('+1 days', '+30 days'),
             'service_type' => $serviceType,
-            'service' => $serviceType === 'nurse' ? 'Nursing Care' : 'Physiotherapy Session',
+            'reason' => $serviceType === 'nurse' ? 'Nursing Care' : 'Physiotherapy Session',
             'status' => fake()->randomElement(['pending', 'accepted', 'rejected', 'completed', 'cancelled']),
         ];
     }

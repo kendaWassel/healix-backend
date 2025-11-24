@@ -12,11 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('orders', function (Blueprint $table) {
-            $table->id();
+                $table->id();
 
                 $table->foreignId('prescription_id')->constrained()->cascadeOnDelete();
-                $table->foreignId('patient_id')->constrained('users')->cascadeOnDelete();
-                $table->foreignId('pharmacy_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('pharmacist_id')->constrained()->cascadeOnDelete();
 
                 $table->enum('status', [
                     'sent', 

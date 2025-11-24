@@ -16,7 +16,7 @@ return new class extends Migration
             ->constrained('care_providers')
             ->cascadeOnDelete()
             ->nullable();// This will be NULL until a nurse/physio accepts the request
-            $table->foreignId('consultation_id')->constrained('')->cascadeOnDelete();
+            // $table->foreignId('consultation_id')->constrained('consultations')->cascadeOnDelete();
             $table->dateTime('scheduled_at');
             $table->enum('service_type', ['nurse', 'physiotherapist']);
             $table->string('reason')->nullable();

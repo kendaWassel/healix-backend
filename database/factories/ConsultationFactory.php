@@ -26,7 +26,7 @@ class ConsultationFactory extends Factory
             'patient_id' => User::factory()->state(fn () => [ 'role' => 'patient' ]),
             'doctor_id' => Doctor::factory(),
             'type' => fake()->randomElement($callTypes),
-            'status' => fake()->randomElement($statuses),
+            'status' => 'completed',
             'scheduled_at' => Carbon::now()->addDays(fake()->numberBetween(1, 30))->setTime(
                 fake()->numberBetween(9, 16), // hour between 9 AM and 4 PM
                 fake()->randomElement([0, 15, 30, 45]) // quarter-hour increments

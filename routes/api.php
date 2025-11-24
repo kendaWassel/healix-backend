@@ -55,7 +55,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/doctors/{id}/available-slots', [DoctorController::class, 'getAvailableSlots']);
 
         // Notifications
-        Route::get('/notifications', [PatientController::class, 'getNotifications']);
+        // Route::get('/notifications', [PatientController::class, 'getNotifications']);
 
 
         // Consultations
@@ -65,7 +65,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
         // Ratings
         Route::post('ratings/doctors/{doctor_id}', [RatingController::class, 'rateDoctor']);
-        Route::get('ratings/doctors/{doctor_id}', [RatingController::class, 'getMyRatingForDoctor']);
+        Route::get('ratings/consultations/{consultation_id}', [RatingController::class, 'getMyRatingForConsultation']);
 
         //Prescription
         

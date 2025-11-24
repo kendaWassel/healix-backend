@@ -11,10 +11,12 @@ class Consultation extends Model
     use HasFactory;
 
     protected $fillable = [
+        
         'patient_id',
         'doctor_id',
         'type',
         'status',
+        'start_time',
         'scheduled_at',
     ];
 
@@ -34,6 +36,11 @@ class Consultation extends Model
     public function prescriptions()
     {
         return $this->hasMany(Prescription::class);
+    }
+
+    public function rating()
+    {
+        return $this->hasOne(Rating::class);
     }
 
 }
