@@ -12,7 +12,7 @@ class Rating extends Model
         'order_id',
         'pharmacist_id',
         'consultation_id',
-        'stars'
+        'stars',
     ];
     
     public function doctor(){
@@ -22,5 +22,10 @@ class Rating extends Model
     public function patient()
     {
         return $this->belongsTo(Patient::class);
+    }
+
+    public function consultation()
+    {
+        return $this->belongsTo(Consultation::class);
     }
 }

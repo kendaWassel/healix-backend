@@ -286,6 +286,16 @@ class DoctorController extends Controller
         ]);
     }
 
+    //notifications 
+    // public function getNotifications(){
+    //     $user = auth()->user();
+    //     $notifications = $user->doctor->notifications()->get();
+    //     return response()->json([
+    //         'status' => 'success',
+    //         'data' => $notifications
+    //     ]);
+    // }   
+
 
 
 }

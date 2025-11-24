@@ -20,7 +20,7 @@ class Patient extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id'); // explicit foreign key
     }
 
     public function medicalRecords()

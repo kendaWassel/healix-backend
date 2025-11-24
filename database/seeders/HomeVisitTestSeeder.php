@@ -19,7 +19,7 @@ class HomeVisitTestSeeder extends Seeder
             'careprovider_id' => 1,
             'scheduled_at' => now()->addDays(2)->setHour(10)->setMinute(0),
             'service_type' => 'nurse',
-            'service' => 'Insulin injection + Blood pressure',
+            'reason' => 'Insulin injection + Blood pressure',
             'status' => 'pending',
         ]);
         // Get existing doctors and care providers
@@ -42,7 +42,7 @@ class HomeVisitTestSeeder extends Seeder
                 'doctor_id' => fn() => $doctors->random()->id,
                 'careprovider_id' => $nurse->id,
                 'service_type' => 'nurse',
-                'service' => fake()->randomElement([
+                'reason' => fake()->randomElement([
                     'Insulin injection + Blood pressure',
                     'Wound dressing + Medication administration',
                     'Blood glucose monitoring',
@@ -58,7 +58,7 @@ class HomeVisitTestSeeder extends Seeder
                 'doctor_id' => fn() => $doctors->random()->id,
                 'careprovider_id' => $nurse->id,
                 'service_type' => 'nurse',
-                'service' => fake()->randomElement([
+                'reason' => fake()->randomElement([
                     'Insulin injection + Blood pressure',
                     'Wound dressing + Medication administration',
                     'Blood glucose monitoring',
@@ -77,7 +77,7 @@ class HomeVisitTestSeeder extends Seeder
                 'doctor_id' => fn() => $doctors->random()->id,
                 'careprovider_id' => $physio->id,
                 'service_type' => 'physiotherapist',
-                'service' => fake()->randomElement([
+                'reason' => fake()->randomElement([
                     'Physiotherapy Session',
                     'Rehabilitation therapy + Mobility exercises',
                     'Pain management + Stretching exercises',
@@ -93,7 +93,7 @@ class HomeVisitTestSeeder extends Seeder
                 'doctor_id' => fn() => $doctors->random()->id,
                 'careprovider_id' => $physio->id,
                 'service_type' => 'physiotherapist',
-                'service' => fake()->randomElement([
+                'reason' => fake()->randomElement([
                     'Physiotherapy Session',
                     'Rehabilitation therapy + Mobility exercises',
                     'Pain management + Stretching exercises',
