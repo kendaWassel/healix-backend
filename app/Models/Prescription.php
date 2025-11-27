@@ -10,10 +10,11 @@ class Prescription extends Model
         'consultation_id',
         'doctor_id',
         'patient_id',
-        'pharmacist_id',
-        'status',
+        'diagnosis',
         'notes',
-        'prescription_file_id',
+        'source',
+        'status',
+        'prescription_image_id'
     ];
     public function consultation()
     {
@@ -31,8 +32,8 @@ class Prescription extends Model
     {
         return $this->belongsTo(Pharmacist::class);
     }
-    public function medication(){
-         return $this->belongsToMany(Medication::class);
+    public function items(){
+         return $this->hasMany(PrescriptionMedication::class);
     }
 
 }

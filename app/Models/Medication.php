@@ -9,12 +9,9 @@ class Medication extends Model
     protected $fillable = [
         'name',
         'dosage',
-        'duration',
-        'notes',
-        'price',
     ];
-    public function prescriptions()
+    public function prescriptionItems()
     {
-        return $this->belongsToMany(Prescription::class);
+        return $this->hasMany(PrescriptionMedication::class);
     }
 }

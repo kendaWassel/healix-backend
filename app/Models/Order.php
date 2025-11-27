@@ -11,6 +11,7 @@ class Order extends Model
         'pharmacy_id',
         'patient_id',
         'status',
+
     ];
     
     public function prescription()
@@ -24,5 +25,9 @@ class Order extends Model
     public function patient()
     {
         return $this->belongsTo(Patient::class);
+    }
+    public function delivery()
+    {
+        return $this->hasOne(DeliveryAssignment::class, 'order_id');
     }
 }
