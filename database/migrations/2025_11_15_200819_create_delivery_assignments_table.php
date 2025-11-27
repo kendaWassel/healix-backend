@@ -17,13 +17,12 @@ return new class extends Migration
             $table->foreignId('delivery_id')->nullable()->constrained()->nullOnDelete();
 
             $table->enum('status', [
-                'assigned',
+                'pending',
+                'accepted',
                 'picked_up',
                 'delivering',
                 'delivered',
-                'failed'
-            ])->default('assigned');
-
+            ])->default('pending');
             $table->timestamp('assigned_at')->nullable();
             $table->timestamp('picked_at')->nullable();
             $table->timestamp('delivered_at')->nullable();

@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('dosage');       // 500mg, 10mg/ml
-            $table->string('form');         // tablet, syrup, injection...
             $table->timestamps();
         });
     }

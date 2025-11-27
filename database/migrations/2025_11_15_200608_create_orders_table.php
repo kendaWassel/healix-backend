@@ -17,7 +17,6 @@ return new class extends Migration
                 $table->foreignId('prescription_id')->constrained()->cascadeOnDelete();
                 $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
                 $table->foreignId('pharmacist_id')->constrained()->cascadeOnDelete();
-
                 $table->enum('status', [
                     'sent', 
                     'accepted', 
@@ -28,7 +27,6 @@ return new class extends Migration
                     'delivered'
                 ])->default('sent');
 
-                $table->text('pharmacist_notes')->nullable();
                 $table->timestamps();
         });
     }
