@@ -13,5 +13,16 @@ class Order extends Model
         'status',
     ];
     
-
+    public function prescription()
+    {
+        return $this->belongsTo(Prescription::class);
+    }
+    public function pharmacist()
+    {
+        return $this->belongsTo(Pharmacist::class);
+    }
+    public function patient()
+    {
+        return $this->belongsTo(Patient::class);
+    }
 }

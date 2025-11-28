@@ -13,11 +13,23 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('prescription_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('pharmacist_id')->constrained()->cascadeOnDelete();
-            $table->enum('status', ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'])->default('pending');
-            $table->timestamps();
+
+                $table->foreignId('prescription_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('patient_id')->constrained('users')->cascadeOnDelete();
+                $table->foreignId('pharmacy_id')->constrained()->cascadeOnDelete();
+
+                $table->enum('status', [
+                    'sent', 
+                    'accepted', 
+                    'rejected', 
+                    'ready',
+                    'waiting_pickup',
+                    'out_for_delivery',
+                    'delivered'
+                ])->default('sent');
+
+                $table->text('pharmacist_notes')->nullable();
+                $table->timestamps();
         });
     }
 
