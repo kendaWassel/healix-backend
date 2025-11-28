@@ -3,10 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\User;          
 
 class CareProvider extends Model
 {
+    protected $table = "care_providers";
     protected $fillable = [
         'user_id',
         'care_provider_image_id',
@@ -20,6 +20,10 @@ class CareProvider extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+    public function homeVisits()
+    {
+        return $this->hasMany(HomeVisit::class);
     }
 
 }
