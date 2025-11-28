@@ -4,7 +4,9 @@ namespace Database\Seeders;
 
 use App\Models\Doctor;
 use App\Models\Specialization;
+use Illuminate\Container\Attributes\DB;
 use Illuminate\Database\Seeder;
+use PhpParser\Comment\Doc;
 
 class DoctorSeeder extends Seeder
 {
@@ -26,6 +28,10 @@ class DoctorSeeder extends Seeder
                 'specialization_id' => $specializations->random()->id,
             ]);
         }
+        //create new doctor
+  
+        
+
     }
 }
 

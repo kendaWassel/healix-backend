@@ -13,13 +13,18 @@ return new class extends Migration
     {
         Schema::create('prescriptions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('consultation_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('doctor_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('patient_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('consultation_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId('doctor_id')->constrained('doctors')->cascadeOnDelete();
+            $table->foreignId('patient_id')->constrained('patients')->cascadeOnDelete();
 
             $table->string('diagnosis')->nullable();
-            $table->text('notes')->nullable();  // Notes for patient/pharmacy
+            $table->text(column: 'notes')->nullable();  // Notes for patient/pharmacy
 
+            //source
+            $table->enum('source', [
+                'doctor_written',
+                'patient_uploaded'
+            ])->default('doctor_written');
             $table->enum('status', [
                 'created', 
                 'sent_to_pharmacy',
@@ -32,7 +37,7 @@ return new class extends Migration
             ])->default('created');
 
             // if patient uploaded paper prescription instead of doctor writing
-            $table->unsignedBigInteger('prescription_file_id')->nullable();
+            $table->unsignedBigInteger('prescription_image_id')->nullable();
             $table->timestamps();
         });
     }

@@ -14,16 +14,15 @@ return new class extends Migration
         Schema::create('delivery_assignments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('delivery_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('delivery_id')->nullable()->constrained()->nullOnDelete();
 
             $table->enum('status', [
-                'assigned',
+                'pending',
+                'accepted',
                 'picked_up',
                 'delivering',
                 'delivered',
-                'failed'
-            ])->default('assigned');
-
+            ])->default('pending');
             $table->timestamp('assigned_at')->nullable();
             $table->timestamp('picked_at')->nullable();
             $table->timestamp('delivered_at')->nullable();

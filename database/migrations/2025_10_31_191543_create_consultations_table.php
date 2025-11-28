@@ -13,10 +13,9 @@ return new class extends Migration
     {
         Schema::create('consultations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('patient_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('patient_id')->constrained('patients')->onDelete('cascade');
             $table->foreignId('doctor_id')->constrained('doctors')->onDelete('cascade');
             $table->enum('type', ['call_now', 'schedule'])->default('schedule');
-            $table->enum('status', ['pending','scheduled','in_progress','completed','cancelled'])->default('pending');
             $table->timestamp('scheduled_at')->nullable();
             $table->timestamps();
         });

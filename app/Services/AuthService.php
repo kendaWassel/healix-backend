@@ -30,7 +30,7 @@ class AuthService
             return null;
         }
 
-        $token = $user->createToken('API Token')->plainTextToken;
+        $token = $user->createToken($user->email.'api-token')->plainTextToken;
 
         return [
             'token' => $token,
