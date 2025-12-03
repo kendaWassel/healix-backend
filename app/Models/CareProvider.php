@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class CareProvider extends Model
 {
+    use HasFactory;
+
     protected $table = "care_providers";
     protected $fillable = [
         'user_id',
@@ -25,5 +28,4 @@ class CareProvider extends Model
     {
         return $this->hasMany(HomeVisit::class);
     }
-
 }
