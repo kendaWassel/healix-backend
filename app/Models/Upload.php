@@ -16,6 +16,9 @@ class Upload extends Model
     public function user(){
         return $this->belongsTo(User::class);
     }
+    public function medicaRecorde(){
+        return $this->belongsTo(MedicalRecord::class);
+    }
     public function url(){
         return asset('/storage/'.$this->path);
     }

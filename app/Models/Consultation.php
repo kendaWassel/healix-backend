@@ -10,13 +10,11 @@ class Consultation extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        
+    protected $fillable = [    
         'patient_id',
         'doctor_id',
         'type',
         'status',
-        'start_time',
         'scheduled_at',
     ];
 
@@ -26,12 +24,12 @@ class Consultation extends Model
 
     public function patient(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'patient_id');
+        return $this->belongsTo(User::class);
     }
 
     public function doctor(): BelongsTo
     {
-        return $this->belongsTo(Doctor::class, 'doctor_id');
+        return $this->belongsTo(Doctor::class);
     }
     public function prescriptions()
     {
@@ -40,7 +38,7 @@ class Consultation extends Model
 
     public function rating()
     {
-        return $this->hasOne(Rating::class);
+        return $this->hasMany(Rating::class);
     }
 
 }

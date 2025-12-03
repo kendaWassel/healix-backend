@@ -5,6 +5,7 @@ namespace Database\Factories;
 use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Doctor;
+use App\Models\Patient;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -23,10 +24,10 @@ class ConsultationFactory extends Factory
         $statuses = ['pending','scheduled','in_progress','completed','cancelled'];
 
         return [
-            'patient_id' => User::factory()->state(fn () => [ 'role' => 'patient' ]),
+            'patient_id' => Patient::factory(),//->state(fn () => [ 'role' => 'patient' ]),
             'doctor_id' => Doctor::factory(),
             'type' => fake()->randomElement($callTypes),
-            'status' => 'completed',
+            'status' => fake()->randomElement($statuses),
             'scheduled_at' => Carbon::now()->addDays(fake()->numberBetween(1, 30))->setTime(
                 fake()->numberBetween(9, 16), // hour between 9 AM and 4 PM
                 fake()->randomElement([0, 15, 30, 45]) // quarter-hour increments

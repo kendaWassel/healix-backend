@@ -45,7 +45,7 @@ class SendConsultationReminders extends Command
         // Only get scheduled consultations (not call_now) that haven't been completed or cancelled
         $consultations = Consultation::with(['patient', 'doctor.user'])
             ->whereNotNull('scheduled_at')
-            ->where('type', 'schedule_later')
+            ->where('type', 'schedule')
             ->whereIn('status', ['scheduled', 'pending'])
             ->whereBetween('scheduled_at', [$reminderTime, $windowEnd])
             ->get();

@@ -50,7 +50,7 @@ class User extends Authenticatable implements MustVerifyEmail
     }
     public function patient()
     {
-        return $this->hasOne(Patient::class, 'user_id'); // explicit foreign key
+        return $this->hasOne(Patient::class); 
     }
     public function doctor() { 
         return $this->hasOne(Doctor::class); 

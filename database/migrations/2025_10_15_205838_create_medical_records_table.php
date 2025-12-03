@@ -18,9 +18,11 @@ return new class extends Migration
         Schema::create('medical_records', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(Patient::class)->constrained()->cascadeOnDelete()->cascadeOnUpdate();
+            $table->foreignIdFor(Doctor::class)->constrained()->cascadeOnDelete()->cascadeOnUpdate();
+            $table->foreignIdFor(Upload::class)->constrained()->cascadeOnDelete();
             $table->text('treatment_plan');
             $table->text('diagnosis');
-            $table->json('attachments')->nullable();// file IDs
+            $table->json('attachments_id')->nullable();// file IDs
             $table->text('chronic_diseases');
             $table->text('previous_surgeries');
             $table->text('allergies');

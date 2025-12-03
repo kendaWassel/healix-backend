@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('orders', function (Blueprint $table) {
                 $table->id();
 
-                $table->foreignId('prescription_id')->constrained()->cascadeOnDelete();
                 $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
                 $table->foreignId('pharmacist_id')->constrained()->cascadeOnDelete();
                 $table->enum('status', [

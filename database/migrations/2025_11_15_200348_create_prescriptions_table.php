@@ -25,6 +25,7 @@ return new class extends Migration
                 'doctor_written',
                 'patient_uploaded'
             ])->default('doctor_written');
+            
             $table->enum('status', [
                 'created', 
                 'sent_to_pharmacy',

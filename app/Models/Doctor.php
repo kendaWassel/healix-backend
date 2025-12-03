@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
 
 class Doctor extends Model
 {
@@ -22,6 +21,9 @@ class Doctor extends Model
     ];
     public function user() { 
         return $this->belongsTo(User::class); 
+    }
+    public function medicalRecordes() {
+        return $this->hasMany(MedicalRecord::class);
     }
     public function specialization() { 
         return $this->belongsTo(Specialization::class); 

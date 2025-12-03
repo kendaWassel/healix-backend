@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Events\ConsultationBooked;
 use App\Events\ConsultationCreated;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -20,7 +21,7 @@ class SendConsultationNotification
     /**
      * Handle the event.
      */
-    public function handle(ConsultationCreated $event): void
+    public function handle(ConsultationBooked $event): void
     {
         
         $event->doctor->notify(new ConsultationRequestedNotification(

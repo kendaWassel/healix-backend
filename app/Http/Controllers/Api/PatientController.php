@@ -6,6 +6,7 @@ use App\Models\Upload;
 use App\Models\Consultation;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\Patient;
 use Illuminate\Support\Facades\Auth;
 
 class PatientController extends Controller
@@ -27,7 +28,18 @@ class PatientController extends Controller
         ]);
         //get patient ID from authenticated user
         $user = Auth::user();
-        $patientId = $user->patient ? $user->patient->id : null;
+        $patient = Patient::where('user_id', $user->id)->first();
+
+        if (!$patient) {
+            return response()->json([
+                'status' => 'empty',
+                'message' => 'Patient not found for this user',
+                'data' => []
+            ], 404);
+        }
+
+        $patientId = $patient->id;
+
 
         try {
             $perPage = $request->get('per_page', 10);
@@ -45,7 +57,7 @@ class PatientController extends Controller
                 if ($doctor && !empty($doctor->doctor_image_id)) {
                     $upload = Upload::find($doctor->doctor_image_id);
                     if ($upload && $upload->file_path) {
-                        $doctorImage = asset('storage/' . ltrim($upload->file_path, '/'));
+                        $doctorImage = asset('storage/public/' . ltrim($upload->file_path, '/'));
                     }
                 }
 
