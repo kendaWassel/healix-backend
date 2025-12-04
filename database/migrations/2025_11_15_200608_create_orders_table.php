@@ -12,8 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('orders', function (Blueprint $table) {
-                $table->id();
+            $table->id();
 
+                $table->foreignId('prescription_id')->constrained()->cascadeOnDelete();
                 $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
                 $table->foreignId('pharmacist_id')->constrained()->cascadeOnDelete();
                 $table->enum('status', [
@@ -26,7 +27,7 @@ return new class extends Migration
                     'delivered'
                 ])->default('sent');
 
-                $table->timestamps();
+            $table->timestamps();
         });
     }
 

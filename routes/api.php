@@ -15,6 +15,9 @@ use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\SpecializationController;
 use App\Http\Controllers\Api\PhysiotherapistController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
+use App\Http\Controllers\Patient\PrescriptionStatusController;
+use App\Http\Controllers\Pharmacist\PrescriptionController;
+
 
 //public APIs (no auth required)
 Route::prefix('auth')->group(function () {
@@ -73,9 +76,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // Ratings
         Route::post('ratings/doctors/{doctor_id}', [RatingController::class, 'rateDoctor']);
         Route::get('ratings/consultations/{consultation_id}', [RatingController::class, 'getMyRatingForConsultation']);
+        Route::post('pharmacies/{pharmacy_id}/rate', [\App\Http\Controllers\Api\RatingController::class, 'ratePharmacy']);
+
 
         //Prescription
-        
+       Route::get('/prescriptions/{prescription_id}/status', [PrescriptionStatusController::class, 'show']);
     
 
     });
@@ -90,7 +95,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/home-visit/request', [HomeVisitController::class,'requestHomeVisit']);
 
     });
-
+    Route::prefix('pharmacist')->group(function () {
+    Route::get('/prescriptions', [PrescriptionController::class, 'index']);
+    Route::get('/prescriptions/{order_id}', [PrescriptionController::class, 'show']);
+    Route::post('/prescriptions/{order_id}/deliver', [PrescriptionController::class, 'deliver']);
+    Route::post('/prescriptions/{order_id}/accept', [PrescriptionController::class, 'accept']);
+    Route::post('/prescriptions/{order_id}/reject', [PrescriptionController::class, 'reject']);
+});
 
 
     // Provider Nurse

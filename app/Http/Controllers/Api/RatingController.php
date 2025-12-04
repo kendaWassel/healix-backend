@@ -211,6 +211,84 @@ class RatingController extends Controller
             ], 500);
         }
     }
+    public function ratePharmacy(Request $request, int $pharmacyId)
+    {
+    $validated = $request->validate([
+        'order_id' => 'required|integer|exists:orders,id',
+        'rating' => 'required|integer|min:1|max:5',
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        $patientUserId = Auth::id();
+        if (!$patientUserId) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthenticated.'
+            ], 401);
+        }
+
+        $patientModel = Auth::user()->patient;
+        if (!$patientModel) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Patient profile not found.'
+            ], 404);
+        }
+
+        // تحقق أن الطلب موجود ومرتبط بالمريض والصيدلية
+        $order = \App\Models\Order::where('id', $validated['order_id'])
+            ->where('patient_id', $patientModel->id)
+            ->where('pharmacist_id', $pharmacyId)
+            ->first();
+
+        if (!$order) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Order not found or unauthorized.'
+            ], 404);
+        }
+
+        // تحقق أن الطلب تم تسليمه
+        if (!in_array($order->status, ['delivered', 'completed'])) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'error',
+                'message' => 'You can rate the pharmacy only after receiving the order.'
+            ], 422);
+        }
+
+        // إنشاء التقييم
+        $rating = Rating::create([
+            'order_id' => $order->id,
+            'pharmacist_id' => $pharmacyId,
+            'patient_id' => $patientModel->id,
+            'doctor_id' => $order->prescription->doctor_id ?? null,
+            'consultation_id' => $order->prescription->consultation_id ?? null,
+            'stars' => $validated['rating'],
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => ['rating_id' => $rating->id],
+            'message' => 'Rating submitted'
+        ], 200);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to submit rating',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+    }
 
     
      
