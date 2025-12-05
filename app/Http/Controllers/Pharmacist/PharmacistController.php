@@ -1,17 +1,17 @@
 <?php
 
-namespace App\Http\Controllers\Pharmacist;
+namespace App\Http\Controllers\pharmacist;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use App\Models\Order;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 
-class PrescriptionController extends Controller
+class PharmacistController extends Controller
 {
     // List orders
-    public function index(Request $request)
+    public function listPrescriptions(Request $request)
     {
         $pharmacist = Auth::user()->pharmacist;
         if (!$pharmacist) {
@@ -85,7 +85,7 @@ class PrescriptionController extends Controller
     }
 
     // View prescription
-    public function show(Request $request, $orderId)
+    public function viewPrescription(Request $request, $orderId)
     {
         $status = $request->query('status'); // ?status=pending
 
@@ -169,7 +169,7 @@ class PrescriptionController extends Controller
     }
 
     // Complete/deliver prescription
-    public function deliver(Request $request, $orderId)
+    public function complete(Request $request, $orderId)
     {
         $validated = $request->validate([
             'delivered' => 'required|boolean',

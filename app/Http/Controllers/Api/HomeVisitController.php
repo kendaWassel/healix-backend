@@ -14,10 +14,9 @@ class HomeVisitController extends Controller
         $validated = $request->validate([
             'consultation_id' => 'required|exists:consultations,id',
             'patient_id' => 'required|exists:patients,id',
-            'service_type' => 'required|in:nurse,physio',
+            'service_type' => 'required|in:nurse,physiotherapist',
             'reason' => 'nullable|string|max:255',
-            'scheduled_at' => 'required|date',
-            'address' => 'required|string|max:255'
+            'scheduled_at' => 'required|date_format:H:i',
         ]);
 
         $doctor = auth()->user()->doctor;
@@ -44,10 +43,10 @@ class HomeVisitController extends Controller
         $homeVisit = HomeVisit::create([
             'consultation_id' => $validated['consultation_id'],
             'patient_id' => $validated['patient_id'],
+            'doctor_id' => $doctor->id,
             'service_type' => $validated['service_type'],
             'reason' => $validated['reason'],
             'scheduled_at' => $validated['scheduled_at'],
-            'address' => $validated['address'],
             'status' => 'pending'
         ]);
 

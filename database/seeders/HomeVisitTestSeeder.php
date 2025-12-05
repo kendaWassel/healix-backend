@@ -3,9 +3,10 @@
 namespace Database\Seeders;
 
 use App\Models\Doctor;
+use App\Models\Patient;
 use App\Models\HomeVisit;
 use App\Models\CareProvider;
-use App\Models\Patient;
+use App\Models\Consultation;
 use Illuminate\Database\Seeder;
 
 class HomeVisitTestSeeder extends Seeder
@@ -16,7 +17,8 @@ class HomeVisitTestSeeder extends Seeder
         HomeVisit::create([
             'patient_id' => 1,
             'doctor_id' => 1,
-            'careprovider_id' => 1,
+            'care_provider_id' => 1,
+            'consultation_id' => 1,
             'scheduled_at' => now()->addDays(2)->setHour(10)->setMinute(0),
             'service_type' => 'nurse',
             'reason' => 'Insulin injection + Blood pressure',
@@ -40,7 +42,8 @@ class HomeVisitTestSeeder extends Seeder
             HomeVisit::factory()->count(3)->state([
                 'patient_id' => fn() => $patients->random()->id,
                 'doctor_id' => fn() => $doctors->random()->id,
-                'careprovider_id' => $nurse->id,
+                'care_provider_id' => $nurse->id,
+                'consultation_id' => fn() => Consultation::factory()->create()->id,
                 'service_type' => 'nurse',
                 'reason' => fake()->randomElement([
                     'Insulin injection + Blood pressure',
@@ -56,7 +59,8 @@ class HomeVisitTestSeeder extends Seeder
             HomeVisit::factory()->count(2)->state([
                 'patient_id' => fn() => $patients->random()->id,
                 'doctor_id' => fn() => $doctors->random()->id,
-                'careprovider_id' => $nurse->id,
+                'care_provider_id' => $nurse->id,
+                'consultation_id' => fn() => Consultation::factory()->create()->id,
                 'service_type' => 'nurse',
                 'reason' => fake()->randomElement([
                     'Insulin injection + Blood pressure',
@@ -75,7 +79,8 @@ class HomeVisitTestSeeder extends Seeder
             HomeVisit::factory()->count(3)->state([
                 'patient_id' => fn() => $patients->random()->id,
                 'doctor_id' => fn() => $doctors->random()->id,
-                'careprovider_id' => $physio->id,
+                'care_provider_id' => $physio->id,
+                'consultation_id' => fn() => Consultation::factory()->create()->id,
                 'service_type' => 'physiotherapist',
                 'reason' => fake()->randomElement([
                     'Physiotherapy Session',
@@ -91,7 +96,8 @@ class HomeVisitTestSeeder extends Seeder
             HomeVisit::factory()->count(2)->state([
                 'patient_id' => fn() => $patients->random()->id,
                 'doctor_id' => fn() => $doctors->random()->id,
-                'careprovider_id' => $physio->id,
+                'care_provider_id' => $physio->id,
+                'consultation_id' => fn() => Consultation::factory()->create()->id,
                 'service_type' => 'physiotherapist',
                 'reason' => fake()->randomElement([
                     'Physiotherapy Session',

@@ -35,8 +35,11 @@ class DatabaseSeeder extends Seeder
             PharmacistSeeder::class,
             CareProviderSeeder::class,
             DeliverySeeder::class,
+            ConsultationSeeder::class,
             HomeVisitTestSeeder::class,
-            // ConsultationSeeder::class,
+            MedicationSeeder::class,
+            PrescriptionSeeder::class,
+            OrderSeeder::class,
         ]);
 
     }

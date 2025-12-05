@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class CareProvider extends Model
 {
+    use HasFactory;
     protected $table = "care_providers";
     protected $fillable = [
         'user_id',

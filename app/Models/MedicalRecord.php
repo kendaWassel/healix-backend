@@ -33,6 +33,7 @@ class MedicalRecord extends Model
     public function attachments(){
         return $this->hasMany(Upload::class);
     }
+    
 
 
     

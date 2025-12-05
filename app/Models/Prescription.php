@@ -3,13 +3,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Prescription extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'consultation_id',
         'doctor_id',
         'patient_id',
+        'pharmacist_id',
         'diagnosis',
         'notes',
         'source',
@@ -39,6 +42,9 @@ class Prescription extends Model
     {
     return $this->hasMany(PrescriptionMedication::class);
     }
-
-
+    
+    public function prescriptionImage()
+    {
+        return $this->belongsTo(Upload::class, 'prescription_image_id');
+    }
 }

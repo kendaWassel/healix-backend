@@ -16,13 +16,14 @@ class PatientFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' =>User::factory()->state(fn () => [ 'role' => 'patient' ]),
+            'user_id' => User::factory()->state(fn () => ['role' => 'patient']),
             'birth_date' => fake()->dateTimeBetween('-80 years', '-18 years'),
             'gender' => fake()->randomElement(['male', 'female']),
             'address' => fake()->address(),
             'latitude' => fake()->latitude(),
             'longitude' => fake()->longitude(),
         ];
+        
     }
 }
 

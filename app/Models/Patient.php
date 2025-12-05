@@ -37,9 +37,9 @@ class Patient extends Model
     }
     public function prescriptions()
     {
-        return $this->hasOne(Prescription::class);
+        return $this->hasMany(Prescription::class);
     }
-    public function consultaions(){
+    public function consultations(){
         return $this->hasMany(  Consultation::class);
     }
 }

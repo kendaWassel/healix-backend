@@ -281,100 +281,25 @@ class ConsultationController extends Controller
         ]);
     }
 
-
-    // public function startConsultation($id)
-    // {
-    //     // Verify patient ownership
-    //     $patient = Auth::user()->patient;
-    //     if (!$patient) {
-    //         return response()->json([
-    //             'status' => 'error',
-    //             'message' => 'Patient profile not found.'
-    //         ], 404);
-    //     }
-    //     $doctor = Auth::user()->doctor;
-    //     if (!$doctor) {
-    //         return response()->json([
-    //             'status' => 'error',
-    //             'message' => 'Doctor profile not found.'
-    //         ], 404);
-    //     }
-
-    //     $consultation = Consultation::where('id', $id)
-    //         ->where('patient_id', $patient->id)
-    //         ->where('doctor_id', $doctor->id)
-    //         ->first();
-
-    //     if (!$consultation) {
-    //         return response()->json([
-    //             'status' => 'error',
-    //             'message' => 'Consultation not found or not authorized.'
-    //         ], 404);
-    //     }
-
-    //     // Allowed types are 'schedule' and 'call_now'
-    //     if (!in_array($consultation->type, ['schedule', 'call_now'])) {
-    //         return response()->json([
-    //             'status' => 'error',
-    //             'message' => 'Invalid consultation type.'
-    //         ], 422);
-    //     }
-
-    //     // Only pending consultations can be started
-    //     if ($consultation->status !== 'pending') {
-    //         return response()->json([
-    //             'status' => 'error',
-    //             'message' => 'Consultation is not in a state to be started.'
-    //         ], 409);
-    //     }
-
-    //     // If it's a scheduled consultation, ensure scheduled_at has arrived
-    //     if ($consultation->type === 'schedule') {
-    //         if (empty($consultation->scheduled_at)) {
-    //             return response()->json([
-    //                 'status' => 'error',
-    //                 'message' => 'Scheduled time is missing for this consultation.'
-    //             ], 422);
-    //         }
-
-    //         $now = Carbon::now();
-    //         $scheduled = Carbon::parse($consultation->scheduled_at);
-    //         if ($now->lt($scheduled)) {
-    //             return response()->json([
-    //                 'status' => 'error',
-    //                 'message' => 'It is not time to start the scheduled consultation yet.'
-    //             ], 409);
-    //         }
-    //     }
-
-    //     // Start the consultation
-    //     $consultation->status = 'in_progress';
-    //     $consultation->start_time = $consultation->start_time ?? Carbon::now();
-    //     $consultation->save();
-
-    //     return response()->json([
-    //         'status' => 'success',
-    //         'message' => 'Call started for consultation.',
-    //         'data' => [
-    //             'consultation_id' => $consultation->id,
-    //             'status' => $consultation->status,
-    //             'start_time' => $consultation->start_time?->toDateTimeString(),
-    //         ],
-    //     ], 200);
-    // }
     public function endConsultation($id)
     {
-        // Use patient->id instead of user id
-        $patient = Auth::user()->patient;
-        if (!$patient) {
+        $user = Auth::user();
+        
+        // Determine if user is doctor or patient
+        $doctor = $user->doctor;
+        $patient = $user->patient;
+
+        if (!$doctor && !$patient) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Patient profile not found.'
-            ], 404);
+                'message' => 'Unauthorized.'
+            ], 403);
         }
 
+        // Fetch consultation based on role
         $consultation = Consultation::where('id', $id)
-            ->where('patient_id', $patient->id)
+            ->when($doctor, fn($q) => $q->where('doctor_id', $doctor->id))
+            ->when($patient, fn($q) => $q->where('patient_id', $patient->id))
             ->first();
 
         if (!$consultation) {
@@ -383,20 +308,28 @@ class ConsultationController extends Controller
                 'message' => 'Consultation not found or not authorized.'
             ], 404);
         }
+
         if ($consultation->status !== 'in_progress') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Consultation is not in a state to be completed.'
+                'message' => 'Consultation is not in progress.'
             ], 409);
         }
 
+        // End the consultation
         $consultation->status = 'completed';
-        $consultation->end_time = Carbon::now();
+        // $consultation->end_time = Carbon::now();
         $consultation->save();
+        $currentRole = $doctor ? 'doctor' : 'patient';
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Consultation marked as completed.'
+            'message' => 'Consultation ended successfully.',
+            'data' => [
+                'consultation_id' => $consultation->id,
+                'ended_by' => $currentRole,
+                'status' => $consultation->status,
+            ]
         ]);
     }
 }

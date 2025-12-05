@@ -7,6 +7,7 @@ use App\Models\Doctor;
 use App\Models\Patient;
 use App\Models\HomeVisit;
 use App\Models\CareProvider;
+use App\Models\Consultation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -25,7 +26,8 @@ class HomeVisitFactory extends Factory
         return [
             'patient_id' => Patient::factory()->state(fn () => [ 'role' => 'patient' ]),
             'doctor_id' => Doctor::factory(),
-            'careprovider_id' => CareProvider::factory()->state(fn () => [ 'type' => $serviceType ]),
+            'care_provider_id' => CareProvider::factory()->state(fn () => [ 'type' => $serviceType ]),
+            'consultation_id' => Consultation::factory(),
             'scheduled_at' => fake()->dateTimeBetween('+1 days', '+30 days'),
             'service_type' => $serviceType,
             'reason' => $serviceType === 'nurse' ? 'Nursing Care' : 'Physiotherapy Session',

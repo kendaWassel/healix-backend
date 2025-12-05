@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 
 class MedicalRecordController extends Controller
 {
-        public function viewDetails($patientId){
+    public function viewDetails($patientId){
 
         $doctor = Auth::user()->doctor;
         if (!$doctor) {
@@ -30,8 +30,6 @@ class MedicalRecordController extends Controller
             }
         // return the latest medical record for the patient (if any)
         $record = $patient->medicalRecords()->with('attachments')->latest()->first();
-        dd($record);
-
         $medicalRecordData = null;
         if ($record) {
             $attachments = $record->attachments()->get();
@@ -70,6 +68,7 @@ class MedicalRecordController extends Controller
     public function updateMedicalRecord(Request $request, $patientId)
     {
         $doctor = Auth::user()->doctor;
+
         if (!$doctor) {
             return response()->json([
                 'status' => 'error',
@@ -86,36 +85,34 @@ class MedicalRecordController extends Controller
         }
 
         $validated = $request->validate([
-            'diagnosis' => 'nullable|string',
-            'treatment_plan' => 'nullable|string',
-            'chronic_diseases' => 'nullable|string',
-            'previous_surgeries' => 'nullable|string',
-            'allergies' => 'nullable|string',
-            'current_medications' => 'nullable|string',
-            'attachments_id' => 'nullable|array',
-            'attachments_id.*' => 'integer|exists:uploads,id',
+            'diagnosis' => 'required|string',
+            'treatment_plan' => 'required|string',
+            'current_medications' => 'required|string',
         ]);
 
-        $record = MedicalRecord::updateOrCreate(
-            ['patient_id' => $patient->id, 'doctor_id' => $doctor->id],
-            [
-                'diagnosis' => $validated['diagnosis'] ?? null,
-                'treatment_plan' => $validated['treatment_plan'] ?? null,
-                'chronic_diseases' => $validated['chronic_diseases'] ?? null,
-                'previous_surgeries' => $validated['previous_surgeries'] ?? null,
-                'allergies' => $validated['allergies'] ?? null,
-                'current_medications' => $validated['current_medications'] ?? null,
-                'attachments_id' => $validated['attachments_id'] ?? null,
-            ]
-        );
+        $medicalRecord = MedicalRecord::where('patient_id', $patientId)
+            ->where('doctor_id', $doctor->id)
+            ->first();
+        if (!$medicalRecord) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Medical record not found for this patient and doctor.'
+            ], 404);
+        }
+
+        
+        $medicalRecord->update($validated);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Medical record updated successfully.',
             'data' => [
-                'medical_record_id' => $record->id,
-                'patient_id' => $record->patient_id,
-                'doctor_id' => $record->doctor_id,
+                'medical_record_id' => $medicalRecord->id,
+                'patient_id' => $medicalRecord->patient_id,
+                'doctor_id' => $medicalRecord->doctor_id,
+                'diagnosis' => $medicalRecord->diagnosis,
+                'treatment_plan' => $medicalRecord->treatment_plan,
+                'current_medications' => $medicalRecord->current_medications
             ]
         ], 200);
     }

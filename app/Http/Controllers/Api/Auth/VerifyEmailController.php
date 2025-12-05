@@ -74,7 +74,7 @@ class VerifyEmailController extends Controller
             $token = $user->createToken('Email Verification Token')->plainTextToken;
             
             // Redirect to frontend with success parameters
-            return redirect(env('FRONTEND_URL') . '/login?' . http_build_query([
+            return redirect(env('FRONTEND_URL') . 'api/auth/login?' . http_build_query([
                 'verified' => 'true',
                 'token' => $token,
                 'email' => $user->email,
@@ -82,7 +82,7 @@ class VerifyEmailController extends Controller
             ]));
         }
 
-        return redirect(env('FRONTEND_URL') . '/login?' . http_build_query([
+        return redirect(env('FRONTEND_URL') . 'api/auth/login?' . http_build_query([
             'verified' => 'false',
             'message' => 'Failed to verify email'
         ]));

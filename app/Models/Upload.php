@@ -8,6 +8,7 @@ class Upload extends Model
 {
     protected $fillable = [
         'user_id',
+        'patient_id',
         'category',
         'file',
         'file_path',
