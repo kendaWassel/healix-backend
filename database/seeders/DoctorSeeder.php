@@ -4,9 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\Doctor;
 use App\Models\Specialization;
-use Illuminate\Container\Attributes\DB;
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use PhpParser\Comment\Doc;
 
 class DoctorSeeder extends Seeder
 {
@@ -15,23 +14,31 @@ class DoctorSeeder extends Seeder
      */
     public function run(): void
     {
-        $specializations = Specialization::all();
+        $user = User::where('role', 'doctor')->first();
 
-        if ($specializations->isEmpty()) {
-            $this->command->warn('No specializations found. Please run SpecializationsTableSeeder first.');
-            return;
+        $specialization = Specialization::first();
+        if (! $specialization) {
+            $specialization = Specialization::create(['name' => 'General']);
         }
 
-        // Create 15 doctors with their associated users and specializations
-        for ($i = 0; $i < 15; $i++) {
-            Doctor::factory()->create([
-                'specialization_id' => $specializations->random()->id,
-            ]);
+        if ($user) {
+            Doctor::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'specialization_id' => $specialization->id,
+                    'gender' => 'male',
+                    'doctor_image_id' => null,
+                    'from' => '00:00:00',
+                    'to' => '23:59:59',
+                    'certificate_file_id' => null,
+                    'consultation_fee' => 50.00,
+                    'bank_account' => null,
+                ]
+            );
         }
-        //create new doctor
-  
-        
 
+        // Create additional doctors via factory
+        Doctor::factory()->count(10)->create();
     }
 }
 

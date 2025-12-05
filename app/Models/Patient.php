@@ -20,12 +20,12 @@ class Patient extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id'); // explicit foreign key
+        return $this->belongsTo(User::class); 
     }
 
     public function medicalRecords()
     {
-        return $this->hasMany(MedicalRecord::class);
+        return $this->hasOne(MedicalRecord::class);
     }
     public function ratings()
     {
@@ -37,6 +37,9 @@ class Patient extends Model
     }
     public function prescriptions()
     {
-        return $this->hasOne(Prescription::class);
+        return $this->hasMany(Prescription::class);
+    }
+    public function consultations(){
+        return $this->hasMany(  Consultation::class);
     }
 }

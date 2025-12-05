@@ -8,6 +8,7 @@ class Upload extends Model
 {
     protected $fillable = [
         'user_id',
+        'patient_id',
         'category',
         'file',
         'file_path',
@@ -15,6 +16,9 @@ class Upload extends Model
     ];
     public function user(){
         return $this->belongsTo(User::class);
+    }
+    public function medicaRecorde(){
+        return $this->belongsTo(MedicalRecord::class);
     }
     public function url(){
         return asset('/storage/'.$this->path);

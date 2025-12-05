@@ -14,9 +14,10 @@ return new class extends Migration
         Schema::create('prescriptions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('consultation_id')->nullable()->constrained()->cascadeOnDelete();
-            $table->foreignId('doctor_id')->constrained('doctors')->cascadeOnDelete();
+            $table->foreignId('doctor_id')->nullable()->constrained('doctors')->cascadeOnDelete();
             $table->foreignId('patient_id')->constrained('patients')->cascadeOnDelete();
-
+            $table->foreignId('pharmacist_id')->nullable()->constrained('pharmacists')->cascadeOnDelete();
+            
             $table->string('diagnosis')->nullable();
             $table->text(column: 'notes')->nullable();  // Notes for patient/pharmacy
 
@@ -25,6 +26,7 @@ return new class extends Migration
                 'doctor_written',
                 'patient_uploaded'
             ])->default('doctor_written');
+            
             $table->enum('status', [
                 'created', 
                 'sent_to_pharmacy',

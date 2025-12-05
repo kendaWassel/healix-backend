@@ -3,17 +3,30 @@
 namespace Database\Seeders;
 
 use App\Models\Patient;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class PatientSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // Create 20 patients with their associated users
-        Patient::factory()->count(20)->create();
+        $user = User::where('role', 'patient')->first();
+        if (!$user) {
+            return;
+        }
+
+        Patient::firstOrCreate([
+            'user_id' => $user->id,
+        ],[
+            'birth_date' => now()->subYears(30)->toDateString(),
+            'gender' => 'male',
+            'address' => '123 Main St',
+            'latitude' => null,
+            'longitude' => null,
+        ]);
+        Patient::factory()->count(5)->create();
+
+
+
     }
 }
-

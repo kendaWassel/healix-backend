@@ -11,7 +11,8 @@ class HomeVisit extends Model
     protected $fillable = [
         'consultation_id',
         'patient_id',
-        'careprovider_id',
+        'doctor_id',
+        'care_provider_id',
         'service_type',
         'reason',
         'scheduled_at',
@@ -22,16 +23,15 @@ class HomeVisit extends Model
     protected $casts = [
         'scheduled_at' => 'datetime',
     ];
-    protected $table = 'home_visits';
 
     public function patient()
     {
-        return $this->belongsTo(Patient::class, 'patient_id');
+        return $this->belongsTo(Patient::class);
     }
 
     public function careProvider()
     {
-        return $this->belongsTo(CareProvider::class, 'careprovider_id');
+        return $this->belongsTo(CareProvider::class );
     }
 
     public function doctor()

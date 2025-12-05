@@ -12,11 +12,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
             $table->foreignId('doctor_id')->constrained('doctors')->cascadeOnDelete();
-            $table->foreignId('careprovider_id')
+            $table->foreignId('care_provider_id')
             ->constrained('care_providers')
             ->cascadeOnDelete()
             ->nullable();// This will be NULL until a nurse/physio accepts the request
-            // $table->foreignId('consultation_id')->constrained('consultations')->cascadeOnDelete();
+            $table->foreignId('consultation_id')->constrained('consultations')->cascadeOnDelete();
             $table->dateTime('scheduled_at');
             $table->enum('service_type', ['nurse', 'physiotherapist']);
             $table->string('reason')->nullable();

@@ -55,13 +55,13 @@ class UploadController extends Controller
             'user_id' => $request->user()?->id,
             'category' => $category,
             'file' => $filename,
-            'file_path' => "{$category}/{$filename}",
+            'file_path' => $path,
             'mime' => $image->getClientMimeType(),
         ]);
 
         return response()->json([
             'image_id' => $upload->id,
-            'url' => asset('storage/' . $upload->file_path),
+            'url' => asset('storage/' . $category . $upload->file_path),
             'status' => 'uploaded'
         ]);
     }

@@ -13,36 +13,36 @@ use Illuminate\Auth\Events\Verified;
 class VerifyEmailController extends Controller
 {
     //send email verification to user
-    // public function sendVerificationEmail(Request $request)
-    // {
-    //     $user = $request->user();
+    public static function sendVerificationEmail(User $user)
+    {
+        
 
-    //     if ($user->hasVerifiedEmail()) {
-    //         return response()->json([
-    //             'message' => 'Email already verified'
-    //         ], 400);
-    //     }
+        if ($user->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Email already verified'
+            ], 400);
+        }
 
-    //     $verificationUrl = URL::temporarySignedRoute(
-    //         'verification.verify',
-    //         now()->addMinutes(60),
-    //         ['id' => $user->id, 'hash' => sha1($user->email)]
-    //     );
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $user->id, 'hash' => sha1($user->email)]
+        );
 
-    //     try {
-    //         Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
+        try {
+            Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
 
-    //         return response()->json([
-    //             'message' => 'Verification email sent successfully'
+            return response()->json([
+                'message' => 'Verification email sent successfully'
                 
-    //         ], 200);
-    //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'message' => 'Failed to send verification email',
-    //             'error' => $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to send verification email',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 
     public function verify(Request $request, $id, $hash)
     {
@@ -74,7 +74,7 @@ class VerifyEmailController extends Controller
             $token = $user->createToken('Email Verification Token')->plainTextToken;
             
             // Redirect to frontend with success parameters
-            return redirect(env('FRONTEND_URL') . '/login?' . http_build_query([
+            return redirect(env('FRONTEND_URL') . 'api/auth/login?' . http_build_query([
                 'verified' => 'true',
                 'token' => $token,
                 'email' => $user->email,
@@ -82,7 +82,7 @@ class VerifyEmailController extends Controller
             ]));
         }
 
-        return redirect(env('FRONTEND_URL') . '/login?' . http_build_query([
+        return redirect(env('FRONTEND_URL') . 'api/auth/login?' . http_build_query([
             'verified' => 'false',
             'message' => 'Failed to verify email'
         ]));

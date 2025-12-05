@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Models\User;
 use App\Models\Doctor;
 use App\Models\Upload;
@@ -65,7 +66,7 @@ class AuthService
             $this->handleFileUploads($user, $data);
 
             // Send verification email (capture success/failure)
-            $emailSent = $this->sendVerificationEmail($user);
+            $emailSent = VerifyEmailController::sendVerificationEmail($user);
 
             DB::commit();
 
@@ -237,19 +238,4 @@ class AuthService
         ])->filter()->values();
     }
 
-    private function sendVerificationEmail(User $user): bool
-    {
-        $verificationUrl = URL::temporarySignedRoute(
-            'verification.verify',
-            now()->addMinutes(60),
-            ['id' => $user->id, 'hash' => sha1($user->email)]
-        );
-
-        try {
-            Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
-            return true;
-        } catch (\Exception $e) {
-            return false;
-        }
-    }
 }
