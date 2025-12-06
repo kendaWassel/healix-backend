@@ -79,7 +79,7 @@ class NurseController extends Controller
         $perPage = $request->get('per_page', 10);
 
         $orders = HomeVisit::with('patient.user')
-            ->where('careprovider_id', $careProvider->id)
+            ->where('care_provider_id', $careProvider->id)
             ->where('service_type', 'nurse')
             ->whereIn('status', ['pending'])
             ->orderBy('scheduled_at', 'asc')
@@ -118,7 +118,7 @@ class NurseController extends Controller
 
        
         $visit = HomeVisit::where('id', $id)
-            ->where('careprovider_id', $careProvider->id ?? null)
+            ->where('care_provider_id', $careProvider->id ?? null)
             ->where('service_type', 'nurse')
             ->where('status', 'pending')
             ->first();

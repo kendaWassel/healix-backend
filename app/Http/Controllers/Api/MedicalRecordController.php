@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Doctor;
 use App\Models\Patient;
+use Illuminate\Http\Request;
 use App\Models\MedicalRecord;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Request;
 
 class MedicalRecordController extends Controller
 {
@@ -67,9 +68,9 @@ class MedicalRecordController extends Controller
     }
     public function updateMedicalRecord(Request $request, $patientId)
     {
-        $doctor = Auth::user()->doctor;
+        $user = Auth::user();
 
-        if (!$doctor) {
+        if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized - only doctors can update medical records.'
@@ -83,16 +84,15 @@ class MedicalRecordController extends Controller
                 'message' => 'Patient not found.'
             ], 404);
         }
-
         $validated = $request->validate([
             'diagnosis' => 'required|string',
             'treatment_plan' => 'required|string',
             'current_medications' => 'required|string',
         ]);
-
+        $doctor=Doctor::where('user_id', $user->id)->first();
         $medicalRecord = MedicalRecord::where('patient_id', $patientId)
-            ->where('doctor_id', $doctor->id)
             ->first();
+
         if (!$medicalRecord) {
             return response()->json([
                 'status' => 'error',
@@ -101,7 +101,12 @@ class MedicalRecordController extends Controller
         }
 
         
-        $medicalRecord->update($validated);
+        $medicalRecord->update([
+            'diagnosis' => $validated['diagnosis'],
+            'treatment_plan' => $validated['treatment_plan'],
+            'current_medications' => $validated['current_medications'],
+            'doctor_id' => $doctor->id,
+        ]);
 
         return response()->json([
             'status' => 'success',
@@ -109,7 +114,7 @@ class MedicalRecordController extends Controller
             'data' => [
                 'medical_record_id' => $medicalRecord->id,
                 'patient_id' => $medicalRecord->patient_id,
-                'doctor_id' => $medicalRecord->doctor_id,
+                'doctor_id' => $doctor->id,
                 'diagnosis' => $medicalRecord->diagnosis,
                 'treatment_plan' => $medicalRecord->treatment_plan,
                 'current_medications' => $medicalRecord->current_medications

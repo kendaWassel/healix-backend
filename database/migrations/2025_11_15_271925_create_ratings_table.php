@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('ratings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('consultation_id')->constrained('consultations')->onDelete('cascade');
-            $table->foreignId('doctor_id')->constrained('doctors')->onDelete('cascade');
+            $table->foreignId('consultation_id')->nullable()->constrained('consultations')->onDelete('cascade');
+            $table->foreignId('doctor_id')->nullable()->constrained('doctors')->onDelete('cascade');
             $table->foreignId('order_id')->nullable()->constrained('orders')->cascadeOnDelete();
+            $table->foreignId('patient_id')->nullable()->constrained('patients')->cascadeOnDelete();    
 
             $table->decimal('stars',5,0)->default(0);
             $table->timestamps();

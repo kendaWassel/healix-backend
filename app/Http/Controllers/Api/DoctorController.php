@@ -247,12 +247,11 @@ class DoctorController extends Controller
             $data = $consultations->map(function ($consultation) {
                 $patient = $consultation->patient;
                 $patientUser = $patient?->user;
-
                 return [
                     'consultation_id' => $consultation->id,
                     'patient_id' => $patient?->id,
-                    'patient_name' => $patientUser?->full_name ?? null,
-                    'patient_phone' => $patientUser?->phone ?? null,
+                    'patient_name' => $patientUser?->full_name,
+                    'patient_phone' => $patientUser->phone,
                     'status' => $consultation->status,
                     'type' => $consultation->type,
                     'scheduled_at' => optional($consultation->scheduled_at)->format('Y-m-d H:i'),
@@ -276,7 +275,7 @@ class DoctorController extends Controller
         $consultations = $query->orderBy('scheduled_at', 'asc')->paginate($perPage)->appends($request->query());
         // dd($consultations);
 
-        $data = $consultations->getCollection()->map(function ($consultation) {
+        $data = $consultations->getCollection()->map(function ($consultation) use ($user) {
 
             $patient = Patient::find($consultation->patient_id);
             $user = $patient?->user;
@@ -304,11 +303,6 @@ class DoctorController extends Controller
         ], 200);
     }
 
-    /**
-     * Doctor: Create a new prescription after a consultation.
-     *
-     * Endpoint: POST /api/doctor/prescriptions
-     */
     public function createPrescription(Request $request)
     {
         $validated = $request->validate([

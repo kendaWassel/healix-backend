@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\DoctorController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\PatientController;
+use App\Http\Controllers\Api\PharmacyController;
 use App\Http\Controllers\Api\HomeVisitController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\ConsultationController;
@@ -16,10 +17,7 @@ use App\Http\Controllers\Api\SpecializationController;
 use App\Http\Controllers\Api\PhysiotherapistController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\pharmacist\PharmacistController;
-use App\Http\Controllers\Api\PharmacyController;
-use App\Http\Controllers\Pharmacist\PrescriptionController;
-use App\Http\Controllers\Patient\PrescriptionStatusController;
-
+use App\Http\Controllers\StripeController;
 
 //public APIs (no auth required)
 Route::prefix('auth')->group(function () {
@@ -117,7 +115,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/pharmacies', [PharmacyController::class, 'getPharmacies']);
         Route::get('/pharmacies/{id}', [PharmacyController::class, 'getPharmacyDetails']);
 
-        
+
         // Prescription Management
         Route::get('/prescriptions', [PharmacistController::class, 'listPrescriptions']);
         Route::get('/prescriptions/{order_id}', [PharmacistController::class, 'viewPrescription']);
@@ -138,5 +136,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/schedules', [PhysiotherapistController::class, 'schedules']);
         Route::get('/orders', [PhysiotherapistController::class, 'orders']);
         Route::post('/orders/{id}/accept', [PhysiotherapistController::class, 'accept']);
+    });
+
+
+    //Payment Gateway
+    Route::prefix('payment')->group(function () {
+        Route::post('/create-checkout-session', [StripeController::class, 'createCheckoutSession']);
+
     });
 });

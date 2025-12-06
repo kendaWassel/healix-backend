@@ -15,22 +15,8 @@ class ConsultationSeeder extends Seeder
      */
     public function run(): void
     {
-        // $doctors = Doctor::all();
-        // $patients = User::where('role', 'patient')->get();
 
-        // if ($doctors->isEmpty() || $patients->isEmpty()) {
-        //     $this->command->warn('No doctors or patients found. Please run DoctorSeeder and PatientSeeder first.');
-        //     return;
-        // }
-
-        // // Create 50 consultations
-        // for ($i = 0; $i < 50; $i++) {
-        //     Consultation::factory()->create([
-        //         'doctor_id' => $doctors->random()->id,
-        //         'patient_id' => $patients->random()->id,
-        //     ]);
-        // }
-        Consultation::factory()->count(2)->create();
+        Consultation::factory()->count(6)->create();
         
     }
 

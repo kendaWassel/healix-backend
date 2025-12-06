@@ -135,7 +135,6 @@ class ConsultationController extends Controller
                 'status' => 'pending',
                 'start_time' => $validated['call_type'] === 'call_now' ? Carbon::now() : null,
                 'scheduled_at' => !empty($validated['scheduled_at']) ? Carbon::parse($validated['scheduled_at']) : null,
-                'end_time' => null,
             ]);
 
             DB::commit();
