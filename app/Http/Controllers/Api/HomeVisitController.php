@@ -31,7 +31,9 @@ class HomeVisitController extends Controller
         // Ensure consultation belongs to the doctor
         $consultation = Consultation::where('id', $validated['consultation_id'])
             ->where('doctor_id', $doctor->id)
+            ->where('patient_id', $validated['patient_id'])
             ->first();
+
 
         if (!$consultation) {
             return response()->json([

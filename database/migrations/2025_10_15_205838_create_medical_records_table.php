@@ -18,7 +18,7 @@ return new class extends Migration
         Schema::create('medical_records', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(Patient::class)->constrained()->cascadeOnDelete()->cascadeOnUpdate();
-            $table->foreignIdFor(Doctor::class)->constrained()->cascadeOnDelete()->cascadeOnUpdate();
+            $table->foreignIdFor(Doctor::class)->nullable()->constrained()->cascadeOnDelete()->cascadeOnUpdate();
             // $table->foreignIdFor(Upload::class)->constrained()->cascadeOnDelete();
             $table->text('treatment_plan');
             $table->text('diagnosis');

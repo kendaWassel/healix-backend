@@ -13,9 +13,9 @@ return new class extends Migration
             $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
             $table->foreignId('doctor_id')->constrained('doctors')->cascadeOnDelete();
             $table->foreignId('care_provider_id')
-            ->constrained('care_providers')
-            ->cascadeOnDelete()
-            ->nullable();// This will be NULL until a nurse/physio accepts the request
+                ->nullable() // This will be NULL until a nurse/physio accepts the request
+                ->constrained('care_providers')
+                ->cascadeOnDelete();
             $table->foreignId('consultation_id')->constrained('consultations')->cascadeOnDelete();
             $table->dateTime('scheduled_at');
             $table->enum('service_type', ['nurse', 'physiotherapist']);

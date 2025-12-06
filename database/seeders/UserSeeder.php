@@ -64,5 +64,6 @@ class UserSeeder extends Seeder
             'gender' =>'female',
             'type' => 'physiotherapist',
         ]);
+        User::factory()->count(5)->create();
     }
 }

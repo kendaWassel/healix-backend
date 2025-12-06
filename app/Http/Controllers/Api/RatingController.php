@@ -25,16 +25,17 @@ class RatingController extends Controller
         try {
             DB::beginTransaction();
 
-            $patientUserId = Auth::id();
-            if (!$patientUserId) {
+            $user = Auth::id();
+            if (!$user) {
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Unauthenticated.'
                 ], 401);
             }
-            $patientModel = Auth::user()->patient;
-            if (!$patientModel) {
+
+            $patient = Patient::where('user_id', $user)->first();
+            if (!$patient) {
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
@@ -47,23 +48,23 @@ class RatingController extends Controller
             if (!$doctor) {
                 DB::rollBack();
                 return response()->json([
-                    'status' => 'error',
+                    'status' => 'error',    
                     'message' => 'Doctor not found.'
                 ], 404);
             }
 
             // Find consultation
             $consultation = Consultation::where('id', $validated['consultation_id'])
-                ->where('patient_id', $patientUserId)
-                ->where('doctor_id', $doctorId)
-                ->first();
+            ->where('patient_id', $patient->id)
+            ->where('doctor_id', $doctorId)
+            ->first();            
             
 
             if (!$consultation) {
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Consultation not found or unauthorized.'
+                    'message' => 'Consultation not found'
                 ], 404);
             }
 
@@ -83,7 +84,7 @@ class RatingController extends Controller
                 $rating = Rating::create([
                     'consultation_id' => $consultation->id,
                     'doctor_id' => $doctorId,
-                    'patient_id' => $patientModel->id,
+                    'patient_id' => $patient->id,
                     'stars' => $validated['stars'],
                 ]);
             }

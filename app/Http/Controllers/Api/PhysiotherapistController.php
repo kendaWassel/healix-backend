@@ -27,7 +27,7 @@ class PhysiotherapistController extends Controller
         }
 
         $visits = HomeVisit::with('patient.user')
-            ->where('careprovider_id', $careProvider->id)
+            ->where('care_provider_id', $careProvider->id)
             ->where('service_type', 'physiotherapist')
             ->whereIn('status', ['accepted'])
             ->orderBy('scheduled_at', 'asc')
@@ -78,7 +78,7 @@ class PhysiotherapistController extends Controller
         $perPage = $request->get('per_page', 10);
 
         $orders = HomeVisit::with('patient.user')
-            ->where('careprovider_id', $careProvider->id)
+            ->where('care_provider_id', $careProvider->id)
             ->where('service_type', 'physiotherapist')
             ->whereIn('status', ['pending'])
             ->orderBy('scheduled_at', 'asc')
@@ -117,7 +117,7 @@ class PhysiotherapistController extends Controller
 
        
         $visit = HomeVisit::where('id', $id)
-            ->where('careprovider_id', $careProvider->id ?? null)
+            ->where('care_provider_id', $careProvider->id ?? null)
             ->where('service_type', 'physiotherapist')
             ->where('status', 'pending')
             ->first();
