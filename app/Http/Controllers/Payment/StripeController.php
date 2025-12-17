@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\payment;
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 
 class StripeController extends Controller
 {

@@ -30,9 +30,8 @@ class Pharmacist extends Model
     public function orders(){
         return $this->hasMany(Order::class);
     }
-    public function pharmacy()
-{
+    public function pharmacy(){
     return $this->belongsTo(Pharmacist::class);
-}
+    }
 
 }
