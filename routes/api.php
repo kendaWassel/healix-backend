@@ -17,7 +17,6 @@ use App\Http\Controllers\Api\SpecializationController;
 use App\Http\Controllers\Api\PhysiotherapistController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\pharmacist\PharmacistController;
-use App\Http\Controllers\StripeController;
 
 //public APIs (no auth required)
 Route::prefix('auth')->group(function () {
@@ -36,8 +35,8 @@ Route::post('/uploads/image', [UploadController::class, 'uploadImage']);
 Route::get('/specializations', [SpecializationController::class, 'listForRegistration']);
 
 // Public pharmacies listing (optional auth)
-Route::get('/pharmacies', [PharmacyController::class, 'index']);
-Route::get('/pharmacies/{id}', [PharmacyController::class, 'show']);
+// Route::get('/pharmacies', [PharmacyController::class, 'index']);
+// Route::get('/pharmacies/{id}', [PharmacyController::class, 'show']);
 
 
 
@@ -77,6 +76,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/consultations/{id}/call', [ConsultationController::class, 'startConsultation']);
         Route::post('/consultations/{id}/end', [ConsultationController::class, 'endConsultation']);
 
+        // Medical Recored
+        Route::get('/medical-record',[MedicalRecordController::class]);
+
         // Ratings
         Route::post('ratings/doctors/{doctor_id}', [RatingController::class, 'rateDoctor']);
         Route::get('ratings/consultations/{consultation_id}', [RatingController::class, 'getMyRatingForConsultation']);
@@ -95,18 +97,21 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('doctor')->group(function () {
 
         Route::get('/my-schedules', [DoctorController::class, 'getDoctorSchedules']);
-
         Route::post('/consultations/{id}/call', [ConsultationController::class, 'startConsultation']);
         Route::post('/consultations/{id}/end', [ConsultationController::class, 'endConsultation']);
 
         Route::get('/patients/{patient_id}/view-details', [MedicalRecordController::class, 'viewDetails']);
-        
         Route::put('patients/{patient_id}/medical-record/update', [MedicalRecordController::class, 'updateMedicalRecord']);
-        
         Route::post('/home-visit/request', [HomeVisitController::class, 'requestHomeVisit']);
-
         // Prescription (doctor)
         Route::post('/prescriptions', [DoctorController::class, 'createPrescription']);
+    });  
+    
+    
+    // Consultation (Doctor or Patient)
+    Route::prefix('consultations')->group(function(){
+        Route::post('/{id}/call', [ConsultationController::class, 'startConsultation']);
+        Route::post('/{id}/end', [ConsultationController::class, 'endConsultation']);
     });
 
     // Pharmacist
@@ -130,18 +135,28 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/schedules', [NurseController::class, 'schedules']);
         Route::get('/orders', [NurseController::class, 'orders']);
         Route::post('/orders/{id}/accept', [NurseController::class, 'accept']);
+
+        // view details
+        Route::get('/patients/{patient_id}/view-details',[MedicalRecordController::class,'viewDetails']);
+
     });
     // Provider Physiotherapist
     Route::prefix('provider/physiotherapist')->group(function () {
         Route::get('/schedules', [PhysiotherapistController::class, 'schedules']);
         Route::get('/orders', [PhysiotherapistController::class, 'orders']);
         Route::post('/orders/{id}/accept', [PhysiotherapistController::class, 'accept']);
+
+        //view details
+        Route::get('/patients/{patient_id}/view-details',[MedicalRecordController::class,'viewDetails']);
+
+
+
     });
 
 
     //Payment Gateway
-    Route::prefix('payment')->group(function () {
-        Route::post('/create-checkout-session', [StripeController::class, 'createCheckoutSession']);
+    // Route::prefix('payment')->group(function () {
+    //     Route::post('/create-checkout-session', [StripeController::class, 'createCheckoutSession']);
 
-    });
+    // });
 });

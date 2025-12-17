@@ -13,14 +13,6 @@ use Illuminate\Support\Facades\Auth;
 
 class PatientController extends Controller
 {
-    public function updateProfile()
-    {
-        //
-    }
-    public function rateService(Request $request)
-    {
-        //
-    }
     public function getPatientScheduledConsultations(Request $request)
     {
         $validated = $request->validate([
@@ -329,14 +321,14 @@ class PatientController extends Controller
         ]);
 
         $user = Auth::user();
-        $patient = Patient::where('user_id', $user->id)->first();
-
+        $patient = $user->patient;
         if (!$patient) {
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Patient not found for this user.',
             ], 404);
         }
+
 
         $prescription = Prescription::where('id', $prescriptionId)
             ->where('patient_id', $patient->id)

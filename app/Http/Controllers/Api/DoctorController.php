@@ -98,7 +98,9 @@ class DoctorController extends Controller
         $doctor = Doctor::find($doctorId);
 
         if (!$doctor) {
-            return response()->json(['message' => 'Doctor not found'], 404);
+            return response()->json([
+                'message' => 'Doctor not found'
+            ], 404);
         }
 
         // Use provided date or fallback to today (Y-m-d)
@@ -174,6 +176,12 @@ class DoctorController extends Controller
             ], 422);
         }
 
+        // Get booked slots for the date
+        $bookedSlots = Consultation::where('doctor_id', $doctor->id)
+            ->whereDate('scheduled_at', $date)
+            ->pluck(DB::raw("TIME(scheduled_at) as time"))
+            ->toArray();
+
         $availableSlots = [];
 
         foreach ($period as $slot) {
@@ -188,10 +196,15 @@ class DoctorController extends Controller
                 continue;
             }
 
-            $availableSlots[] = [
-                'time' => $slot->format('H:i'),
-                'is_available' => true,
-            ];
+            $slotTime = $slot->format('H:i');
+
+            // Check if slot is already booked
+            if (!in_array($slotTime, $bookedSlots)) {
+                $availableSlots[] = [
+                    'time' => $slotTime,
+                    'is_available' => true,
+                ];
+            }
         }
 
         return response()->json([
