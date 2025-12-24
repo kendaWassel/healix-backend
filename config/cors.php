@@ -15,19 +15,13 @@ return [
     |
     */
 
-        'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        'http://localhost:3000',
-        'https://localhost:8000',
-        'http://localhost:5173',
-        'https://localhost:5173',
-        'http://healix.infinityfreeapp.com',
-        'https://healix.infinityfreeapp.com',
-        '*'
-    ],
+    'allowed_origins' => ['http://localhost:5173', 'https://unjuicy-schizogenous-gibson.ngrok-free.dev'],
+
+    'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
 
@@ -38,4 +32,3 @@ return [
     'supports_credentials' => true,
 
 ];
-

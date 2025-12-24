@@ -28,11 +28,11 @@ class PharmacyController extends Controller
 
         $pharmacies = $query->paginate($perPage)->appends($request->query());
 
-        $now = Carbon::now();
+        $now = Carbon::now('GMT+2:00'); 
 
         $data = $pharmacies->getCollection()->map(function (Pharmacist $pharmacy) use ($now, $validated) {
-            $from = $pharmacy->from ? Carbon::createFromFormat('H:i:s', $pharmacy->from) : null;
-            $to   = $pharmacy->to ? Carbon::createFromFormat('H:i:s', $pharmacy->to) : null;
+            $from = Carbon::createFromFormat('H:i:s', $pharmacy->from,'GMT+2:00');
+            $to   = Carbon::createFromFormat('H:i:s', $pharmacy->to,'GMT+2:00');
 
             $openNow = false;
             if ($from && $to) {
@@ -47,8 +47,8 @@ class PharmacyController extends Controller
                 'latitude'  => $pharmacy->latitude ? (float) $pharmacy->latitude : null,
                 'longitude' => $pharmacy->longitude ? (float) $pharmacy->longitude : null,
                 'open_now'  => $openNow,
-                'from'      => $pharmacy->from,
-                'to'        => $pharmacy->to,
+                'from'      => $from,
+                'to'        => $to,
                 'rating'    => $pharmacy->rating_avg ? (float) $pharmacy->rating_avg : 0.0,
             ];
         })->values();

@@ -33,5 +33,12 @@ class Pharmacist extends Model
     public function pharmacy(){
     return $this->belongsTo(Pharmacist::class);
     }
+    public function isOpen()
+    {
+        $currentTime = now()->format('H:i:s');
+        $pharmacy = $this; // Assuming this model represents the pharmacy
+
+        return $currentTime >= $pharmacy->from && $currentTime <= $pharmacy->to;
+    }
 
 }

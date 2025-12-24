@@ -18,6 +18,10 @@ return new class extends Migration
             $table->foreignId('medication_id')->nullable()->constrained()->nullOnDelete();
             $table->string('boxes')->nullable();      
             $table->string('instructions')->nullable();
+
+            $table->integer('quantity')->default(1);
+            $table->decimal('price', 10, 2)->nullable();
+
             $table->timestamps();
         });
     }

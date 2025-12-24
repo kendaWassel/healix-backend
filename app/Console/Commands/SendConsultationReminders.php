@@ -5,9 +5,11 @@ namespace App\Console\Commands;
 use App\Models\Consultation;
 use App\Models\User;
 use App\Notifications\ConsultationReminderNotification;
+use App\Services\UltraMsgService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SendConsultationReminders extends Command
 {
@@ -35,7 +37,7 @@ class SendConsultationReminders extends Command
         $reminderMinutes = (int) $this->option('minutes');
         $windowMinutes = (int) $this->option('window');
         
-        $now = Carbon::now();
+        $now = Carbon::now('GMT+2:00');
         $reminderTime = $now->copy()->addMinutes($reminderMinutes);
         $windowEnd = $reminderTime->copy()->addMinutes($windowMinutes);
 
@@ -77,10 +79,17 @@ class SendConsultationReminders extends Command
                     continue;
                 }
 
+                // Get patient user
+                $patientUser = $patient->user;
+                if (!$patientUser) {
+                    $this->warn("Skipping consultation #{$consultation->id} - patient user not found");
+                    continue;
+                }
+
                 // Check if reminder was already sent to either patient or doctor
                 $patientReminderSent = DB::table('notifications')
                     ->where('notifiable_type', User::class)
-                    ->where('notifiable_id', $patient->id)
+                    ->where('notifiable_id', $patientUser->id)
                     ->where('type', ConsultationReminderNotification::class)
                     ->whereRaw('JSON_EXTRACT(data, "$.consultation_id") = ?', [$consultation->id])
                     ->exists();
@@ -97,18 +106,48 @@ class SendConsultationReminders extends Command
                     continue;
                 }
 
-                // Send reminder to patient
-                $patient->notify(
-                    new ConsultationReminderNotification($consultation, 'patient', $doctor->user)
-                );
+                $scheduledTime = $consultation->scheduled_at 
+                    ? $consultation->scheduled_at->format('Y-m-d H:i') 
+                    : 'now';
 
-                // Send reminder to doctor
-                $doctor->user->notify(
-                    new ConsultationReminderNotification($consultation, 'doctor', $patient)
-                );
+                // Send email and database reminder to patient
+                if (!$patientReminderSent) {
+                    $patientUser->notify(
+                        new ConsultationReminderNotification($consultation, 'patient', $doctor->user)
+                    );
+                    
+                    // Send WhatsApp to patient
+                    if ($patientUser->phone) {
+                        $this->sendWhatsAppReminder(
+                            $patientUser->phone,
+                            $patientUser->full_name ?? 'Patient',
+                            $doctor->user->full_name ?? 'Doctor',
+                            $scheduledTime,
+                            'patient'
+                        );
+                    }
+                }
+
+                // Send email and database reminder to doctor
+                if (!$doctorReminderSent) {
+                    $doctor->user->notify(
+                        new ConsultationReminderNotification($consultation, 'doctor', $patientUser)
+                    );
+                    
+                    // Send WhatsApp to doctor
+                    if ($doctor->user->phone) {
+                        $this->sendWhatsAppReminder(
+                            $doctor->user->phone,
+                            $doctor->user->full_name ?? 'Doctor',
+                            $patientUser->full_name ?? 'Patient',
+                            $scheduledTime,
+                            'doctor'
+                        );
+                    }
+                }
 
                 $sentCount++;
-                $this->info("Sent reminders for consultation #{$consultation->id} (Patient: {$patient->full_name}, Doctor: {$doctor->user->full_name})");
+                $this->info("Sent reminders (Email + WhatsApp) for consultation #{$consultation->id} (Patient: {$patientUser->full_name}, Doctor: {$doctor->user->full_name})");
 
             } catch (\Exception $e) {
                 $this->error("Failed to send reminder for consultation #{$consultation->id}: " . $e->getMessage());
@@ -117,6 +156,55 @@ class SendConsultationReminders extends Command
 
         $this->info("Successfully sent {$sentCount} reminder(s).");
         return 0;
+    }
+
+    /**
+     * Send WhatsApp reminder message
+     */
+    private function sendWhatsAppReminder(string $phone, string $recipientName, string $otherPartyName, string $scheduledTime, string $recipientType): void
+    {
+        try {
+            $ultraMsgService = new UltraMsgService();
+            
+            if (!$ultraMsgService->isConfigured()) {
+                $this->warn("UltraMsg not configured. Skipping WhatsApp reminder to {$recipientName}");
+                return;
+            }
+
+            if ($recipientType === 'patient') {
+                $message = "🔔 Consultation Reminder\n\n";
+                $message .= "Hello {$recipientName},\n\n";
+                $message .= "You have a consultation scheduled with Dr. {$otherPartyName} in 15 minutes.\n\n";
+                $message .= "Scheduled Time: {$scheduledTime}\n\n";
+                $message .= "Please be ready for your consultation.";
+            } else {
+                $message = "🔔 Consultation Reminder\n\n";
+                $message .= "Hello Dr. {$recipientName},\n\n";
+                $message .= "You have a consultation scheduled with {$otherPartyName} in 15 minutes.\n\n";
+                $message .= "Scheduled Time: {$scheduledTime}\n\n";
+                $message .= "Please be ready for your consultation.";
+            }
+
+            $result = $ultraMsgService->sendWhatsAppMessage($phone, $message);
+            
+            if ($result['success']) {
+                $this->info("WhatsApp reminder sent to {$recipientName} ({$phone})");
+            } else {
+                $this->warn("Failed to send WhatsApp reminder to {$recipientName}: {$result['message']}");
+                Log::warning('Failed to send WhatsApp reminder', [
+                    'phone' => $phone,
+                    'recipient' => $recipientName,
+                    'error' => $result['message']
+                ]);
+            }
+        } catch (\Exception $e) {
+            $this->error("Exception while sending WhatsApp reminder to {$recipientName}: " . $e->getMessage());
+            Log::error('Exception while sending WhatsApp reminder', [
+                'phone' => $phone,
+                'recipient' => $recipientName,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }
 

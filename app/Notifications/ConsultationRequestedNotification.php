@@ -2,37 +2,31 @@
 
 namespace App\Notifications;
 
+use App\Mail\ConsultationBookedMail;
 use Illuminate\Bus\Queueable;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Notifications\Notification;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Notification;
+use Illuminate\Notifications\Messages\BroadcastMessage;
+
 
 class ConsultationRequestedNotification extends Notification
 {
     use Queueable;
     protected $consultation;
     protected $patient;
-    
 
-    /**
-     * Create a new notification instance.
-     */
-    public function __construct($consultation, $patient)
+    public function __construct($consultation, $patient, $doctor)
     {
         $this->consultation = $consultation;
         $this->patient = $patient;
+        $this->doctor=$consultation->doctor;
     }
-
-    /**
-     * Get the notification's delivery channels.
-     *
-     * @return array<int, string>
-     */
     public function via(object $notifiable): array
     {
-        return ['database','broadcast'];
+        return ['broadcast', 'mail', 'database'];
     }
 
     /**
@@ -40,10 +34,17 @@ class ConsultationRequestedNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-                    ->line('The introduction to the notification.')
-                    ->action('Notification Action', url('/'))
-                    ->line('Thank you for using our application!');
+    $patientName = $this->patient->full_name ?? $this->patient->name;
+    $scheduledAt = optional($this->consultation->scheduled_at);
+
+    return (new MailMessage)
+        ->subject('New Consultation Requested')
+        ->markdown('emails.notifications.consultation-booked', [
+            'consultation' => $this->consultation,
+            'patient' => $this->patient,
+            'doctor' => $this->consultation->doctor
+        ]);
+
     }
     public function toDatabase(object $notifiable)
     {
@@ -58,20 +59,19 @@ class ConsultationRequestedNotification extends Notification
 
         ];
     }
-
-    public function toBroadcast($notifiable)
-    {
-        return new BroadcastMessage([
-            'title' => 'New Consultation Requested',
-            'message' => 'A new consultation has been requested by ' . ($this->patient->full_name ?? $this->patient->name),
-            'consultation_id' => $this->consultation->id,
-            'patient_id' => $this->patient->id,
-            'patient_name' => $this->patient->full_name ?? $this->patient->name,
-            'call_type' => $this->consultation->type,
-            'scheduled_at' => optional($this->consultation->scheduled_at)->toIso8601String(),
-        ]);
-        
+    public function toSms(object $notifiable): array{
+        $message = "New Consultation Requested by " . ($this->patient->full_name ?? $this->patient->name) . ".";
+        if ($this->consultation->scheduled_at) {
+            $message .= " Scheduled at: " . $this->consultation->scheduled_at->format('Y-m-d H:i');
+        }
+        $message .= " Type: " . ucfirst($this->consultation->type) . ".";
+        return [
+            'to' => $this->doctor->phone,
+            'message' => $message,
+        ];
     }
+    
+    
 
     public function broadcastOn(): array
     {
@@ -80,16 +80,4 @@ class ConsultationRequestedNotification extends Notification
         ];
     }
 
-
-    /**
-     * Get the array representation of the notification.
-     *
-     * @return array<string, mixed>
-     */
-    public function toArray(object $notifiable): array
-    {
-        return [
-            //
-        ];
-    }
 }

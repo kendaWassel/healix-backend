@@ -2,18 +2,16 @@
 
 namespace App\Providers;
 
+use App\Events\ConsultationBooked;
 use App\Events\ConsultationCreated;
 use Illuminate\Support\ServiceProvider;
 use App\Listeners\SendConsultationNotification;
 
 class EventServiceProvider extends ServiceProvider
-{
-    protected $listen = [
-        ConsultationCreated::class => [
-            SendConsultationNotification::class,
-
+{    protected $listen = [
+        ConsultationBooked::class => [
+            [SendConsultationNotification::class, 'handleConsultationBooked'],
         ],
-        
     ];
     /**
      * Register services.

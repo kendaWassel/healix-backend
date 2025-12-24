@@ -7,11 +7,16 @@ use App\Models\Doctor;
 use App\Models\Upload;
 use App\Models\Patient;
 use App\Models\Consultation;
-use App\Events\ConsultationBooked;
 use Illuminate\Http\Request;
+use App\Services\UltraMsgService;
+use App\Events\ConsultationBooked;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Mail\ConsultationBookedMail;
+use App\Services\HypersenderService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use App\Notifications\ConsultationRequestedNotification;
 
 
@@ -143,22 +148,50 @@ class ConsultationController extends Controller
             $consultation->load(['patient', 'doctor.user']);
             $doctor->loadMissing('user');
 
-            // Send database notification to doctor
-            if ($doctor->user) {
-                $doctor->user->notify(
-                    new ConsultationRequestedNotification($consultation, $patient)
-                );
-            }
-
             // Get patient user for event
             $patientUser = $consultation->patient;
             if (method_exists($patient, 'user') && $patient->user) {
                 $patientUser = $patient->user;
             }
 
-            // Broadcast real-time event to doctor
-            if ($doctor->user) {
-                event(new ConsultationBooked($consultation, $patientUser, $doctor->user));
+            //notify doctor
+            // $doctor->user->notify(
+                
+            //     new ConsultationRequestedNotification($consultation, $patientUser, $doctor->user)
+            // );
+            
+            //send whatsapp message to doctor
+            if ($doctor->user && $doctor->user->phone) {
+                try {
+                    $patientName = $patientUser->full_name ?? $patientUser->name ?? 'Unknown Patient';
+                    $consultationType = $consultation->type === 'call_now' ? 'Call Now' : 'Scheduled';
+                    $scheduledTime = $consultation->scheduled_at 
+                        ? $consultation->scheduled_at->format('Y-m-d H:i') 
+                        : 'Immediately';
+                    
+                    $whatsappMessage = "New Consultation Booked\n\n";
+                    $whatsappMessage .= "Patient: {$patientName}\n";
+                    $whatsappMessage .= "Type: {$consultationType}\n";
+                    $whatsappMessage .= "Time: {$scheduledTime}\n";
+                    $whatsappMessage .= "Please check your dashboard for more details.";
+                    
+                    $ultraMsgService = new UltraMsgService();
+                    $result = $ultraMsgService->sendWhatsAppMessage($doctor->user->phone, $whatsappMessage);
+                    
+                    if (!$result['success']) {
+                        Log::warning('Failed to send WhatsApp notification', [
+                            'doctor_id' => $doctor->id,
+                            'phone' => $doctor->user->phone,
+                            'error' => $result['message']
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    // Don't fail consultation creation if WhatsApp fails
+                    Log::error('Exception while sending WhatsApp message', [
+                        'doctor_id' => $doctor->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
             }
 
             $responseData = [
@@ -257,12 +290,12 @@ class ConsultationController extends Controller
 
             $now = Carbon::now();
             $scheduled = Carbon::parse($consultation->scheduled_at);
-            // if ($now->lt($scheduled)|| $now->lte($scheduled)) {
-            //     return response()->json([
-            //         'status' => 'error',
-            //         'message' => 'It is not time to start the scheduled consultation yet.'
-            //     ], 409);
-            // }
+            if ($now->lt($scheduled)|| $now->lte($scheduled)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'It is not time to start the scheduled consultation yet.'
+                ], 409);
+            }
         }
         // Start consultation
         $consultation->update([

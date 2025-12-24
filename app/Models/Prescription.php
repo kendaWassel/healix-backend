@@ -17,7 +17,8 @@ class Prescription extends Model
         'notes',
         'source',
         'status',
-        'prescription_image_id'
+        'prescription_image_id',
+        'total_price'
     ];
     public function consultation()
     {

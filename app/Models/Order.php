@@ -41,4 +41,8 @@ class Order extends Model
     {
         return $this->hasOne(DeliveryAssignment::class, 'order_id');
     }
+    public function items()
+    {
+        return $this->hasMany(OrderMedication::class);
+    }
 }

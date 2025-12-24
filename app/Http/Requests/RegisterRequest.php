@@ -36,8 +36,8 @@ class RegisterRequest extends FormRequest
                     'birth_date' => 'required|date',
                     'gender' => 'required|string|in:male,female',
                     'address' => 'required|string',
-                    'latitude' => 'required|numeric',
-                    'longitude' => 'required|numeric',
+                    'latitude' => 'nullable|numeric',
+                    'longitude' => 'nullable|numeric',
 
                     // Medical record fields (all optional)
                     'medical_record' => 'nullable|array',
@@ -47,7 +47,7 @@ class RegisterRequest extends FormRequest
                     'medical_record.allergies' => 'nullable|string',
                     'medical_record.current_medications' => 'nullable|string',
                     'medical_record.attachments' => 'nullable|array',
-                    'medical_record.attachments.*' => 'nullable|integer|exists:uploads,id',
+                    'medical_record.attachments.*' => 'nullable|integer',
                 ],
                 'doctor' => [
                     'specialization' => 'required|string|max:255',
@@ -78,7 +78,7 @@ class RegisterRequest extends FormRequest
                     'delivery_image_id' => 'required|exists:uploads,id',
                     'vehicle_type' => 'required|string|max:50',
                     'plate_number' => 'required|string|max:50',
-                    'driving_license_file_id' => 'required|exists:uploads,id',
+                    'driving_license_id' => 'required|exists:uploads,id',
                 ],
                 default => [],
             };
@@ -94,11 +94,23 @@ class RegisterRequest extends FormRequest
         return [
             'email.unique' => 'Email already exists',
             'phone.unique' => 'Phone number already exists',
-            'password.min' => 'Password must be at least 8 characters',
+            'password.min' => 'Password must be at least 6 characters',
             'role.in' => 'Invalid role selected',
             'gender.in' => 'Gender must be either male or female',
             'type.in' => 'Care provider type must be either nurse or physiotherapist',
         ];
     }
+
+    protected function failedValidation(ValidatorContract $validator)
+    {
+        throw new HttpResponseException(
+            response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422)
+        );
+    }
+
 
 }

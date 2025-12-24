@@ -67,6 +67,7 @@ class PhysiotherapistController extends Controller
 
         $user = Auth::user();
         $careProvider = $user->careProvider;
+        
 
         if (!$careProvider || $careProvider->type !== 'physiotherapist') {
             return response()->json([
@@ -89,7 +90,7 @@ class PhysiotherapistController extends Controller
             return [
                 'id' => $visit->id,
                 'patient_name' => $patient?->user?->full_name,
-                'service' => $visit->service,
+                'reason' => $visit->reason,
                 'address' => $patient?->address,
                 'scheduled_at' => $visit->scheduled_at->toIso8601String(),
                 'status' => $visit->status,

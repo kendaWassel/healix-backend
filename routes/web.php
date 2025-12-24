@@ -32,19 +32,6 @@ use Illuminate\Support\Facades\Route;
 
 
 Route::get('/', function () {
-    // $patientId =  22; // أو جاي من request
-    // $doctorId = 13;   // نفس الشي
-
-    // // استرجع كائن المستخدم من قاعدة البيانات
-    // $patient = User::findOrFail($patientId)->load('patient');
-    // $doctor =  User::findOrFail($doctorId)->load('doctor');
-    
-
-    // $consultation = Consultation::create(['patient_id' => $patientId, 'doctor_id' => $doctorId]); // استرجع أو أنشئ الـ Consultation
-
-    // event(new ConsultationCreated($patient, $doctor, $consultation));
-
-    // return 'Event fired';
     return view('welcome');
 });
 

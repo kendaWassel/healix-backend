@@ -11,6 +11,10 @@ class PrescriptionMedication extends Model
     protected $fillable = [
         'prescription_id',
         'medication_id',
+        'medicine_name',
+        'quantity',
+        'price',
+        'subtotal',
         'boxes',
         'instructions',
     ];
