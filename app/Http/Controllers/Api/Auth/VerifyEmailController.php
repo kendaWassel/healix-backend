@@ -48,38 +48,53 @@ class VerifyEmailController extends Controller
     {
         $user = User::findOrFail($id);
 
-        // Check if the URL signature is valid
         if (!$request->hasValidSignature()) {
-            return response()->json([
-                'message' => 'Invalid or expired verification link'
-            ], 400);
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Invalid or expired verification link'], 400);
+            }
+            return redirect(env('FRONTEND_URL') . '?verified=false&message=Invalid+or+expired+verification+link');
         }
 
         if (!hash_equals((string) $hash, sha1($user->email))) {
-            return response()->json([
-                'message' => 'Invalid verification link'
-            ], 400);
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Invalid verification link'], 400);
+            }
+            return redirect(env('FRONTEND_URL') . '?verified=false&message=Invalid+verification+link');
         }
 
         if ($user->hasVerifiedEmail()) {
-            return response()->json([
-                'message' => 'Email already verified'
-            ], 400);
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Email already verified'], 400);
+            }
+            return redirect(env('FRONTEND_URL') . '?verified=true&message=Email+already+verified');
         }
 
         if ($user->markEmailAsVerified()) {
             event(new Verified($user));
-            
-            // Create an authentication token
             $token = $user->createToken('Email Verification Token')->plainTextToken;
-            
-            // Redirect to frontend with success parameters
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'verified' => true,
+                    'token' => $token,
+                    'email' => $user->email,
+                    'message' => 'Email verified successfully',
+                ]);
+            }
+
             return redirect(env('FRONTEND_URL') . 'api/auth/login?' . http_build_query([
                 'verified' => 'true',
                 'token' => $token,
                 'email' => $user->email,
                 'message' => 'Email verified successfully'
             ]));
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'verified' => false,
+                'message' => 'Failed to verify email',
+            ], 500);
         }
 
         return redirect(env('FRONTEND_URL') . 'api/auth/login?' . http_build_query([

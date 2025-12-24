@@ -22,7 +22,7 @@ class DoctorFactory extends Factory
 
         // store as 24-hour DB-friendly TIME; accessors will format to 12-hour when read
         $from = Carbon::createFromTime($startHour, 0, 0)->format('H:i:s');
-        $to   = Carbon::createFromTime($endHour, 0, 0)->format('H:i:s');
+        $to   = Carbon::createFromTime($endHour + 12, 0, 0)->format('H:i:s');
 
         return [
             'user_id' => User::factory()->state(fn () => ['role' => 'doctor']),

@@ -3,22 +3,10 @@
 namespace App\Services;
 
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
-use App\Models\User;
-use App\Models\Doctor;
-use App\Models\Upload;
-use App\Models\Patient;
-use App\Models\Delivery;
-use App\Models\Pharmacist;
-use App\Models\CareProvider;
+use App\Models\{User,Doctor,Patient,Delivery,Pharmacist,CareProvider,Upload,MedicalRecord,Specialization};
 use Illuminate\Http\Request;
-use App\Models\MedicalRecord;
-use App\Models\Specialization;
 use App\Mail\VerificationEmail;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\{DB,Log,Hash,Mail,URL};
 
 class AuthService
 {
@@ -32,6 +20,13 @@ class AuthService
         }
 
         $token = $user->createToken($user->email.'api-token')->plainTextToken;
+        //return the type of care provider (nurse, therapist, etc.) along with role
+        if($user->role ==='care_provider'){
+            $careProvider = CareProvider::where('user_id', $user->id)->first();
+            if ($careProvider) {
+                $user->role = $careProvider->type;
+            }
+        }
 
         return [
             'token' => $token,
@@ -65,8 +60,8 @@ class AuthService
             // Handle file uploads
             $this->handleFileUploads($user, $data);
 
-            // Send verification email (capture success/failure)
-            $emailSent = VerifyEmailController::sendVerificationEmail($user);
+            // Send verification email
+            $this->sendVerificationEmail($user);
 
             DB::commit();
 
@@ -74,7 +69,6 @@ class AuthService
                 'status' => 'success',
                 'message' => 'User registered successfully. Please check your email for verification.',
                 'user_id' => $user->id,
-                'email_sent' => $emailSent,
             ];
 
         } catch (\Exception $e) {
@@ -83,7 +77,7 @@ class AuthService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            throw $e;
+            throw $e; 
         }
     }
 
@@ -148,14 +142,19 @@ class AuthService
                 'allergies' => $medical['allergies'] ?? '',
                 'current_medications' => $medical['current_medications'] ?? '',
             ]);
+            //attachments
+            if (isset($medical['attachments']) && is_array($medical['attachments'])) {
+                foreach ($medical['attachments'] as $fileId) {
+                    $upload = Upload::find($fileId);
+                    if ($upload) {
+                        $upload->user_id = $user->id;
+                        $upload->save();
+                    }
+                }
+            }
         }
-        if (!empty($medical['attachments']) && is_array($medical['attachments'])) {
-        Upload::whereIn('id', $medical['attachments'])
-            ->update([
-                'user_id' => $user->id,
-                'patient_id' => $patient->id,
-            ]);
-    }
+
+    
     }
 
 
@@ -164,6 +163,11 @@ class AuthService
     {
         // Handle specialization
         $specialization = Specialization::where('name', $data['specialization'])->first();
+        
+        if (!$specialization) {
+            throw new \Exception('Specialization not found: ' . $data['specialization']);
+        }
+        
         Doctor::create([
             'user_id' => $user->id,
             'specialization_id' => $specialization->id,
@@ -212,7 +216,7 @@ class AuthService
             'delivery_image_id' => $data['delivery_image_id'],
             'vehicle_type' => $data['vehicle_type'],
             'plate_number' => $data['plate_number'],
-            'driving_license_id' => $data['driving_license_file_id'],
+            'driving_license_id' => $data['driving_license_id'],
         ]);
     }
 
@@ -227,15 +231,54 @@ class AuthService
 
     private function getFileIds(array $data): \Illuminate\Support\Collection
     {
-        return collect($data)->only([
-            'medical_record.attachments',
+        $fileIds = collect();
+        
+        // Handle nested medical_record.attachments
+        if (isset($data['medical_record']['attachments']) && is_array($data['medical_record']['attachments'])) {
+            $fileIds = $fileIds->merge($data['medical_record']['attachments']);
+        }
+        
+        // Handle flat file ID fields
+        $flatFields = [
             'certificate_file_id',
             'doctor_image_id',
             'license_file_id',
             'care_provider_image_id',
             'delivery_image_id',
             'driving_license_id',
-        ])->filter()->values();
+        ];
+        
+        foreach ($flatFields as $field) {
+            if (isset($data[$field]) && $data[$field]) {
+                $fileIds->push($data[$field]);
+            }
+        }
+        
+        return $fileIds->filter()->values();
+    }
+
+    private function sendVerificationEmail(User $user): void
+    {
+        if ($user->hasVerifiedEmail()) {
+            return;
+        }
+
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $user->id, 'hash' => sha1($user->email)]
+        );
+
+        try {
+            Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
+        } catch (\Exception $e) {
+            // Log error but don't fail registration if email fails
+            Log::warning('Failed to send verification email during registration', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
 }

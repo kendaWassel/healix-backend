@@ -8,10 +8,10 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Schedule consultation reminder notifications to run every 5 minutes
-// Sends reminders 10 minutes before consultation starts
-Schedule::command('consultations:send-reminders --minutes=10 --window=5')
-    ->everyFiveMinutes()
+// Schedule consultation reminder notifications to run every minute
+// Sends reminders 15 minutes before consultation starts
+Schedule::command('consultations:send-reminders --minutes=15 --window=1')
+    ->everyMinute()
     ->withoutOverlapping()
     ->runInBackground();
 

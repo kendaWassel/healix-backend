@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Order;
 use App\Models\Upload;
 use App\Models\Patient;
-use App\Models\Prescription;
-use App\Models\Order;
+use App\Models\Pharmacist;
 use App\Models\Consultation;
+use App\Models\Prescription;
+use App\Models\OrderMedication;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -205,9 +207,8 @@ class PatientController extends Controller
 
         $doctorUser = $prescription->doctor?->user;
 
-        $medicines = $prescription->medications->map(function ($item) {
+        $medicines = $prescription->medications->map(function ($item) use ($prescription) {
             $med = $item->medication;
-
             return [
                 'name'         => $med?->name,
                 'dosage'       => $med?->dosage,
@@ -216,6 +217,17 @@ class PatientController extends Controller
             ];
         })->values();
 
+        if($prescription->source === 'patient_uploaded'){
+            // For patient-uploaded prescriptions, doctor details might be null
+            $doctorUser = null;
+            return response()->json([
+                'status' => 'success',
+                'data'   => [
+                    'id'          => $prescription->id,
+                    'prescription_image_url' => $prescription->prescriptionImage ? asset('storage/' . $prescription->prescriptionImage->file_path) : null,       
+                ],
+            ], 200);
+        }
         return response()->json([
             'status' => 'success',
             'data'   => [
@@ -224,7 +236,7 @@ class PatientController extends Controller
                 'diagnosis'   => $prescription->diagnosis,
                 'notes'       => $prescription->notes,
                 'status'      => $prescription->status,
-                'medicines'   => $medicines,
+                'medicines'   => $medicines,        
             ],
         ], 200);
     }
@@ -340,17 +352,26 @@ class PatientController extends Controller
                 'message' => 'Prescription not found.',
             ], 404);
         }
+        //pharmacy closed check depending on from ,to fields in pharmacies table
+        $pharmacist = Pharmacist::find($validated['pharmacy_id']);
+        if (!$pharmacist || !$pharmacist->isOpen()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Selected pharmacy is currently closed ,please choose another one.',
+            ], 400);
+        }
 
         // Create order for this prescription & pharmacy
         $order = Order::create([
             'prescription_id' => $prescription->id,
             'patient_id'      => $patient->id,
             'pharmacist_id'   => $validated['pharmacy_id'],
-            'status'          => 'sent',
+            'status'          => 'sent_to_pharmacy',
         ]);
 
         // Mark prescription as sent to pharmacy
         $prescription->update([
+            'pharmacist_id' => $validated['pharmacy_id'],
             'status' => 'sent_to_pharmacy',
         ]);
 
@@ -399,6 +420,173 @@ class PatientController extends Controller
                 ],
             ],
             'message' => ''
+        ], 200);
+    }
+
+    /**
+     * Patient: View prescription pricing (read-only)
+     * GET /api/patient/prescriptions/{id}/update-price
+     */
+    public function viewPrescriptionPricing($prescriptionId)
+    {
+        $user = Auth::user();
+        $patient = Patient::where('user_id', $user->id)->first();
+
+        if (!$patient) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Patient not found for this user.',
+            ], 404);
+        }
+
+        $prescription = Prescription::with('medications','pharmacist')
+            ->where('id', $prescriptionId)
+            ->where('patient_id', $patient->id)
+            ->first();
+
+        if (!$prescription) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Prescription not found or not authorized.',
+            ], 404);
+        }
+
+        // Check if prescription has been priced
+        if ($prescription->status !== 'accepted') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Prescription pricing not available yet.',
+            ], 404);
+        }
+        $pharmacy=$prescription->pharmacist->map(function($pharmacist){
+            return [
+                'id'=>$pharmacist->id,
+                'name'=>$pharmacist->name ?? null,
+            ];
+        });
+        $items = $prescription->medications->map(function ($medication) {
+            return [
+                'medicine_name' => $medication->medicine_name ?? $medication->medication->name ?? 'Unknown',
+                'quantity' => $medication->quantity ?? 1,
+                'price' => (float) ($medication->price ?? 0),
+            ];
+        
+        })->values();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'prescription_id' => $prescription->id,
+                'status' => $prescription->status,
+                'source' => $prescription->source,
+                'pharmacy' => $pharmacy,
+                'items' => $items,
+                'total_price' => (float) ($prescription->total_price ?? 0),
+            ],
+        ], 200);
+    }
+
+    /**
+     * Patient: Get all prescriptions with pricing
+     * GET /api/patient/prescriptions/pricing
+     */
+    public function getPrescriptionsWithPricing(Request $request)
+    {
+        $validated = $request->validate([
+            'page' => 'sometimes|integer|min:1',
+            'per_page' => 'sometimes|integer|min:1|max:100',
+        ]);
+
+        $user = Auth::user();
+        $patient = Patient::where('user_id', $user->id)->first();
+
+        if (!$patient) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Patient not found for this user.',
+                'data' => [],
+            ], 404);
+        }
+
+        $perPage = $request->get('per_page', 20);
+
+        // Get prescriptions that have been priced (status = 'accepted')
+        $prescriptions = Prescription::where('patient_id', $patient->id)
+            ->where('status', 'accepted')
+            ->orderByDesc('created_at')
+            ->paginate($perPage)->appends($request->query());
+
+        if ($prescriptions->isEmpty()) {
+            return response()->json([
+                'status' => 'empty',
+                'message' => 'No prescriptions with pricing found.',
+                'data' => [],
+                'meta' => [
+                    'current_page' => $prescriptions->currentPage(),
+                    'per_page' => $prescriptions->perPage(),
+                    'total_pages' => $prescriptions->lastPage(),
+                    'total_items' => $prescriptions->total(),
+                ],
+            ], 200);
+        }
+
+        $data = $prescriptions->getCollection()->map(function ($prescription) {
+            // Get the latest order for this prescription
+            $order = Order::with(['pharmacist', 'items.medication'])
+                ->where('prescription_id', $prescription->id)
+                ->orderByDesc('created_at')
+                ->first();
+
+            if (!$order || !$order->pharmacist) {
+                return null;
+            }
+
+            // Get pharmacy info
+            $pharmacy = [
+                'id' => $order->pharmacist->id,
+                'name' => $order->pharmacist->pharmacy_name ?? 'Unknown Pharmacy',
+            ];
+
+            // Get order medications (items)
+            $items = $order->items->map(function ($orderMedication) {
+                $quantity = $orderMedication->total_quantity ?? 1;
+                $totalPrice = (float) ($orderMedication->total_price ?? 0);
+                // Calculate unit price
+                $unitPrice = $quantity > 0 ? $totalPrice / $quantity : $totalPrice;
+                
+                return [
+                    'medicine_name' => $orderMedication->medication->name ?? 'Unknown',
+                    'quantity' => $quantity,
+                    'price' => $unitPrice,
+                ];
+            })->values();
+
+            // Calculate total quantity
+            $totalQuantity = $order->items->sum('total_quantity');
+
+            // Map source: 'patient_uploaded' to 'paper', 'doctor_written' to 'doctor'
+            $source = $prescription->source === 'patient_uploaded' ? 'paper' : 'doctor';
+
+            return [
+                'prescription_id' => $prescription->id,
+                'status' => $prescription->status,
+                'source' => $source,
+                'pharmacy' => $pharmacy,
+                'items' => $items,
+                'total_quantity' => $totalQuantity,
+                'total_price' => (float) ($prescription->total_price ?? 0),
+            ];
+        })->filter()->values();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $data,
+            'meta' => [
+                'current_page' => $prescriptions->currentPage(),
+                'per_page' => $prescriptions->perPage(),
+                'total_pages' => $prescriptions->lastPage(),
+                'total_items' => $prescriptions->total(),
+            ],
         ], 200);
     }
 }

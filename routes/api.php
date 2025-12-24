@@ -1,6 +1,4 @@
 <?php
-
-use App\Models\HomeVisit;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\NurseController;
 use App\Http\Controllers\Api\DoctorController;
@@ -34,12 +32,6 @@ Route::post('/uploads/image', [UploadController::class, 'uploadImage']);
 // Specializations for Registration
 Route::get('/specializations', [SpecializationController::class, 'listForRegistration']);
 
-// Public pharmacies listing (optional auth)
-// Route::get('/pharmacies', [PharmacyController::class, 'index']);
-// Route::get('/pharmacies/{id}', [PharmacyController::class, 'show']);
-
-
-
 
 // Protected APIs (auth required) and verified email
 
@@ -47,6 +39,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Auth actions
     Route::post('/auth/logout', [LoginController::class, 'logout']);
+
+    // Notifications (available for all authenticated users)
+    Route::get('/notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
+    Route::get('/notifications/unread', [\App\Http\Controllers\Api\NotificationController::class, 'unread']);
+    Route::get('/notifications/unread-count', [\App\Http\Controllers\Api\NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'destroy']);
 
 
     // Patient
@@ -61,14 +61,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // related to Doctors
         Route::get('/doctors/by-specialization', [DoctorController::class, 'getDoctorsBySpecialization']);
         Route::get('/doctors/{id}/available-slots', [DoctorController::class, 'getAvailableSlots']);
-
-        // Notifications (available for all authenticated users)
-        Route::get('/notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
-        Route::get('/notifications/unread', [\App\Http\Controllers\Api\NotificationController::class, 'unread']);
-        Route::get('/notifications/unread-count', [\App\Http\Controllers\Api\NotificationController::class, 'unreadCount']);
-        Route::post('/notifications/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
-        Route::post('/notifications/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
-        Route::delete('/notifications/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'destroy']);
 
 
         // Consultations
@@ -91,6 +83,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/prescriptions/upload', [PatientController::class, 'uploadPaperPrescription']);
         Route::get('/prescriptions/{prescription_id}/status', [PatientController::class, 'getPrescriptionStatus']);
         Route::post('/prescriptions/{prescription_id}/send', [PatientController::class, 'sendPrescriptionToPharmacy']);
+        Route::get('/prescriptions/pricing', [PatientController::class, 'getPrescriptionsWithPricing']);
     });
 
     // Doctor
@@ -127,6 +120,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/prescriptions/{order_id}/deliver', [PharmacistController::class, 'complete']);
         Route::post('/prescriptions/{order_id}/accept', [PharmacistController::class, 'accept']);
         Route::post('/prescriptions/{order_id}/reject', [PharmacistController::class, 'reject']);
+
+        //add price for medications
+        Route::post('/prescriptions/{id}/add-price', [PharmacistController::class, 'addPrice']);
+        
     });
 
 

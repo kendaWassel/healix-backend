@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Models\Doctor;
 use App\Models\Consultation;
 use Illuminate\Database\Seeder;
-use Carbon\Carbon;
 
 class ConsultationSeeder extends Seeder
 {

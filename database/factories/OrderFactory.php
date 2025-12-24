@@ -24,7 +24,7 @@ class OrderFactory extends Factory
             'patient_id'      => $prescription->patient_id ?? Patient::factory(),
             'pharmacist_id'   => Pharmacist::inRandomOrder()->first()->id ?? Pharmacist::factory(),
             'status'          => fake()->randomElement([
-                'sent',
+                'sent_to_pharmacy',
                 'accepted',
                 'rejected',
                 'ready',

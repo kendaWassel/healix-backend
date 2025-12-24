@@ -44,3 +44,4 @@ Broadcast::channel('patient.{patientId}', function ($user, $patientId) {
     
     return (int) $patient->id === (int) $patientId;
 });
+

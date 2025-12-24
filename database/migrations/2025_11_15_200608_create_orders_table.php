@@ -13,19 +13,22 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('prescription_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('pharmacist_id')->constrained()->cascadeOnDelete();
+            $table->enum('status', [
+                'sent_to_pharmacy',
+                'accepted',
+                'rejected',
+                'ready',
+                'waiting_pickup',
+                'out_for_delivery',
+                'delivered'
+            ])->default('sent_to_pharmacy');
 
-                $table->foreignId('prescription_id')->constrained()->cascadeOnDelete();
-                $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
-                $table->foreignId('pharmacist_id')->constrained()->cascadeOnDelete();
-                $table->enum('status', [
-                    'sent', 
-                    'accepted', 
-                    'rejected', 
-                    'ready',
-                    'waiting_pickup',
-                    'out_for_delivery',
-                    'delivered'
-                ])->default('sent');
+            //rejection reason from pharmacist
+            $table->text('rejection_reason')->nullable();
+                
 
             $table->timestamps();
         });

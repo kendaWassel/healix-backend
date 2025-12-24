@@ -40,6 +40,9 @@ return new class extends Migration
 
             // if patient uploaded paper prescription instead of doctor writing
             $table->unsignedBigInteger('prescription_image_id')->nullable();
+
+            $table->decimal('total_price', 10, 2)->nullable();
+
             $table->timestamps();
         });
     }
