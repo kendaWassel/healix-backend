@@ -298,7 +298,6 @@ class PharmacistController extends Controller
                     'dosage' => $dosage,
                     'quantity' => $quantity,
                     'price' => $price,
-                    'total_price' => $itemTotalPrice,
                 ];
             }
 
@@ -320,9 +319,9 @@ class PharmacistController extends Controller
                 'data' => [
                     'prescription_id' => $prescription->id,
                     'order_id' => $order->id,
-                    'items' => $updatedItems,
-                    'total_price' => $calculatedTotalPrice,
-                    'status' => $prescription->status,
+                    // 'items' => $updatedItems,
+                    // 'total_price' => $calculatedTotalPrice,
+                    // 'status' => $prescription->status,
                 ],
             ], 200);
 

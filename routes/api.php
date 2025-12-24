@@ -14,7 +14,7 @@ use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\SpecializationController;
 use App\Http\Controllers\Api\PhysiotherapistController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
-use App\Http\Controllers\pharmacist\PharmacistController;
+use App\Http\Controllers\Api\pharmacist\PharmacistController;
 
 //public APIs (no auth required)
 Route::prefix('auth')->group(function () {
