@@ -78,12 +78,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 
         // Prescription (patient)
-        Route::get('/prescriptions', [PatientController::class, 'getPatientPrescriptions']);
-        Route::get('/prescriptions/{prescription_id}', [PatientController::class, 'getPrescriptionDetails']);
-        Route::post('/prescriptions/upload', [PatientController::class, 'uploadPaperPrescription']);
-        Route::get('/prescriptions/{prescription_id}/status', [PatientController::class, 'getPrescriptionStatus']);
-        Route::post('/prescriptions/{prescription_id}/send', [PatientController::class, 'sendPrescriptionToPharmacy']);
-        Route::get('/prescriptions/pricing', [PatientController::class, 'getPrescriptionsWithPricing']);
+        Route::prefix('prescriptions')->group(function () {
+            Route::get('/', [PatientController::class, 'getPatientPrescriptions']);
+            Route::get('/{prescription_id}', [PatientController::class, 'getPrescriptionDetails']);
+            Route::post('/upload', [PatientController::class, 'uploadPaperPrescription']);
+            Route::post('/{prescription_id}/send', [PatientController::class, 'sendPrescriptionToPharmacy']);
+        });
+        //get prescriptions with pricing info
+        Route::get('/view-prescriptions-with-pricing', [PatientController::class, 'getPrescriptionsWithPricing']);
+
     });
 
     // Doctor
