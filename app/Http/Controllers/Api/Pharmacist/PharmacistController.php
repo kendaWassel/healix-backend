@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\Auth;
 
 class PharmacistController extends Controller
 {
-    // List orders
+    /**
+     * GET api/pharmacist/prescriptions
+     */
     public function listPrescriptions(Request $request)
     {
         $pharmacist = Auth::user()->pharmacist;
@@ -34,7 +36,7 @@ class PharmacistController extends Controller
             'pharmacist',
             'patient.user'
         ])->where('pharmacist_id', $pharmacist->id)
-        ->orderBy('created_at', 'desc');
+            ->orderBy('created_at', 'desc');
 
         $orders = $ordersQuery->paginate($perPage, ['*'], 'page', $page);
 
@@ -54,8 +56,8 @@ class PharmacistController extends Controller
 
         $data = $orders->getCollection()->map(function ($order) {
             $prescription = $order->prescription;
-            
-            if (!$prescription) {
+
+            if ($prescription && $prescription->status === 'accepted') {
                 return null;
             }
 
@@ -70,7 +72,7 @@ class PharmacistController extends Controller
                         'instructions' => $item->instructions ?? null,
                     ];
                 })->filter();
-                
+
                 $totalBoxes = $prescription->medications->sum('boxes');
 
                 return [
@@ -195,7 +197,6 @@ class PharmacistController extends Controller
                 ],
                 'message' => 'Order accepted'
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -209,12 +210,12 @@ class PharmacistController extends Controller
      * Add prices to prescription medications
      * POST /api/pharmacist/prescriptions/{id}/add-price
      */
-    public function addPrice(Request $request, $prescriptionId)
+    public function addPrice(Request $request, $orderId)
     {
         $validated = $request->validate([
             'items' => 'required|array|min:1',
             'items.*.medicine_name' => 'required|string|max:255',
-            'items.*.dosage' =>'required|string',
+            'items.*.dosage' => 'required|string',
             'items.*.price' => 'required|numeric|min:0',
         ]);
 
@@ -229,20 +230,9 @@ class PharmacistController extends Controller
                 ], 404);
             }
 
-            // Get prescription and verify pharmacist has access via order
-            $prescription = Prescription::with(['medications.medication'])
-                ->where('id', $prescriptionId)
-                ->first();
-
-            if (!$prescription) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Prescription not found.'
-                ], 404);
-            }
 
             // Verify pharmacist has access to this prescription via an order
-            $order = Order::where('prescription_id', $prescription->id)
+            $order = Order::where('id', $orderId)
                 ->where('pharmacist_id', $pharmacist->id)
                 ->first();
 
@@ -252,6 +242,7 @@ class PharmacistController extends Controller
                     'message' => 'Prescription not authorized for this pharmacist.'
                 ], 403);
             }
+            $prescription = $order->prescription;
 
             // Check if prescription is already priced
             if ($prescription->status === 'accepted') {
@@ -265,8 +256,6 @@ class PharmacistController extends Controller
             OrderMedication::where('order_id', $order->id)->delete();
 
             $totalPrice = 0;
-            $updatedItems = [];
-
             // Create order medications with prices
             foreach ($validated['items'] as $item) {
                 $medicineName = $item['medicine_name'];
@@ -319,12 +308,12 @@ class PharmacistController extends Controller
                 'data' => [
                     'prescription_id' => $prescription->id,
                     'order_id' => $order->id,
-                    // 'items' => $updatedItems,
-                    // 'total_price' => $calculatedTotalPrice,
-                    // 'status' => $prescription->status,
+                    'items' => $updatedItems,
+                    'total_quantity' => count($updatedItems),
+                    'total_price' => $calculatedTotalPrice,
+                    'status' => $prescription->status,
                 ],
             ], 200);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -373,7 +362,6 @@ class PharmacistController extends Controller
                     'delivery_method' => $order->delivery_method,
                 ]
             ], 200);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
