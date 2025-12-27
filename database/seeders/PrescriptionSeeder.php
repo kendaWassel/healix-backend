@@ -15,15 +15,23 @@ class PrescriptionSeeder extends Seeder
     {
         // Create prescriptions with medications
         Prescription::factory()
-            ->count(10)
-            ->create()
-            ->each(function (Prescription $prescription) {
-                PrescriptionMedication::factory()
-                    ->count(fake()->numberBetween(1, 4))
-                    ->create([
-                        'prescription_id' => $prescription->id,
-                    ]);
-            });
+    ->count(10)
+    ->create()
+    ->each(function (Prescription $prescription) {
+
+        $medications = PrescriptionMedication::factory()
+            ->count(fake()->numberBetween(1, 4))
+            ->create([
+                'prescription_id' => $prescription->id,
+            ]);
+
+        $prescription->update([
+            'total_quantity' => $medications->sum('boxes'),
+            'total_price' => $medications->sum(function ($m) {
+                return $m->boxes * $m->price;
+            }),
+        ]);
+    });
     }
 }
 

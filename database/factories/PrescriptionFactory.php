@@ -19,16 +19,17 @@ class PrescriptionFactory extends Factory
         $consultation = Consultation::inRandomOrder()->first() ?? Consultation::factory()->create();
 
         return [
-            'consultation_id'       => $consultation->id,
-            'doctor_id'             => $consultation->doctor_id ?? Doctor::factory(),
-            'patient_id'            => $consultation->patient_id ?? Patient::factory(),
-            'pharmacist_id'          => Pharmacist::inRandomOrder()->first()?->id,
-            'diagnosis'             => fake()->randomElement(['Flu', 'Bacterial throat infection', 'Migraine', 'Allergy']),
-            'notes'                 => fake()->sentence(),
-            'source'                => 'doctor_written',
-            'status'                => 'created',
-            'prescription_image_id' => null,
-        ];
+        'consultation_id' => Consultation::factory(),
+        'doctor_id' => Doctor::factory(),
+        'patient_id' => Patient::factory(),
+        'pharmacist_id' => Pharmacist::factory(),
+        'diagnosis' => $this->faker->word,
+        'notes' => $this->faker->sentence,
+        'source' => 'doctor_written',
+        'status' => 'created',
+        'total_quantity' => $this->faker->numberBetween(1, 10),
+        'total_price' => $this->faker->randomFloat(2, 10, 200),
+    ];
     }
 }
 
