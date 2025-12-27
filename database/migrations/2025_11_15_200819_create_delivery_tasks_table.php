@@ -14,11 +14,12 @@ return new class extends Migration {
 
             $table->enum('status', [
                 'pending',
-                'accepted',
-                'picked_up',
-                'delivering',
+                'picked_up_the_order',
+                'on_the_way',
                 'delivered',
             ])->default('pending');
+
+            
             $table->timestamp('assigned_at')->nullable();
             $table->timestamp('picked_at')->nullable();
             $table->timestamp('delivered_at')->nullable();

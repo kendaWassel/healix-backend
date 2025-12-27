@@ -52,4 +52,9 @@ class User extends Authenticatable implements MustVerifyEmail
     public function delivery() { 
         return $this->hasOne(Delivery::class); 
     }
+    
+    public function ratings()
+    {
+        return $this->hasMany(Rating::class);
+    }
 }

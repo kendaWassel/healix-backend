@@ -4,14 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DeliveryAssignment extends Model
+class DeliveryTask extends Model
 {
-    protected $table = "delivery_assignments";
+    protected $table = "delivery_tasks";
     protected $fillable = [
         'order_id',
         'delivery_id',
         'status',
         'assigned_at',
+        'picked_at',
         'delivered_at'
     ];
 
