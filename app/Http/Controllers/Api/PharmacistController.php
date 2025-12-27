@@ -1,14 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Api\pharmacist;
+namespace App\Http\Controllers\Api;
 
 use App\Models\Order;
-use App\Models\Prescription;
 use App\Models\Medication;
-use App\Models\OrderMedication;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Models\PrescriptionMedication;
 use Illuminate\Support\Facades\Auth;
 
 class PharmacistController extends Controller
@@ -252,9 +251,6 @@ class PharmacistController extends Controller
                 ], 422);
             }
 
-            // Clear existing order medications
-            OrderMedication::where('order_id', $order->id)->delete();
-
             $totalPrice = 0;
             // Create order medications with prices
             foreach ($validated['items'] as $item) {
@@ -272,17 +268,16 @@ class PharmacistController extends Controller
                 // Calculate total price for this medication (price * quantity)
                 $itemTotalPrice = $price * $quantity;
 
-                // Create order medication
-                $orderMedication = OrderMedication::create([
-                    'order_id' => $order->id,
+                // Add to prescription medications
+                PrescriptionMedication::create([
+                    'prescription_id' => $prescription->id,
                     'medication_id' => $medication->id,
-                    'total_quantity' => $quantity,
                     'total_price' => $itemTotalPrice,
+
                 ]);
 
                 $totalPrice += $itemTotalPrice;
                 $updatedItems[] = [
-                    'id' => $orderMedication->id,
                     'medicine_name' => $medicineName,
                     'dosage' => $dosage,
                     'quantity' => $quantity,
@@ -291,7 +286,7 @@ class PharmacistController extends Controller
             }
 
             // Calculate total price from order medications
-            $calculatedTotalPrice = OrderMedication::where('order_id', $order->id)
+            $calculatedTotalPrice = PrescriptionMedication::where('prescription_id', $prescription->id)
                 ->sum('total_price');
 
             // Update prescription with total price and status
@@ -323,6 +318,12 @@ class PharmacistController extends Controller
             ], 500);
         }
     }
+    /**
+     * Set prescription as ready to be picked up/delivered
+     * POST /api/pharmacist/prescriptions/{id}/complete
+     */
+
+
 
     // Complete/deliver prescription
     public function complete(Request $request, $orderId)

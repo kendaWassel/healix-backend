@@ -29,7 +29,14 @@ class Patient extends Model
     }
     public function ratings()
     {
-        return $this->hasMany(Rating::class);
+        return $this->hasManyThrough(
+            Rating::class,
+            User::class,
+            'id',        // Foreign key on users table
+            'user_id',   // Foreign key on ratings table
+            'user_id',   // Local key on patients table
+            'id'         // Local key on users table
+        );
     }
     public function homeVisits()
     {

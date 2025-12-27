@@ -1,6 +1,7 @@
 <?php
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\NurseController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\DoctorController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\UploadController;
@@ -123,6 +124,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/prescriptions/{order_id}/deliver', [PharmacistController::class, 'complete']);
         Route::post('/prescriptions/{order_id}/accept', [PharmacistController::class, 'accept']);
         Route::post('/prescriptions/{order_id}/reject', [PharmacistController::class, 'reject']);
+
+        //  Order Management
+        // Set order as ready
+        Route::post('/orders/{id}/ready', [OrderController::class, 'markReadyForDelivery']);
+
+
+
 
         //add price for medications
         Route::post('/prescriptions/{id}/add-price', [PharmacistController::class, 'addPrice']);

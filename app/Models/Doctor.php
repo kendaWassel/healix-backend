@@ -17,7 +17,8 @@ class Doctor extends Model
         'rating_avg', 
         'certificate_file_id',
         'specialization_id', 
-        'user_id'
+        'user_id',
+        'gender'
     ];
     public function user() { 
         return $this->belongsTo(User::class); 

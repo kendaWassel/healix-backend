@@ -7,25 +7,26 @@ use Illuminate\Database\Eloquent\Model;
 class Rating extends Model
 {
     protected $fillable = [
-        'doctor_id',
-        'patient_id',
-        'order_id',
-        'pharmacist_id',
-        'consultation_id',
+        'user_id',
+        'target_type',
+        'target_id',
         'stars',
     ];
     
-    public function doctor(){
-        return $this->belongsTo(Doctor::class);
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
-    public function patient()
+    public function target()
     {
-        return $this->belongsTo(Patient::class);
-    }
+        $modelClass = match($this->target_type) {
+            'doctor' => Doctor::class,
+            'pharmacist' => Pharmacist::class,
+            'care_provider' => CareProvider::class,
+            'delivery' => Delivery::class,
+        };
 
-    public function consultation()
-    {
-        return $this->belongsTo(Consultation::class);
+        return $modelClass::find($this->target_id);
     }
 }

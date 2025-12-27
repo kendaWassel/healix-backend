@@ -30,19 +30,13 @@ return new class extends Migration
             $table->enum('status', [
                 'created', 
                 'sent_to_pharmacy',
-                'accepted',
-                'rejected',
-                'ready',
-                'out_for_delivery',
-                'delivered',
-                'completed'
             ])->default('created');
 
             // if patient uploaded paper prescription instead of doctor writing
             $table->unsignedBigInteger('prescription_image_id')->nullable();
-
-            $table->decimal('total_price', 10, 2)->nullable();
-
+            //total quantity and price of all medications in the prescription
+            $table->integer('total_quantity');
+            $table->decimal('total_price', 10, 2);
             $table->timestamps();
         });
     }

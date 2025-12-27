@@ -18,7 +18,8 @@ class Prescription extends Model
         'source',
         'status',
         'prescription_image_id',
-        'total_price'
+        'total_quantity',// total quantity of all medications
+        'total_price',// total price of all medications
     ];
     public function consultation()
     {

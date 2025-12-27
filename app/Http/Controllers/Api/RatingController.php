@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Doctor;
 use App\Models\Rating;
 use App\Models\Patient;
+use App\Models\Pharmacist;
 use App\Models\Consultation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,15 +19,15 @@ class RatingController extends Controller
     public function rateDoctor(Request $request, int $doctorId)
     {
         $validated = $request->validate([
-            'consultation_id' => 'required|integer|exists:consultations,id',
+            'consultaion_id' => 'required',
             'stars' => 'required|integer|min:1|max:5',
         ]);
 
         try {
             DB::beginTransaction();
 
-            $user = Auth::id();
-            if (!$user) {
+            $userId = Auth::id();
+            if (!$userId) {
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
@@ -34,7 +35,7 @@ class RatingController extends Controller
                 ], 401);
             }
 
-            $patient = Patient::where('user_id', $user)->first();
+            $patient = Patient::where('user_id', $userId)->first();
             if (!$patient) {
                 DB::rollBack();
                 return response()->json([
@@ -53,44 +54,14 @@ class RatingController extends Controller
                 ], 404);
             }
 
-            // Find consultation
-            $consultation = Consultation::where('id', $validated['consultation_id'])
-            ->where('patient_id', $patient->id)
-            ->where('doctor_id', $doctorId)
-            ->first();            
-            
-
-            if (!$consultation) {
-                DB::rollBack();
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Consultation not found'
-                ], 404);
-            }
-
-            if ($consultation->status !== 'completed') {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'You can only rate a doctor after the consultation is completed.'
-                ], 422);
-            }
-
             // Create or update rating
-            $existing = Rating::where('consultation_id', $consultation->id)->first();
-            if ($existing) {
-                $existing->update(['stars' => $validated['stars']]);
-                $rating = $existing;
-            } else {
-                $rating = Rating::create([
-                    'consultation_id' => $consultation->id,
-                    'doctor_id' => $doctorId,
-                    'patient_id' => $patient->id,
-                    'stars' => $validated['stars'],
-                ]);
-            }
+            $rating = Rating::updateOrCreate(
+                ['user_id' => $userId, 'target_type' => 'doctor', 'target_id' => $doctorId],
+                ['stars' => $validated['stars']]
+            );
 
             // Update doctor average
-            $avgRating = Rating::where('doctor_id', $doctorId)->avg('stars');
+            $avgRating = Rating::where('target_type', 'doctor')->where('target_id', $doctorId)->avg('stars');
             $doctor->update(['rating_avg' => round($avgRating, 1)]);
 
             DB::commit();
@@ -100,8 +71,8 @@ class RatingController extends Controller
                 'message' => 'Rating submitted successfully',
                 'data' => [
                     'rating' => $rating->stars,
-                    'consultation_id' => $rating->consultation_id,
-                    'doctor_id' => $rating->doctor_id,
+                    'target_type' => $rating->target_type,
+                    'target_id' => $rating->target_id,
                     'updated_at' => $rating->updated_at
                 ]
             ], 200);
@@ -128,8 +99,9 @@ class RatingController extends Controller
         try {
             $doctor = Doctor::findOrFail($doctorId);
             
-            $query = Rating::with('patient.user')
-                ->where('doctor_id', $doctorId)
+            $query = Rating::with('user')
+                ->where('target_type', 'doctor')
+                ->where('target_id', $doctorId)
                 ->orderBy('created_at', 'desc');
 
             $perPage = $request->get('per_page', 10);
@@ -139,7 +111,7 @@ class RatingController extends Controller
                 return [
                     'id' => $rating->id,
                     'stars' => $rating->stars,
-                    'patient_name' => $rating->patient->user->full_name,
+                    'user_name' => $rating->user->full_name ?? 'Unknown',
                     'created_at' => $rating->created_at->format('Y-m-d H:i:s')
                 ];
             });
@@ -168,127 +140,65 @@ class RatingController extends Controller
             ], 500);
         }
     }
-    public function getMyRatingForConsultation($consultationId)
+    public function ratePharmacy(Request $request, int $pharmacyId)
     {
-        try {
-            // Verify consultation belongs to authenticated patient
-            $consultation = Consultation::where('id', $consultationId)
-                ->where('patient_id', Auth::id())
-                ->first();
+        $validated = $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+        ]);
 
-            if (!$consultation) {
+        try {
+            DB::beginTransaction();
+
+            $userId = Auth::id();
+            if (!$userId) {
+                DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Consultation not found or you do not have permission to view this rating'
+                    'message' => 'Unauthenticated.'
+                ], 401);
+            }
+
+            $patientModel = Auth::user()->patient;
+            if (!$patientModel) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Patient profile not found.'
                 ], 404);
             }
 
-            $rating = Rating::where('consultation_id', $consultationId)->first();
+            // Create or update rating
+            $rating = Rating::updateOrCreate(
+                ['user_id' => $userId, 'target_type' => 'pharmacist', 'target_id' => $pharmacyId],
+                ['stars' => $validated['rating']]
+            );
 
-            if (!$rating) {
-                return response()->json([
-                    'status' => 'success',
-                    'message' => 'No rating found for this consultation',
-                    'data' => null
-                ], 200);
+            // Update pharmacist average
+            $avgRating = Rating::where('target_type', 'pharmacist')->where('target_id', $pharmacyId)->avg('stars');
+            $pharmacist = Pharmacist::find($pharmacyId);
+            if ($pharmacist) {
+                $pharmacist->update(['rating_avg' => round($avgRating, 1)]);
             }
+
+            DB::commit();
 
             return response()->json([
                 'status' => 'success',
                 'data' => [
-                    'consultation_id' => $rating->consultation_id,
-                    'doctor_id' => $rating->doctor_id,
-                    'rating' => $rating->stars,
-                    'created_at' => $rating->created_at->format('Y-m-d H:i:s'),
-                    'updated_at' => $rating->updated_at->format('Y-m-d H:i:s')
-                ]
-            ], 200);
+                    'rating_id' => $rating->id
+                ],
+                'message' => 'Rating submitted'
+
+                ], 200);
 
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to retrieve rating',
+                'message' => 'Failed to submit rating',
                 'error' => $e->getMessage()
             ], 500);
         }
-    }
-    public function ratePharmacy(Request $request, int $pharmacyId)
-    {
-    $validated = $request->validate([
-        'order_id' => 'required|integer|exists:orders,id',
-        'rating' => 'required|integer|min:1|max:5',
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        $patientUserId = Auth::id();
-        if (!$patientUserId) {
-            DB::rollBack();
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthenticated.'
-            ], 401);
-        }
-
-        $patientModel = Auth::user()->patient;
-        if (!$patientModel) {
-            DB::rollBack();
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Patient profile not found.'
-            ], 404);
-        }
-
-        // تحقق أن الطلب موجود ومرتبط بالمريض والصيدلية
-        $order = \App\Models\Order::where('id', $validated['order_id'])
-            ->where('patient_id', $patientModel->id)
-            ->where('pharmacist_id', $pharmacyId)
-            ->first();
-
-        if (!$order) {
-            DB::rollBack();
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Order not found or unauthorized.'
-            ], 404);
-        }
-
-        // تحقق أن الطلب تم تسليمه
-        if (!in_array($order->status, ['delivered', 'completed'])) {
-            DB::rollBack();
-            return response()->json([
-                'status' => 'error',
-                'message' => 'You can rate the pharmacy only after receiving the order.'
-            ], 422);
-        }
-
-        // إنشاء التقييم
-        $rating = Rating::create([
-            'order_id' => $order->id,
-            'pharmacist_id' => $pharmacyId,
-            'patient_id' => $patientModel->id,
-            'doctor_id' => $order->prescription->doctor_id ?? null,
-            'consultation_id' => $order->prescription->consultation_id ?? null,
-            'stars' => $validated['rating'],
-        ]);
-
-        DB::commit();
-
-        return response()->json([
-            'status' => 'success',
-            'data' => ['rating_id' => $rating->id],
-            'message' => 'Rating submitted'
-        ], 200);
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Failed to submit rating',
-            'error' => $e->getMessage()
-        ], 500);
-    }
     }
 
     
