@@ -21,6 +21,6 @@ class Upload extends Model
         return $this->belongsTo(MedicalRecord::class);
     }
     public function url(){
-        return asset('/storage/'.$this->path);
+        return asset('/storage/'.$this->file_path);
     }
 }

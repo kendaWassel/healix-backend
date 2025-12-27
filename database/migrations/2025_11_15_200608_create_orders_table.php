@@ -20,14 +20,14 @@ return new class extends Migration
                 'sent_to_pharmacy',
                 'accepted',
                 'rejected',
-                'ready',
-                'waiting_pickup',
+                'ready_for_delivery',
                 'out_for_delivery',
                 'delivered'
             ])->default('sent_to_pharmacy');
 
             //rejection reason from pharmacist
             $table->text('rejection_reason')->nullable();
+            $table->decimal('total_amount', 10, 2);
                 
 
             $table->timestamps();

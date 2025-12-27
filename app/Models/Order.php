@@ -13,9 +13,8 @@ class Order extends Model
         'pharmacist_id',
         'patient_id',
         'status',
-        'delivered_at',
-        'delivery_method',
-        'rejection_reason',  
+        'rejection_reason',
+        'total_amount',
     ];
     
     protected $dates = [
@@ -37,12 +36,9 @@ class Order extends Model
         return $this->belongsTo(Patient::class);
     }
 
-    public function delivery()
+    public function deliveryTask()
     {
-        return $this->hasOne(DeliveryAssignment::class, 'order_id');
+        return $this->hasOne(DeliveryTask::class, 'order_id');
     }
-    public function items()
-    {
-        return $this->hasMany(OrderMedication::class);
-    }
+
 }

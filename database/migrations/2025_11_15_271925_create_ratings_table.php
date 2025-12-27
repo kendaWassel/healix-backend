@@ -13,12 +13,11 @@ return new class extends Migration
     {
         Schema::create('ratings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('consultation_id')->nullable()->constrained('consultations')->onDelete('cascade');
-            $table->foreignId('doctor_id')->nullable()->constrained('doctors')->onDelete('cascade');
-            $table->foreignId('order_id')->nullable()->constrained('orders')->cascadeOnDelete();
-            $table->foreignId('patient_id')->nullable()->constrained('patients')->cascadeOnDelete();    
-
-            $table->decimal('stars',5,0)->default(0);
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->enum('target_type', ['doctor', 'pharmacist', 'care_provider', 'delivery']);
+            $table->unsignedInteger('target_id');
+            $table->tinyInteger('stars')->check('stars BETWEEN 1 AND 5');
+            $table->unique(['user_id', 'target_type', 'target_id'], 'unique_rating');
             $table->timestamps();
         });
     }

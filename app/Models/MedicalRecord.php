@@ -18,7 +18,7 @@ class MedicalRecord extends Model
         'current_medications',
     ]; 
     protected $casts = [
-        'attachments' => 'array',
+        'attachments_id' => 'array',
     ];
 
     public function patient()

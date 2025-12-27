@@ -1,6 +1,7 @@
 <?php
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\NurseController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\DoctorController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\UploadController;
@@ -80,12 +81,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 
         // Prescription (patient)
-        Route::get('/prescriptions', [PatientController::class, 'getPatientPrescriptions']);
-        Route::get('/prescriptions/{prescription_id}', [PatientController::class, 'getPrescriptionDetails']);
-        Route::post('/prescriptions/upload', [PatientController::class, 'uploadPaperPrescription']);
-        Route::get('/prescriptions/{prescription_id}/status', [PatientController::class, 'getPrescriptionStatus']);
-        Route::post('/prescriptions/{prescription_id}/send', [PatientController::class, 'sendPrescriptionToPharmacy']);
-        Route::get('/prescriptions/pricing', [PatientController::class, 'getPrescriptionsWithPricing']);
+        Route::prefix('prescriptions')->group(function () {
+            Route::get('/', [PatientController::class, 'getPatientPrescriptions']);
+            Route::get('/{prescription_id}', [PatientController::class, 'getPrescriptionDetails']);
+            Route::post('/upload', [PatientController::class, 'uploadPaperPrescription']);
+            Route::post('/{prescription_id}/send', [PatientController::class, 'sendPrescriptionToPharmacy']);
+        });
+        //get prescriptions with pricing info
+        Route::get('/view-prescriptions-with-pricing', [PatientController::class, 'getPrescriptionsWithPricing']);
+
     });
 
     // Doctor
@@ -122,6 +126,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/prescriptions/{order_id}/deliver', [PharmacistController::class, 'complete']);
         Route::post('/prescriptions/{order_id}/accept', [PharmacistController::class, 'accept']);
         Route::post('/prescriptions/{order_id}/reject', [PharmacistController::class, 'reject']);
+
+        //  Order Management
+        // Set order as ready
+        Route::post('/orders/{id}/ready', [OrderController::class, 'markReadyForDelivery']);
+
+
+
 
         //add price for medications
         Route::post('/prescriptions/{id}/add-price', [PharmacistController::class, 'addPrice']);

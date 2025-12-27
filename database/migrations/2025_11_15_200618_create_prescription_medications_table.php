@@ -13,13 +13,10 @@ return new class extends Migration
     {
         Schema::create('prescription_medications', function (Blueprint $table) {
             $table->id();
-
             $table->foreignId('prescription_id')->constrained()->cascadeOnDelete();
             $table->foreignId('medication_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('boxes')->nullable();      
+            $table->string('boxes')->nullable();      //the same as quantity 
             $table->string('instructions')->nullable();
-
-            $table->integer('quantity')->default(1);
             $table->decimal('price', 10, 2)->nullable();
 
             $table->timestamps();

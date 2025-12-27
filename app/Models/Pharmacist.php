@@ -17,6 +17,9 @@ class Pharmacist extends Model
         'latitude',
         'longitude',
         'bank_account',
+        'from',
+        'to',
+        'rating_avg',
     ];
 
     public function user()
@@ -29,9 +32,6 @@ class Pharmacist extends Model
     }
     public function orders(){
         return $this->hasMany(Order::class);
-    }
-    public function pharmacy(){
-    return $this->belongsTo(Pharmacist::class);
     }
     public function isOpen()
     {

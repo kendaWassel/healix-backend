@@ -23,15 +23,15 @@ class OrderFactory extends Factory
             'prescription_id' => $prescription->id,
             'patient_id'      => $prescription->patient_id ?? Patient::factory(),
             'pharmacist_id'   => Pharmacist::inRandomOrder()->first()->id ?? Pharmacist::factory(),
-            'status'          => fake()->randomElement([
-                'sent_to_pharmacy',
-                'accepted',
-                'rejected',
-                'ready',
-                'waiting_pickup',
-                'out_for_delivery',
-                'delivered',
-            ]),
+            'status' => $this->faker->randomElement([
+            'sent_to_pharmacy',
+            'accepted',
+            'rejected',
+            'ready_for_delivery',
+            'out_for_delivery',
+            'delivered',
+        ]),
+            'total_amount' => fn () => Prescription::inRandomOrder()->first()->total_price,
         ];
     }
 }
