@@ -2,14 +2,16 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MedicalRecord extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'patient_id',
         'doctor_id',
-        'attachments_id',
         'treatment_plan',
         'diagnosis',
         'chronic_diseases',
@@ -17,9 +19,9 @@ class MedicalRecord extends Model
         'allergies',
         'current_medications',
     ]; 
-    protected $casts = [
-        'attachments_id' => 'array',
+    protected $casts = [        
     ];
+    
 
     public function patient()
     {
@@ -30,11 +32,9 @@ class MedicalRecord extends Model
     {
         return $this->belongsTo(Doctor::class);
     }
-    public function attachments(){
-        return $this->hasMany(Upload::class);
+
+    public function attachments()
+    {
+        return $this->belongsToMany(Upload::class, 'medical_record_uploads');
     }
-    
-
-
-    
 }

@@ -34,9 +34,10 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-    'tracer' => [
-        'url'   => env('TRACCAR_SMS_URL', 'https://www.traccar.org/sms/'),
-        'token' => env('TRACCAR_SMS_TOKEN'),
+    'traccar_sms' => [
+        'url'   => env('TRACCER_SMS_URL', 'https://www.traccar.org/sms/'),
+        'api_key' => env('TRACCER_SMS_API_KEY'),
 
     ],
+    
 ];

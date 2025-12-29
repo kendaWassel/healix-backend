@@ -18,15 +18,17 @@ class AuthService
         if (!$user || !Hash::check($password, $user->password)) {
             return null;
         }
+        //return the type of care provider (nurse, therapist) along with role
 
-        $token = $user->createToken($user->email.'api-token')->plainTextToken;
-        //return the type of care provider (nurse, therapist, etc.) along with role
         if($user->role ==='care_provider'){
             $careProvider = CareProvider::where('user_id', $user->id)->first();
             if ($careProvider) {
                 $user->role = $careProvider->type;
             }
         }
+
+        $token = $user->createToken($user->email.'api-token')->plainTextToken;
+
 
         return [
             'token' => $token,
@@ -123,38 +125,41 @@ class AuthService
             'birth_date' => $data['birth_date'],
             'gender' => $data['gender'],
             'address' => $data['address'],
-            'latitude' => $data['latitude'],
-            'longitude' => $data['longitude'],
+            'latitude' => $data['latitude'] ?? null,
+            'longitude' => $data['longitude'] ?? null,
         ]);
 
-        $medical = $data['medical_record'] ?? $data;
-        if (
-            isset($medical['treatment_plan']) || isset($medical['diagnosis']) || isset($medical['attachments']) || isset($medical['chronic_diseases']) || isset($medical['previous_surgeries']) || isset($medical['allergies']) || isset($medical['current_medications'])
-        ) {
+        // Always create a medical record for new patients
+        $medical = $data['medical_record'] ?? [];
+        
+        $medicalRecord = MedicalRecord::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => null, // No doctor assigned during registration
+            'treatment_plan' => $medical['treatment_plan'] ?? null,
+            'diagnosis' => $medical['diagnosis'] ?? null,
+            'chronic_diseases' => $medical['chronic_diseases'] ?? null,
+            'previous_surgeries' => $medical['previous_surgeries'] ?? null,
+            'allergies' => $medical['allergies'] ?? null,
+            'current_medications' => $medical['current_medications'] ?? null,
+        ]);
+
+        // Attach uploads if provided (using pivot table relationship)
+        if (isset($medical['attachments']) && is_array($medical['attachments']) && !empty($medical['attachments'])) {
+            // Validate that all upload IDs exist
+            $file = Upload::whereIn('id', $medical['attachments'])
+                ->where('category', 'medical_record')
+                //split to file and image
+                ->pluck('id')
+                ->toArray();
             
-            MedicalRecord::create([
-                'patient_id' => $patient->id,
-                'treatment_plan' => $medical['treatment_plan'] ?? '',
-                'diagnosis' => $medical['diagnosis'] ?? '',
-                'attachments' => is_array($medical['attachments']) ? implode(',', $medical['attachments']) : ($medical['attachments'] ?? ''),
-                'chronic_diseases' => $medical['chronic_diseases'] ?? '',
-                'previous_surgeries' => $medical['previous_surgeries'] ?? '',
-                'allergies' => $medical['allergies'] ?? '',
-                'current_medications' => $medical['current_medications'] ?? '',
-            ]);
-            //attachments
-            if (isset($medical['attachments']) && is_array($medical['attachments'])) {
-                foreach ($medical['attachments'] as $fileId) {
-                    $upload = Upload::find($fileId);
-                    if ($upload) {
-                        $upload->user_id = $user->id;
-                        $upload->save();
-                    }
-                }
+            if (!empty($validUploadIds)) {
+                // Update uploads to link to the user
+                Upload::whereIn('id', $validUploadIds)->update(['user_id' => $user->id]);
+                
+                // Attach uploads to medical record using pivot table
+                $medicalRecord->attachments()->attach($validUploadIds);
             }
         }
-
-    
     }
 
 

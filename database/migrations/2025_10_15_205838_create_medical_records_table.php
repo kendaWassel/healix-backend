@@ -19,14 +19,12 @@ return new class extends Migration
             $table->id();
             $table->foreignIdFor(Patient::class)->constrained()->cascadeOnDelete()->cascadeOnUpdate();
             $table->foreignIdFor(Doctor::class)->nullable()->constrained()->cascadeOnDelete()->cascadeOnUpdate();
-            // $table->foreignIdFor(Upload::class)->constrained()->cascadeOnDelete();
-            $table->text('treatment_plan');
-            $table->text('diagnosis');
-            $table->json('attachments_id')->nullable();// file IDs
-            $table->text('chronic_diseases');
-            $table->text('previous_surgeries');
-            $table->text('allergies');
-            $table->text('current_medications');
+            $table->text('treatment_plan')->nullable();
+            $table->text('diagnosis')->nullable();
+            $table->text('chronic_diseases')->nullable();
+            $table->text('previous_surgeries')->nullable();
+            $table->text('allergies')->nullable();
+            $table->text('current_medications')->nullable();
             $table->timestamps();
         });
     }

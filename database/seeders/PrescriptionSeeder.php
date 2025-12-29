@@ -15,7 +15,7 @@ class PrescriptionSeeder extends Seeder
     {
         // Create prescriptions with medications
         Prescription::factory()
-            ->count(10)
+            ->count(20)
             ->create()
             ->each(function (Prescription $prescription) {
                 PrescriptionMedication::factory()
@@ -24,7 +24,15 @@ class PrescriptionSeeder extends Seeder
                         'prescription_id' => $prescription->id,
                     ]);
             });
+        Prescription::factory()->count(20)->create();
+
+        // Create a doctor-written prescription
+        Prescription::factory()->count(20)->doctorWritten()->create();
+
+        // Create a patient-uploaded prescription
+        Prescription::factory()->count(20)->patientUploaded()->create();
     }
+
 }
 
 

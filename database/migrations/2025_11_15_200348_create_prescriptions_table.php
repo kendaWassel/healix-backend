@@ -33,10 +33,10 @@ return new class extends Migration
             ])->default('created');
 
             // if patient uploaded paper prescription instead of doctor writing
-            $table->unsignedBigInteger('prescription_image_id')->nullable();
+            $table->foreignId('prescription_image_id')->nullable()->constrained('uploads')->nullOnDelete();
             //total quantity and price of all medications in the prescription
-            $table->integer('total_quantity');
-            $table->decimal('total_price', 10, 2);
+            $table->integer('total_quantity')->nullable();
+            $table->decimal('total_price', 10, 2)->nullable();
             $table->timestamps();
         });
     }

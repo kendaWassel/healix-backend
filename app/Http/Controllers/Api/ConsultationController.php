@@ -4,21 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use Carbon\Carbon;
 use App\Models\Doctor;
-use App\Models\Upload;
-use App\Models\Patient;
 use App\Models\Consultation;
 use Illuminate\Http\Request;
 use App\Services\UltraMsgService;
-use App\Events\ConsultationBooked;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
-use App\Mail\ConsultationBookedMail;
-use App\Services\HypersenderService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Notifications\ConsultationRequestedNotification;
-
+use App\Services\TraccarSmsService;
 
 class ConsultationController extends Controller
 {

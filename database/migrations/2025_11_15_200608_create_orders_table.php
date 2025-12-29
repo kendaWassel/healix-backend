@@ -27,7 +27,7 @@ return new class extends Migration
 
             //rejection reason from pharmacist
             $table->text('rejection_reason')->nullable();
-            $table->decimal('total_amount', 10, 2);
+            $table->decimal('total_amount', 10, 2)->nullable();
                 
 
             $table->timestamps();

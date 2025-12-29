@@ -27,11 +27,12 @@ class OrderFactory extends Factory
                 'sent_to_pharmacy',
                 'accepted',
                 'rejected',
-                'ready',
-                'waiting_pickup',
+                'ready_for_delivery',
                 'out_for_delivery',
                 'delivered',
             ]),
+            'rejection_reason'=> fake()->optional()->sentence(),
+            'total_amount'    => fake()->randomFloat(2, 10000, 2000000),
         ];
     }
 }

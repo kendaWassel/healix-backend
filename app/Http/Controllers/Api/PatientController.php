@@ -9,14 +9,14 @@ use App\Models\Pharmacist;
 use App\Models\Consultation;
 use App\Models\Prescription;
 use Illuminate\Http\Request;
+use App\Models\OrderMedication;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
-use App\Models\OrderMedication;
 use Illuminate\Support\Facades\Auth;
 
 class PatientController extends Controller
 {
-    public function getPatientScheduledConsultations(Request $request)
+        public function getPatientScheduledConsultations(Request $request)
     {
         $validated = $request->validate([
             'page' => 'sometimes|integer|min:1',
@@ -94,7 +94,7 @@ class PatientController extends Controller
             ], 500);
         }
     }
-
+ 
     /**
      * Patient: Get all prescriptions belonging to the logged-in patient.
      * Includes both doctor-written and patient-uploaded (image) prescriptions.
@@ -166,6 +166,7 @@ class PatientController extends Controller
                 'image_url'   => $prescriptionImage ? asset('storage/' . $prescriptionImage->file_path) : null, // For patient-uploaded prescriptions
             ];
         })->values();
+        
 
         return response()->json([
             'status' => 'success',
@@ -444,11 +445,11 @@ class PatientController extends Controller
                 'data' => [],
             ], 404);
         }
-        $perPage = $request->get('per_page');
+        $perPage = $request->get('per_page', 10);
 
-        // Get prescriptions that have been priced (status = 'accepted')
+        // Get prescriptions that have been accepted or rejected
         $prescriptions = Prescription::where('patient_id', $patient->id)
-            ->where('status', 'accepted')
+            ->whereIn('status', ['accepted', 'rejected'])
             ->orderByDesc('created_at')
             ->paginate($perPage)->appends($request->query());
 
@@ -469,49 +470,51 @@ class PatientController extends Controller
 
         $data = $prescriptions->getCollection()->map(function ($prescription) {
             // Get the latest order for this prescription
+            $order = Order::with('pharmacist')->where('prescription_id', $prescription->id)->latest()->first();
 
-            $order_medications = OrderMedication::with(['medication', 'order.pharmacist'])
-                ->whereHas('order', function ($query) use ($prescription) {
-                    $query->where('prescription_id', $prescription->id)
-                          ->where('status', 'accepted');
-                })
-                ->get();
-
-            if (!$order_medications || !$order_medications->first()->order->pharmacist) {
+            if (!$order || !$order->pharmacist) {
                 return null;
             }
 
             // Get pharmacy info
             $pharmacy = [
-                'id' => $order_medications->first()->order->pharmacist->id,
-                'name' => $order_medications->first()->order->pharmacist->pharmacy_name ?? 'Unknown Pharmacy',
+                'id' => $order->pharmacist->id,
+                'name' => $order->pharmacist->pharmacy_name ?? 'Unknown Pharmacy',
             ];
 
-            // Get order medications (items)
-            $items = $order_medications->map(function ($orderMedication) {
-                $quantity = $orderMedication->total_quantity ?? 1;
-                $totalPrice = (float) ($orderMedication->total_price ?? 0);
-                // Calculate unit price
-                $unitPrice = $quantity > 0 ? $totalPrice / $quantity : $totalPrice;
-                
+            if ($prescription->status === 'rejected') {
+                // For rejected prescriptions, show rejection reason
                 return [
-                    'medicine_name' => $orderMedication->medication->name ?? 'Unknown',
-                    'quantity' => $quantity,
-                    'price' => $unitPrice,
+                    'prescription_id' => $prescription->id,
+                    'status' => $prescription->status,
+                    'source' => $prescription->source === 'patient_uploaded' ? 'paper' : 'electronic',
+                    'pharmacy' => $pharmacy,
+                    'rejection_reason' => $order->rejection_reason,
+                    'rejected_at' => $order->updated_at->toIso8601String(),
+                ];
+            }
+
+            // For accepted prescriptions, show pricing
+            $prescriptionMedications = \App\Models\PrescriptionMedication::with('medication')
+                ->where('prescription_id', $prescription->id)
+                ->get();
+
+            // Get items
+            $items = $prescriptionMedications->map(function ($medication) {
+                return [
+                    'medicine_name' => $medication->medication->name ?? 'Unknown',
+                    'quantity' => $medication->boxes ?? 1,
+                    'price' => (float) ($medication->price ?? 0),
                 ];
             })->values();
 
             // Calculate total quantity
-            $totalQuantity = $order_medications->sum('total_quantity');
-         
-
-            // Map source: 'patient_uploaded' to 'paper', 'doctor_written' to 'doctor'
-            $source = $prescription->source === 'patient_uploaded' ? 'paper' : 'electronic';
+            $totalQuantity = $prescriptionMedications->sum('boxes');
 
             return [
                 'prescription_id' => $prescription->id,
                 'status' => $prescription->status,
-                'source' => $source,
+                'source' => $prescription->source === 'patient_uploaded' ? 'paper' : 'electronic',
                 'pharmacy' => $pharmacy,
                 'items' => $items,
                 'total_quantity' => $totalQuantity,
@@ -519,6 +522,7 @@ class PatientController extends Controller
                 'priced_at' => $prescription->updated_at->toIso8601String(),
             ];
         })->filter()->values();
+
         return response()->json([
             'status' => 'success',
             'data' => $data,
@@ -527,6 +531,103 @@ class PatientController extends Controller
                 'per_page' => $prescriptions->perPage(),
                 'total_pages' => $prescriptions->lastPage(),
                 'total_items' => $prescriptions->total(),
+            ],
+        ], 200);
+    }
+
+    /**
+     * Patient: View Order & Delivery Status
+     * 
+     * Endpoint: GET /api/patient/orders/status
+     */
+    public function getOrdersStatus(Request $request)
+    {
+        $user = Auth::user();
+        $patient = Patient::where('user_id', $user->id)->first();
+
+        if (!$patient) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Patient not found for this user.',
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'page'     => 'sometimes|integer|min:1',
+            'per_page' => 'sometimes|integer|min:1|max:100',
+        ]);
+
+        $perPage = $request->get('per_page', 10);
+
+        // Get all orders for this patient
+        $orders = Order::with([
+            'prescription',
+            'delivery.delivery.user',
+            'delivery.delivery' => function($query) {
+                $query->with('user');
+            }
+        ])
+        ->where('patient_id', $patient->id)
+        ->orderByDesc('created_at')
+        ->paginate($perPage)->appends($request->query());
+
+        $data = $orders->getCollection()->map(function ($order) {
+            $deliveryTask = $order->delivery;
+            $deliveryData = null;
+
+            if ($deliveryTask && $deliveryTask->delivery_id) {
+                $delivery = $deliveryTask->delivery;
+                $deliveryUser = $delivery->user;
+                
+                // Get delivery image
+                $deliveryImageUrl = null;
+                if ($delivery->delivery_image_id) {
+                    $upload = Upload::find($delivery->delivery_image_id);
+                    if ($upload && $upload->file_path) {
+                        $deliveryImageUrl = asset('storage/' . ltrim($upload->file_path, '/'));
+                    }
+                }
+
+                $deliveryData = [
+                    'status' => $deliveryTask->status,
+                    'name' => $deliveryUser ? $deliveryUser->full_name : null,
+                    'phone' => $deliveryUser ? $deliveryUser->phone : null,
+                    'image' => $deliveryImageUrl,
+                    'plate_number' => $delivery->plate_number,
+                ];
+            }
+
+            $result = [
+                'order_id' => $order->id,
+                'order_status' => $order->status,
+                'total_amount' => $order->total_amount ? (float) $order->total_amount : null,
+            ];
+
+            // Include rejection reason if order is rejected
+            if ($order->status === 'rejected' && $order->rejection_reason) {
+                $result['rejection_reason'] = $order->rejection_reason;
+            }
+
+            if ($deliveryData) {
+                $result['delivery'] = $deliveryData;
+            } else {
+                $result['delivery'] = null;
+                if ($order->status !== 'rejected') {
+                    $result['message'] = 'No delivery agent has accepted your order yet';
+                }
+            }
+
+            return $result;
+        })->values();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $data,
+            'meta' => [
+                'current_page' => $orders->currentPage(),
+                'last_page' => $orders->lastPage(),
+                'per_page' => $orders->perPage(),
+                'total' => $orders->total()
             ],
         ], 200);
     }

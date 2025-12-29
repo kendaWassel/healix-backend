@@ -81,7 +81,7 @@ class NurseController extends Controller
         $orders = HomeVisit::with('patient.user')
             ->where('care_provider_id', $careProvider->id)
             ->where('service_type', 'nurse')
-            // ->whereIn('status', ['pending'])
+            ->whereIn('status', ['pending'])
             ->orderBy('scheduled_at', 'asc')
             ->paginate($perPage);
 
