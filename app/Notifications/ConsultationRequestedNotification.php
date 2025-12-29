@@ -26,7 +26,7 @@ class ConsultationRequestedNotification extends Notification
     }
     public function via(object $notifiable): array
     {
-        return ['broadcast', 'mail', 'database'];
+        return ['mail', 'database'];
     }
 
     /**
@@ -34,6 +34,7 @@ class ConsultationRequestedNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
+        
     $patientName = $this->patient->full_name ?? $this->patient->name;
     $scheduledAt = optional($this->consultation->scheduled_at);
 
@@ -71,13 +72,6 @@ class ConsultationRequestedNotification extends Notification
         ];
     }
     
-    
 
-    public function broadcastOn(): array
-    {
-        return [
-            new PrivateChannel('doctor.' . $this->consultation->doctor_id),
-        ];
-    }
 
 }

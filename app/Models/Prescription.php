@@ -21,6 +21,7 @@ class Prescription extends Model
         'total_quantity',// total quantity of all medications
         'total_price',// total price of all medications
     ];
+    
     public function consultation()
     {
         return $this->belongsTo(Consultation::class);

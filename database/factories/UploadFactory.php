@@ -7,21 +7,19 @@ use App\Models\User;
 use App\Models\Patient;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories.Factory<\App\Models\Upload>
- */
 class UploadFactory extends Factory
 {
     protected $model = Upload::class;
 
     public function definition(): array
     {
-        return [
-            'user_id'    => User::factory(),
-            'category'   => fake()->randomElement(['prescription', 'medical_record', 'profile']),
-            'file'       => fake()->uuid() . '.jpg',
-            'file_path'  => 'uploads/' . fake()->uuid() . '.jpg',
-            'mime'       => 'image/jpeg',
+        // file or image
+        return[
+            'user_id' => User::factory(),
+            'category' => $this->faker->randomElement(['profile', 'prescription', 'certificate', 'report']),
+            'file' => $this->faker->word().'.'.$this->faker->fileExtension(),
+            'file_path' => 'uploads/'.$this->faker->word().'.'.$this->faker->fileExtension(),
+            'mime' => $this->faker->mimeType(),
         ];
     }
 }

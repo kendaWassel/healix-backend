@@ -15,8 +15,7 @@ use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\SpecializationController;
 use App\Http\Controllers\Api\PhysiotherapistController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
-use App\Http\Controllers\Api\pharmacist\PharmacistController;
-use App\Http\Controllers\Api\DeliveryController;
+use App\Http\Controllers\Api\PharmacistController;
 
 //public APIs (no auth required)
 Route::prefix('auth')->group(function () {
@@ -71,7 +70,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/consultations/{id}/end', [ConsultationController::class, 'endConsultation']);
 
         // Medical Recored
-        Route::get('/medical-record',[MedicalRecordController::class]);
+        Route::get('/medical-record', [MedicalRecordController::class, 'getPatientMedicalRecord']);
 
         // Ratings
         Route::post('ratings/doctors/{doctor_id}', [RatingController::class, 'rateDoctor']);
@@ -90,6 +89,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         //get prescriptions with pricing info
         Route::get('/view-prescriptions-with-pricing', [PatientController::class, 'getPrescriptionsWithPricing']);
 
+        // Orders (patient)
+        Route::get('/orders/status', [PatientController::class, 'getOrdersStatus']);
     });
 
     // Doctor
@@ -128,6 +129,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/prescriptions/{order_id}/reject', [PharmacistController::class, 'reject']);
 
         //  Order Management
+        Route::get('/my-orders', [PharmacistController::class, 'myOrders']);
+        Route::get('/orders/track', [PharmacistController::class, 'trackOrders']);
+        Route::get('/orders/history', [PharmacistController::class, 'ordersHistory']);
         // Set order as ready
         Route::post('/orders/{id}/ready', [OrderController::class, 'markReadyForDelivery']);
 

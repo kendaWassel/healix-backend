@@ -31,8 +31,14 @@ class UserSeeder extends Seeder
             'role' => 'pharmacist'
         ]);
         User::create([
-            'full_name' => 'Care Provider',
-            'email' => 'careprovider@gmail.com',
+            'full_name' => 'Nurse',
+            'email' => 'nurse@gmail.com',
+            'password' => Hash::make('password'),
+            'role' => 'care_provider'
+        ]);
+        User::create([
+            'full_name' => 'Physiotherapist',
+            'email' => 'physiotherapist@gmail.com',
             'password' => Hash::make('password'),
             'role' => 'care_provider'
         ]);
@@ -49,7 +55,7 @@ class UserSeeder extends Seeder
             'role' => 'patient'
         ]);
         CareProvider::create([
-            'user_id' => User::where('role', 'care_provider')->first()->id,
+            'user_id' => User::where('role', 'care_provider')->where('email', 'nurse@gmail.com')->first()->id,
             'care_provider_image_id' => null,
             'license_file_id' => null,
             'session_fee' => 100,
@@ -57,7 +63,7 @@ class UserSeeder extends Seeder
             'type' => 'nurse',
         ]);
         CareProvider::create([
-            'user_id' => User::where('role', 'care_provider')->first()->id,
+            'user_id' => User::where('role', 'care_provider')->where('email', 'physiotherapist@gmail.com')->first()->id,
             'care_provider_image_id' => null,
             'license_file_id' => null,
             'session_fee' => 150,

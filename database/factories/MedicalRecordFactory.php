@@ -17,24 +17,32 @@ class MedicalRecordFactory extends Factory
 
     public function definition(): array
     {
-        // optionally create attachments and return their ids
-        $attachmentsCount = $this->faker->numberBetween(0, 3);
-        $attachments = null;
-
-        if ($attachmentsCount > 0) {
-            $attachments = Upload::factory()->count($attachmentsCount)->create()->pluck('id')->toArray();
-        }
-
         return [
             'patient_id' => Patient::factory(),
             'doctor_id' => Doctor::factory(),
-            'treatment_plan' => $this->faker->paragraph(),
-            'diagnosis' => $this->faker->sentence(),
-            'attachments_id' => $attachments,
-            'chronic_diseases' => $this->faker->sentence(),
-            'previous_surgeries' => $this->faker->sentence(),
-            'allergies' => $this->faker->word(),
-            'current_medications' => $this->faker->sentence(),
+            'treatment_plan' => fake()->optional(0.8)->paragraph(),
+            'diagnosis' => fake()->optional(0.8)->sentence(),
+            'chronic_diseases' => fake()->optional(0.6)->sentence(),
+            'previous_surgeries' => fake()->optional(0.5)->sentence(),
+            'allergies' => fake()->optional(0.7)->word(),
+            'current_medications' => fake()->optional(0.8)->sentence(),
         ];
+    }
+    
+    /**
+     * Configure the model factory to attach uploads after creation.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (MedicalRecord $medicalRecord) {
+            // Create 0-5 uploads and attach them to the medical record
+            if (fake()->boolean(70)) {
+                $uploads = Upload::factory()
+                    ->count(fake()->numberBetween(1, 5))
+                    ->create(['category' => 'medical_record']);
+                
+                $medicalRecord->attachments()->attach($uploads->pluck('id'));
+            }
+        });
     }
 }

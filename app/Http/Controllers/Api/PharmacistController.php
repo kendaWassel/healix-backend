@@ -62,25 +62,25 @@ class PharmacistController extends Controller
 
             $patientName = $order->patient->user->full_name ?? $prescription->patient->user->full_name ?? null;
 
+            $medicines = $prescription->medications->map(function ($item) {
+                return [
+                    'name' => $item->medication->name ?? null,
+                    'dosage' => $item->medication->dosage ?? null,
+                    'boxes' => $item->boxes,
+                    'instructions' => $item->instructions ?? null,
+                ];
+            })->filter();
+
+            $totalBoxes = $prescription->medications->sum('boxes');
+
             if ($prescription->source === 'doctor_written') {
-                $medicines = $prescription->medications->map(function ($item) {
-                    return [
-                        'name' => $item->medication->name ?? null,
-                        'dosage' => $item->medication->dosage ?? null,
-                        'boxes' => $item->boxes,
-                        'instructions' => $item->instructions ?? null,
-                    ];
-                })->filter();
-
-                $totalBoxes = $prescription->medications->sum('boxes');
-
                 return [
                     'id' => $prescription->id,
                     'order_id' => $order->id,
                     'source' => 'doctor',
                     'patient' => $patientName,
                     'medicines' => $medicines,
-                    'total_boxes' => $totalBoxes,
+                    'total_quantity' => $totalBoxes,
                     'status' => $order->status,
                     'created_at' => $prescription->created_at->toIso8601String(),
                 ];
@@ -90,7 +90,7 @@ class PharmacistController extends Controller
                     ? asset('storage/' . ltrim($prescriptionImage->file_path, '/'))
                     : null;
 
-                return [
+                $result = [
                     'id' => $prescription->id,
                     'order_id' => $order->id,
                     'source' => 'patient_upload',
@@ -99,6 +99,13 @@ class PharmacistController extends Controller
                     'status' => $order->status,
                     'created_at' => $prescription->created_at->toIso8601String(),
                 ];
+
+                if ($medicines->isNotEmpty()) {
+                    $result['medicines'] = $medicines;
+                    $result['total_quantity'] = $totalBoxes;
+                }
+
+                return $result;
             }
         })->filter();
 
@@ -252,48 +259,44 @@ class PharmacistController extends Controller
             }
 
             $totalPrice = 0;
-            // Create order medications with prices
-            foreach ($validated['items'] as $item) {
-                $medicineName = $item['medicine_name'];
-                $dosage = $item['dosage'];
-                $price = (float) $item['price'];
-                $quantity = 1; // Default quantity
+        $updatedItems = [];
+        // Create order medications with prices
+        foreach ($validated['items'] as $item) {
+            $medicineName = $item['medicine_name'];
+            $dosage = $item['dosage'];
+            $price = (float) $item['price'];
+            $quantity = 1; // Default quantity
 
-                // Find medication or create new one
-                $medication = Medication::firstOrCreate([
-                    'name' => $medicineName,
-                    'dosage' => $dosage,
-                ]);
-
-                // Calculate total price for this medication (price * quantity)
-                $itemTotalPrice = $price * $quantity;
-
-                // Add to prescription medications
-                PrescriptionMedication::create([
-                    'prescription_id' => $prescription->id,
-                    'medication_id' => $medication->id,
-                    'total_price' => $itemTotalPrice,
-
-                ]);
-
-                $totalPrice += $itemTotalPrice;
-                $updatedItems[] = [
-                    'medicine_name' => $medicineName,
-                    'dosage' => $dosage,
-                    'quantity' => $quantity,
-                    'price' => $price,
-                ];
-            }
-
-            // Calculate total price from order medications
-            $calculatedTotalPrice = PrescriptionMedication::where('prescription_id', $prescription->id)
-                ->sum('total_price');
-
-            // Update prescription with total price and status
-            $prescription->update([
-                'total_price' => $calculatedTotalPrice,
-                'status' => 'accepted',
+            // Find medication or create new one
+            $medication = Medication::firstOrCreate([
+                'name' => $medicineName,
+                'dosage' => $dosage,
             ]);
+
+            // Calculate total price for this medication (price * quantity)
+            $itemTotalPrice = $price * $quantity;
+
+            // Add to prescription medications
+            PrescriptionMedication::create([
+                'prescription_id' => $prescription->id,
+                'medication_id' => $medication->id,
+                'boxes' => $quantity,
+                'price' => $price,
+            ]);
+
+            $totalPrice += $itemTotalPrice;
+            $updatedItems[] = [
+                'medicine_name' => $medicineName,
+                'dosage' => $dosage,
+                'quantity' => $quantity,
+                'price' => $price,
+            ];
+        }
+
+        // Calculate total price from order medications
+        $calculatedTotalPrice = PrescriptionMedication::where('prescription_id', $prescription->id)
+            ->selectRaw('SUM(price * boxes) as total')
+            ->value('total') ?? 0;
 
             DB::commit();
 
@@ -304,7 +307,7 @@ class PharmacistController extends Controller
                     'prescription_id' => $prescription->id,
                     'order_id' => $order->id,
                     'items' => $updatedItems,
-                    'total_quantity' => count($updatedItems),
+                    'total_quantity' => array_sum(array_column($updatedItems, 'quantity')),
                     'total_price' => $calculatedTotalPrice,
                     'status' => $prescription->status,
                 ],
@@ -318,81 +321,336 @@ class PharmacistController extends Controller
             ], 500);
         }
     }
+
     /**
-     * Set prescription as ready to be picked up/delivered
-     * POST /api/pharmacist/prescriptions/{id}/complete
+     * GET /api/pharmacist/my-orders
+     * View all accepted orders for the pharmacist
      */
-
-
-
-    // Complete/deliver prescription
-    public function complete(Request $request, $orderId)
+    public function myOrders(Request $request)
     {
-        $validated = $request->validate([
-            'delivered' => 'required|boolean',
-            'delivery_method' => 'required|string|in:pickup,delivery',
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            $order = Order::findOrFail($orderId);
-
-            if (!$validated['delivered']) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Delivery not confirmed.'
-                ], 422);
-            }
-
-            $order->update([
-                'status' => 'delivered',
-                'delivered_at' => now(),
-                'delivery_method' => $validated['delivery_method'],
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Order marked delivered',
-                'data' => [
-                    'order_id' => $order->id,
-                    'status' => $order->status,
-                    'delivered_at' => $order->delivered_at->toIso8601String(),
-                    'delivery_method' => $order->delivery_method,
-                ]
-            ], 200);
-        } catch (\Exception $e) {
-            DB::rollBack();
+        $pharmacist = Auth::user()->pharmacist;
+        if (!$pharmacist) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to mark order delivered',
-                'error' => $e->getMessage()
-            ], 500);
+                'message' => 'Pharmacist profile not found.'
+            ], 404);
         }
+
+        $perPage = $request->get('per_page', 10);
+        $page = $request->get('page', 1);
+
+        $ordersQuery = Order::with([
+            'prescription.prescriptionImage',
+            'prescription.patient.user',
+            'prescription.medications.medication'
+        ])
+        ->where('pharmacist_id', $pharmacist->id)
+        ->where('status', 'accepted')
+        ->orderBy('created_at', 'desc');
+
+        $orders = $ordersQuery->paginate($perPage, ['*'], 'page', $page);
+
+        if ($orders->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'data' => [],
+                'meta' => [
+                    'current_page' => $orders->currentPage(),
+                    'last_page' => $orders->lastPage(),
+                    'per_page' => $orders->perPage(),
+                    'total' => $orders->total(),
+                ],
+            ], 200);
+        }
+
+        $data = $orders->getCollection()->map(function ($order) {
+            $prescription = $order->prescription;
+            $patientName = $prescription->patient->user->full_name ?? 'Unknown';
+
+            $medicines = $prescription->medications->map(function ($item) {
+                return [
+                    'name' => $item->medication->name ?? 'Unknown',
+                    'dosage' => $item->medication->dosage ?? 'Unknown',
+                    'quantity' => $item->boxes ?? 0,
+                    'price_per_unit' => $item->price ?? 0,
+                ];
+            });
+
+            $totalQuantity = $medicines->sum('quantity');
+            $totalMedicinePrice = $medicines->sum(function ($medicine) {
+                return $medicine['quantity'] * $medicine['price_per_unit'];
+            });
+
+            
+            $result = [
+                'id' => $order->id,
+                'source' => $prescription->source === 'patient_uploaded' ? 'paper' : 'electronic',
+                'patient' => $patientName,
+                'medicines' => $medicines,
+                'total_quantity' => $totalQuantity,
+                'total_medicine_price' => $totalMedicinePrice,
+                'status' => $order->status,
+            ];
+            // Include prescription image URL if source is paper
+            if ($prescription->source === 'patient_uploaded') {
+                $prescriptionImage = $prescription->prescriptionImage;
+                $imageUrl = $prescriptionImage && $prescriptionImage->file_path
+                    ? asset('storage/' . ltrim($prescriptionImage->file_path, '/'))
+                    : null;
+                $result['prescription_image_url'] = $imageUrl;
+            }
+
+            return $result;
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $data,
+            'meta' => [
+                'current_page' => $orders->currentPage(),
+                'last_page' => $orders->lastPage(),
+                'per_page' => $orders->perPage(),
+                'total' => $orders->total(),
+            ],
+        ], 200);
     }
 
-    // Reject prescription
+    /**
+     * Pharmacist: Reject order
+     * 
+     * Endpoint: POST /api/pharmacist/prescriptions/{order_id}/reject
+     */
     public function reject(Request $request, $order_id)
     {
-        $request->validate([
-            'reason' => 'required|string|max:255',
+        $validated = $request->validate([
+            'reason' => 'required|string|max:500',
         ]);
 
-        $order = Order::findOrFail($order_id);
+        $pharmacist = Auth::user()->pharmacist;
+        if (!$pharmacist) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pharmacist profile not found.'
+            ], 404);
+        }
+
+        $order = Order::where('id', $order_id)
+            ->where('pharmacist_id', $pharmacist->id)
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Order not found or not authorized.'
+            ], 404);
+        }
+
+        // Check if order can be rejected (not already delivered or rejected)
+        if (in_array($order->status, ['delivered', 'rejected'])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Order cannot be rejected. Current status: ' . $order->status
+            ], 422);
+        }
 
         $order->status = 'rejected';
-        $order->rejection_reason = $request->reason;
+        $order->rejection_reason = $validated['reason'];
         $order->save();
+
+        // Also update prescription status if needed
+        if ($order->prescription) {
+            $order->prescription->update(['status' => 'rejected']);
+        }
 
         return response()->json([
             'status' => 'success',
             'data' => [
                 'order_id' => $order->id,
                 'status' => $order->status,
+                'rejection_reason' => $order->rejection_reason,
             ],
-            'message' => 'Order rejected'
+            'message' => 'Order rejected successfully'
+        ], 200);
+    }
+
+    /**
+     * Pharmacist: Track Current Active Orders
+     * 
+     * Endpoint: GET /api/pharmacist/orders/track
+     */
+    public function trackOrders(Request $request)
+    {
+        $pharmacist = Auth::user()->pharmacist;
+        if (!$pharmacist) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pharmacist profile not found.'
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'page' => 'sometimes|integer|min:1',
+            'per_page' => 'sometimes|integer|min:1|max:100',
         ]);
+
+        $perPage = $request->get('per_page', 10);
+
+        // Get active orders (not delivered, not rejected)
+        $orders = Order::with([
+            'delivery.delivery.user'
+        ])
+        ->where('pharmacist_id', $pharmacist->id)
+        ->whereNotIn('status', ['delivered', 'rejected'])
+        ->orderByDesc('created_at')
+        ->paginate($perPage)->appends($request->query());
+
+        $data = $orders->getCollection()->map(function ($order) {
+            $deliveryTask = $order->delivery;
+            $deliveryData = null;
+
+            if ($deliveryTask && $deliveryTask->delivery_id) {
+                $delivery = $deliveryTask->delivery;
+                $deliveryUser = $delivery->user;
+                
+                // Get delivery image
+                $deliveryImageUrl = null;
+                if ($delivery->delivery_image_id) {
+                    $upload = \App\Models\Upload::find($delivery->delivery_image_id);
+                    if ($upload && $upload->file_path) {
+                        $deliveryImageUrl = asset('storage/' . ltrim($upload->file_path, '/'));
+                    }
+                }
+
+                $deliveryData = [
+                    'task_id' => $deliveryTask->id,
+                    'status' => $deliveryTask->status,
+                    'delivery_agent' => [
+                        'name' => $deliveryUser ? $deliveryUser->full_name : null,
+                        'driver_image' => $deliveryImageUrl,
+                        'phone' => $deliveryUser ? $deliveryUser->phone : null,
+                        'vehicle_type' => $delivery->vehicle_type,
+                        'plate_number' => $delivery->plate_number,
+                    ],
+                    'assigned_at' => $deliveryTask->assigned_at ? $deliveryTask->assigned_at->format('Y-m-d H:i:s') : null,
+                ];
+            }
+
+            $result = [
+                'order_id' => $order->id,
+                'order_status' => $order->status,
+                'created_at' => $order->created_at->format('Y-m-d H:i:s'),
+            ];
+
+            if ($deliveryData) {
+                $result['delivery'] = $deliveryData;
+            } else {
+                $result['delivery'] = null;
+                $result['message'] = 'No delivery agent has accepted this order yet';
+            }
+
+            return $result;
+        })->values();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $data,
+            'meta' => [
+                'current_page' => $orders->currentPage(),
+                'last_page' => $orders->lastPage(),
+                'per_page' => $orders->perPage(),
+                'total' => $orders->total()
+            ],
+        ], 200);
+    }
+
+    /**
+     * Pharmacist: View Previous Delivered Orders (History)
+     * 
+     * Endpoint: GET /api/pharmacist/orders/history
+     */
+    public function ordersHistory(Request $request)
+    {
+        $pharmacist = Auth::user()->pharmacist;
+        if (!$pharmacist) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pharmacist profile not found.'
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'page' => 'sometimes|integer|min:1',
+            'per_page' => 'sometimes|integer|min:1|max:100',
+        ]);
+
+        $perPage = $request->get('per_page', 10);
+
+        // Get delivered orders
+        $orders = Order::with([
+            'patient.user',
+            'prescription.medications.medication',
+            'delivery.delivery.user',
+        ])
+        ->where('pharmacist_id', $pharmacist->id)
+        ->where('status', 'delivered')
+        ->orderByDesc('delivered_at')
+        ->orderByDesc('created_at')
+        ->paginate($perPage)->appends($request->query());
+
+        $data = $orders->getCollection()->map(function ($order) {
+            $patient = $order->patient;
+            $patientUser = $patient->user;
+            
+            // Get delivery info
+            $deliveryData = null;
+            $deliveryTask = $order->delivery;
+            if ($deliveryTask && $deliveryTask->delivery_id) {
+                $delivery = $deliveryTask->delivery;
+                $deliveryUser = $delivery->user;
+                $deliveryData = [
+                    'name' => $deliveryUser ? $deliveryUser->full_name : null,
+                    'phone' => $deliveryUser ? $deliveryUser->phone : null,
+                ];
+            }
+
+            // Get medications with prices
+            $medications = $order->prescription->medications->map(function ($item) {
+                return [
+                    'medication_name' => $item->medication->name ?? null,
+                    'quantity' => (int) ($item->boxes ?? 0),
+                    'price' => (float) ($item->price ?? 0),
+                ];
+            })->filter(function ($med) {
+                return $med['medication_name'] !== null;
+            })->values();
+
+            $totalMedicinePrice = $medications->sum('price');
+
+            return [
+                'order_id' => $order->id,
+                'delivered_at' => $deliveryTask && $deliveryTask->delivered_at 
+                    ? $deliveryTask->delivered_at->format('Y-m-d H:i:s')
+                    : $order->updated_at->format('Y-m-d H:i:s'),
+                'patient' => [
+                    'name' => $patientUser ? $patientUser->full_name : null,
+                    'address' => $patient->address ?? null,
+                    'phone' => $patientUser ? $patientUser->phone : null,
+                ],
+                'delivery' => $deliveryData,
+                'medications' => $medications,
+                'total_medicine_price' => $totalMedicinePrice,
+            ];
+        })->values();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $data,
+            'meta' => [
+                'current_page' => $orders->currentPage(),
+                'last_page' => $orders->lastPage(),
+                'per_page' => $orders->perPage(),
+                'total' => $orders->total()
+            ],
+        ], 200);
     }
 }

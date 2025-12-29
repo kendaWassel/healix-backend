@@ -91,7 +91,7 @@ class PhysiotherapistController extends Controller
                 'id' => $visit->id,
                 'patient_name' => $patient?->user?->full_name,
                 'reason' => $visit->reason,
-                'address' => $patient?->address,
+                'address' => $patient->address,
                 'scheduled_at' => $visit->scheduled_at->toIso8601String(),
                 'status' => $visit->status,
             ];
@@ -129,15 +129,25 @@ class PhysiotherapistController extends Controller
                 'message' => 'Visit not found for this provider',
             ], 404);
         }
+        if($visit->status == 'accepted'){
+            return response()->json([
+                'status' => 'error',
+                'message' => 'This session is already accepted from another physiotherapist',
+            ], 400);
+        }
 
         $visit->status = 'accepted';
         $visit->save();
+        
 
         return response()->json([
             'status' => 'success',
             'message' => 'Home visit accepted successfully',
-            'new_status' => $visit->status,
-            'data' => $visit,
+            'data' => [
+                'id' => $visit->id,
+                'scheduled_at' => $visit->scheduled_at->toIso8601String(),
+                'status' => $visit->status,
+            ],
         ]);
     }
 

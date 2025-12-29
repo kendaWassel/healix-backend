@@ -91,46 +91,5 @@ class ConsultationReminderNotification extends Notification
         ];
     }
 
-    public function toBroadcast($notifiable)
-    {
-        $scheduledTime = $this->consultation->scheduled_at 
-            ? $this->consultation->scheduled_at->format('Y-m-d H:i') 
-            : 'now';
-        
-        $otherName = $this->otherParty->full_name ?? $this->otherParty->name;
-        
-        if ($this->recipientType === 'patient') {
-            $title = 'Consultation Reminder';
-            $message = "You have a consultation with Dr. {$otherName} scheduled for {$scheduledTime}";
-        } else {
-            $title = 'Consultation Reminder';
-            $message = "You have a consultation with {$otherName} scheduled for {$scheduledTime}";
-        }
-
-        return new BroadcastMessage([
-            'title' => $title,
-            'message' => $message,
-            'consultation_id' => $this->consultation->id,
-            'recipient_type' => $this->recipientType,
-            'other_party_id' => $this->otherParty->id,
-            'other_party_name' => $otherName,
-            'call_type' => $this->consultation->type,
-            'scheduled_at' => optional($this->consultation->scheduled_at)->toIso8601String(),
-        ]);
-    }
-
-    public function broadcastOn(): array
-    {
-        if ($this->recipientType === 'patient') {
-            return [
-                new PrivateChannel('user.' . $this->consultation->patient_id),
-            ];
-        } else {
-            return [
-                new PrivateChannel('doctor.' . $this->consultation->doctor_id),
-            ];
-        }
-
-    }
 }
 

@@ -21,6 +21,7 @@ class PrescriptionMedicationFactory extends Factory
             'medication_id'   => Medication::factory(),
             'boxes'           => (string) fake()->numberBetween(1, 5),
             'instructions'    => fake()->randomElement(['After meals', 'Before sleep', 'Twice daily', 'When needed']),
+            'price'           => fake()->randomFloat(2, 5000, 50000),
         ];
     }
 }

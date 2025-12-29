@@ -40,6 +40,8 @@ class DatabaseSeeder extends Seeder
             MedicationSeeder::class,
             PrescriptionSeeder::class,
             OrderSeeder::class,
+            UploadSeeder::class,
+            MedicalRecordSeeder::class,
         ]);
 
     }
