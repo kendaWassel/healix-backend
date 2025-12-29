@@ -36,7 +36,7 @@ class Order extends Model
         return $this->belongsTo(Patient::class);
     }
 
-    public function delivery()
+    public function deliveryTask()
     {
         return $this->hasOne(DeliveryTask::class, 'order_id');
     }

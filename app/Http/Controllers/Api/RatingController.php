@@ -8,6 +8,8 @@ use App\Models\Rating;
 use App\Models\Patient;
 use App\Models\Pharmacist;
 use App\Models\Consultation;
+use App\Models\Delivery;
+use App\Models\DeliveryTask;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
@@ -75,6 +77,87 @@ class RatingController extends Controller
                     'target_id' => $rating->target_id,
                     'updated_at' => $rating->updated_at
                 ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to submit rating',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function rateDelivery(Request $request, int $deliveryId)
+    {
+        $validated = $request->validate([
+            'stars' => 'required|integer|min:1|max:5',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $userId = Auth::id();
+            if (!$userId) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unauthenticated.'
+                ], 401);
+            }
+
+            $patient = Patient::where('user_id', $userId)->first();
+            if (!$patient) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Patient profile not found.'
+                ], 404);
+            }
+
+            $delivery = Delivery::find($deliveryId);
+            if (!$delivery) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Delivery not found.'
+                ], 404);
+            }
+
+            // Ensure the patient actually received a delivered order from this delivery
+            $hasDeliveredForPatient = DeliveryTask::where('delivery_id', $deliveryId)
+                ->where('status', 'delivered')
+                ->whereHas('order', function ($q) use ($patient) {
+                    $q->where('patient_id', $patient->id);
+                })->exists();
+
+            if (!$hasDeliveredForPatient) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'You can only rate deliveries that were completed for you.'
+                ], 403);
+            }
+
+            // Create or update rating
+            $rating = Rating::updateOrCreate(
+                ['user_id' => $userId, 'target_type' => 'delivery', 'target_id' => $deliveryId],
+                ['stars' => $validated['stars']]
+            );
+
+            // Update delivery average
+            $avgRating = Rating::where('target_type', 'delivery')->where('target_id', $deliveryId)->avg('stars');
+            $delivery->update(['rating_avg' => round($avgRating, 1)]);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'rating_stars' => (int) $rating->stars
+                ],
+                'message' => 'Rating submitted successfully'
             ], 200);
 
         } catch (\Exception $e) {

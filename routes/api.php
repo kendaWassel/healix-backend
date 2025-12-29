@@ -76,6 +76,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('ratings/doctors/{doctor_id}', [RatingController::class, 'rateDoctor']);
         Route::get('ratings/consultations/{consultation_id}', [RatingController::class, 'getMyRatingForConsultation']);
         Route::post('pharmacies/{pharmacy_id}/rate', [RatingController::class, 'ratePharmacy']);
+        Route::post('deliveries/{delivery_id}/rate', [RatingController::class, 'rateDelivery']);
 
 
         // Prescription (patient)
@@ -166,11 +167,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     });
 
-    //sms
-    Route::prefix('sms')->group(function () {
-    Route::post('/send', [ConsultationController::class, 'sendNotification']);
+    // Delivery
+    Route::prefix('delivery')->group(function () {
+        Route::get('/new-orders', [DeliveryController::class, 'newOrders']);
+        Route::post('/new-orders/{order_id}/accept', [DeliveryController::class, 'accept']);
+        Route::get('/tasks', [DeliveryController::class, 'tasks']);
+        Route::put('/tasks/{task_id}/update-status', [DeliveryController::class, 'updateTaskStatus']);
     });
-
 
 
     //Payment Gateway
