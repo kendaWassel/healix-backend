@@ -28,7 +28,7 @@ class NurseController extends Controller
         }
 
         $visits = HomeVisit::with('patient.user')
-            ->where('careprovider_id', $careProvider->id)
+            ->where('care_provider_id', $careProvider->id)
             ->where('service_type', 'nurse')
             ->whereIn('status', ['accepted'])
             ->orderBy('scheduled_at', 'asc')
@@ -146,6 +146,84 @@ class NurseController extends Controller
         ]);
     }
 
+    public function startSession($id)
+    {
+        $user = Auth::user();
+        $careProvider = $user->careProvider;
+
+        if (!$careProvider || $careProvider->type !== 'nurse') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized or not a nurse.'
+            ], 403);
+        }
+
+        $visit = HomeVisit::where('id', $id)
+            ->where('care_provider_id', $careProvider->id)
+            ->where('service_type', 'nurse')
+            ->where('status', 'accepted')
+            ->first();
+
+        if (!$visit) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Visit not found or not in accepted status.',
+            ], 404);
+        }
+
+        $visit->started_at = now();
+        $visit->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Session started successfully',
+            'data' => [
+                'id' => $visit->id,
+                'started_at' => $visit->started_at->toIso8601String(),
+            ],
+        ]);
+    }
+
+    public function endSession($id)
+    {
+        $user = Auth::user();
+        $careProvider = $user->careProvider;
+
+        if (!$careProvider || $careProvider->type !== 'nurse') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized or not a nurse.'
+            ], 403);
+        }
+
+        $visit = HomeVisit::where('id', $id)
+            ->where('care_provider_id', $careProvider->id)
+            ->where('service_type', 'nurse')
+            ->where('status', 'accepted')
+            ->whereNotNull('started_at')
+            ->first();
+
+        if (!$visit) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Visit not found, not started, or not in accepted status.',
+            ], 404);
+        }
+
+        $visit->ended_at = now();
+        $visit->status = 'completed';
+        $visit->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Session ended successfully',
+            'data' => [
+                'id' => $visit->id,
+                'ended_at' => $visit->ended_at->toIso8601String(),
+                'status' => $visit->status,
+            ],
+        ]);
+    }
 
 
 
