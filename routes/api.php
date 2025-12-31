@@ -6,16 +6,17 @@ use App\Http\Controllers\Api\DoctorController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\PatientController;
+use App\Http\Controllers\Api\DeliveryController;
 use App\Http\Controllers\Api\PharmacyController;
 use App\Http\Controllers\Api\HomeVisitController;
 use App\Http\Controllers\Api\Auth\LoginController;
+use App\Http\Controllers\Api\PharmacistController;
 use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\SpecializationController;
 use App\Http\Controllers\Api\PhysiotherapistController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
-use App\Http\Controllers\Api\PharmacistController;
 
 //public APIs (no auth required)
 Route::prefix('auth')->group(function () {
@@ -142,13 +143,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/prescriptions/{id}/add-price', [PharmacistController::class, 'addPrice']);
         
     });
+    // Medical Record view details or update (Doctor, Nurse, Physiotherapist)
+    Route::get('/patients/{patient_id}/view-details',[MedicalRecordController::class,'viewDetails']);
+    Route::put('/patients/{patient_id}/medical-record/update', [MedicalRecordController::class, 'updateMedicalRecord']);
+
 
 
     // Provider Nurse
     Route::prefix('provider/nurse')->group(function () {
-        Route::get('/schedules', [NurseController::class, 'schedules']);
         Route::get('/orders', [NurseController::class, 'orders']);
         Route::post('/orders/{id}/accept', [NurseController::class, 'accept']);
+        Route::get('/schedules', [NurseController::class, 'schedules']);
+        Route::post('/schedules/{id}/start-session', [NurseController::class, 'startSession']);
+        Route::post('/schedules/{id}/end-session', [NurseController::class, 'endSession']);
 
         // view details
         Route::get('/patients/{patient_id}/view-details',[MedicalRecordController::class,'viewDetails']);
@@ -156,9 +163,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
     // Provider Physiotherapist
     Route::prefix('provider/physiotherapist')->group(function () {
-        Route::get('/schedules', [PhysiotherapistController::class, 'schedules']);
         Route::get('/orders', [PhysiotherapistController::class, 'orders']);
         Route::post('/orders/{id}/accept', [PhysiotherapistController::class, 'accept']);
+        Route::get('/schedules', [PhysiotherapistController::class, 'schedules']);
+        Route::post('/schedules/{id}/start-session', [PhysiotherapistController::class, 'startSession']);
+        Route::post('/schedules/{id}/end-session', [PhysiotherapistController::class, 'endSession']);
 
         //view details
         Route::get('/patients/{patient_id}/view-details',[MedicalRecordController::class,'viewDetails']);

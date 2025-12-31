@@ -18,10 +18,14 @@ class HomeVisit extends Model
         'scheduled_at',
         'address',
         'status',
+        'started_at',
+        'ended_at',
     ];
 
     protected $casts = [
         'scheduled_at' => 'datetime',
+        'started_at' => 'datetime',
+        'ended_at' => 'datetime',
     ];
 
     public function patient()
