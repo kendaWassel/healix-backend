@@ -12,6 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         channels: __DIR__.'/../routes/channels.php',
         health: '/up'
     )
+    ->withSchedule(function ($schedule) {
+        $schedule->command('consultations:send-reminders')->everyMinute();
+    })
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,

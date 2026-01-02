@@ -19,7 +19,8 @@ class MedicalRecordFactory extends Factory
     {
         return [
             'patient_id' => Patient::factory(),
-            'doctor_id' => Doctor::factory(),
+            'doctor_id' => null,
+            'care_provider_id' => null,
             'treatment_plan' => fake()->optional(0.8)->paragraph(),
             'diagnosis' => fake()->optional(0.8)->sentence(),
             'chronic_diseases' => fake()->optional(0.6)->sentence(),

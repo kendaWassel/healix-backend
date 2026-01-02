@@ -71,6 +71,14 @@ class ConsultationRequestedNotification extends Notification
             'message' => $message,
         ];
     }
+    public function toWhatsApp(object $notifiable): string{
+        $message = "New Consultation Requested by " . ($this->patient->full_name ?? $this->patient->name) . ".";
+        if ($this->consultation->scheduled_at) {
+            $message .= " Scheduled at: " . $this->consultation->scheduled_at->format('Y-m-d H:i');
+        }
+        $message .= " Type: " . ucfirst($this->consultation->type) . ".";
+        return $message;
+    }
     
 
 

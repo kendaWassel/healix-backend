@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\Doctor;
 use App\Models\Patient;
 use Illuminate\Http\Request;
 use App\Models\MedicalRecord;
@@ -15,15 +14,18 @@ class MedicalRecordController extends Controller
     /**
      * Doctor: View patient medical record details.
      * 
-     * Endpoint: GET /api/doctor/patients/{patient_id}/view-details
+     * Endpoint: GET api/pa
      */
     public function viewDetails($patientId)
     {
-        $doctor = Auth::user()->doctor;
-        if (!$doctor) {
+        $user = Auth::user();
+        $doctor = $user->doctor;
+        $care_provider = $user->careProvider;
+        $isAuthorized = $doctor || ($care_provider && in_array($care_provider->type, ['nurse', 'physiotherapist']));
+        if (!$user || !$isAuthorized) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized access - only doctors can view medical records.'
+                'message' => 'Unauthorized - only doctors, nurses, and physiotherapists can view patient medical records.'
             ], 403);
         }
 
@@ -51,6 +53,7 @@ class MedicalRecordController extends Controller
             $medicalRecordData = [
                 'id' => $record->id,
                 'doctor_id' => $record->doctor_id,
+                'care_provider_id' => $care_provider ? $care_provider->id : null,
                 'doctor_name' => $record->doctor?->user ? 'Dr. ' . $record->doctor->user->full_name : null,
                 'diagnosis' => $record->diagnosis,
                 'treatment_plan' => $record->treatment_plan,
@@ -83,11 +86,13 @@ class MedicalRecordController extends Controller
     public function updateMedicalRecord(Request $request, $patientId)
     {
         $user = Auth::user();
-
-        if (!$user || !$user->doctor) {
+        $doctor = $user->doctor;
+        $care_provider = $user->careProvider;
+        $isAuthorized = $doctor || ($care_provider && in_array($care_provider->type, ['nurse', 'physiotherapist']));
+        if (!$user || !$isAuthorized) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized - only doctors can update medical records.'
+                'message' => 'Unauthorized - only doctors, nurses, and physiotherapists can update medical records.'
             ], 403);
         }
 
@@ -116,7 +121,7 @@ class MedicalRecordController extends Controller
         $medicalRecord = MedicalRecord::updateOrCreate(
             [
                 'patient_id' => $patientId,
-                'doctor_id' => $doctor->id,
+                'doctor_id' => $doctor ? $doctor->id : null,
             ],
             [
                 'diagnosis' => $validated['diagnosis'] ?? null,
@@ -139,7 +144,7 @@ class MedicalRecordController extends Controller
             'data' => [
                 'medical_record_id' => $medicalRecord->id,
                 'patient_id' => $medicalRecord->patient_id,
-                'doctor_id' => $doctor->id,
+                'doctor_id' => $doctor ? $doctor->id : null,
                 'diagnosis' => $medicalRecord->diagnosis,
                 'treatment_plan' => $medicalRecord->treatment_plan,
                 'current_medications' => $medicalRecord->current_medications,

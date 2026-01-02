@@ -12,6 +12,7 @@ class MedicalRecord extends Model
     protected $fillable = [
         'patient_id',
         'doctor_id',
+        'care_provider_id',
         'treatment_plan',
         'diagnosis',
         'chronic_diseases',
@@ -31,6 +32,11 @@ class MedicalRecord extends Model
     public function doctor()
     {
         return $this->belongsTo(Doctor::class);
+    }
+
+    public function careProvider()
+    {
+        return $this->belongsTo(CareProvider::class);
     }
 
     public function attachments()

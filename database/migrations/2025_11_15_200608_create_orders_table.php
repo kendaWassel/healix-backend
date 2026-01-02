@@ -17,13 +17,14 @@ return new class extends Migration
             $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
             $table->foreignId('pharmacist_id')->constrained()->cascadeOnDelete();
             $table->enum('status', [
+                'pending',
                 'sent_to_pharmacy',
                 'accepted',
                 'rejected',
                 'ready_for_delivery',
                 'out_for_delivery',
                 'delivered'
-            ])->default('sent_to_pharmacy');
+            ])->default('pending');
 
             //rejection reason from pharmacist
             $table->text('rejection_reason')->nullable();

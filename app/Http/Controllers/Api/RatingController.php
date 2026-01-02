@@ -21,7 +21,7 @@ class RatingController extends Controller
     public function rateDoctor(Request $request, int $doctorId)
     {
         $validated = $request->validate([
-            'consultaion_id' => 'required',
+            'consultation_id' => 'required',
             'stars' => 'required|integer|min:1|max:5',
         ]);
 

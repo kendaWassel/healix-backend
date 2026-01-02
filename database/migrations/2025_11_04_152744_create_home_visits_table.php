@@ -23,7 +23,7 @@ return new class extends Migration
             $table->enum('status', [
                 'pending',  // waiting for nurse to accept
                 'accepted', 
-                'rejected', 
+                'in_progress', 
                 'completed', 
                 'cancelled'
             ])->default('pending');

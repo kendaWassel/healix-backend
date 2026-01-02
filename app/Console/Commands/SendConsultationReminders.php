@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Consultation;
 use App\Models\User;
 use App\Notifications\ConsultationReminderNotification;
+use App\Services\TraccarSmsService;
 use App\Services\UltraMsgService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -37,7 +38,7 @@ class SendConsultationReminders extends Command
         $reminderMinutes = (int) $this->option('minutes');
         $windowMinutes = (int) $this->option('window');
         
-        $now = Carbon::now('GMT+2:00');
+        $now = Carbon::now('Asia/Damascus');
         $reminderTime = $now->copy()->addMinutes($reminderMinutes);
         $windowEnd = $reminderTime->copy()->addMinutes($windowMinutes);
 
@@ -116,9 +117,20 @@ class SendConsultationReminders extends Command
                         new ConsultationReminderNotification($consultation, 'patient', $doctor->user)
                     );
                     
+                    // Send SMS to patient
+                    if ($patientUser->phone) {
+                        $this->sendSmsReminder(
+                            $patientUser->phone,
+                            $patientUser->full_name ?? 'Patient',
+                            $doctor->user->full_name ?? 'Doctor',
+                            $scheduledTime,
+                            'patient'
+                        );
+                    }
+
                     // Send WhatsApp to patient
                     if ($patientUser->phone) {
-                        $this->sendWhatsAppReminder(
+                        $this->whatsappReminder(
                             $patientUser->phone,
                             $patientUser->full_name ?? 'Patient',
                             $doctor->user->full_name ?? 'Doctor',
@@ -134,9 +146,9 @@ class SendConsultationReminders extends Command
                         new ConsultationReminderNotification($consultation, 'doctor', $patientUser)
                     );
                     
-                    // Send WhatsApp to doctor
+                    // Send SMS to doctor
                     if ($doctor->user->phone) {
-                        $this->sendWhatsAppReminder(
+                        $this->sendSmsReminder(
                             $doctor->user->phone,
                             $doctor->user->full_name ?? 'Doctor',
                             $patientUser->full_name ?? 'Patient',
@@ -144,10 +156,22 @@ class SendConsultationReminders extends Command
                             'doctor'
                         );
                     }
-                }
+                    // Send WhatsApp to doctor
+                    if ($doctor->user->phone) {
+                        $this->whatsappReminder(
+                            $doctor->user->phone,
+                            $doctor->user->full_name ?? 'Doctor',
+                            $patientUser->full_name ?? 'Patient',
+                            $scheduledTime,
+                            'doctor'
+                        );
+                    }
+                } 
 
+            
+                
                 $sentCount++;
-                $this->info("Sent reminders (Email + WhatsApp) for consultation #{$consultation->id} (Patient: {$patientUser->full_name}, Doctor: {$doctor->user->full_name})");
+                $this->info("Sent reminders (Email + SMS) for consultation #{$consultation->id} (Patient: {$patientUser->full_name}, Doctor: {$doctor->user->full_name})");
 
             } catch (\Exception $e) {
                 $this->error("Failed to send reminder for consultation #{$consultation->id}: " . $e->getMessage());
@@ -159,42 +183,59 @@ class SendConsultationReminders extends Command
     }
 
     /**
-     * Send WhatsApp reminder message
+     * Send SMS reminder message
      */
-    private function sendWhatsAppReminder(string $phone, string $recipientName, string $otherPartyName, string $scheduledTime, string $recipientType): void
+    private function sendSmsReminder(string $phone, string $recipientName, string $otherPartyName, string $scheduledTime, string $recipientType): void
     {
         try {
-            $ultraMsgService = new UltraMsgService();
+            $traccarSmsService = new TraccarSmsService();
             
-            if (!$ultraMsgService->isConfigured()) {
-                $this->warn("UltraMsg not configured. Skipping WhatsApp reminder to {$recipientName}");
-                return;
-            }
-
             if ($recipientType === 'patient') {
-                $message = "🔔 Consultation Reminder\n\n";
-                $message .= "Hello {$recipientName},\n\n";
-                $message .= "You have a consultation scheduled with Dr. {$otherPartyName} in 15 minutes.\n\n";
-                $message .= "Scheduled Time: {$scheduledTime}\n\n";
-                $message .= "Please be ready for your consultation.";
+                $message = "Consultation Reminder: You have a consultation scheduled with Dr. {$otherPartyName} at {$scheduledTime}. Please be ready.";
             } else {
-                $message = "🔔 Consultation Reminder\n\n";
-                $message .= "Hello Dr. {$recipientName},\n\n";
-                $message .= "You have a consultation scheduled with {$otherPartyName} in 15 minutes.\n\n";
-                $message .= "Scheduled Time: {$scheduledTime}\n\n";
-                $message .= "Please be ready for your consultation.";
+                $message = "Consultation Reminder: You have a consultation scheduled with {$otherPartyName} at {$scheduledTime}. Please be ready.";
             }
 
-            $result = $ultraMsgService->sendWhatsAppMessage($phone, $message);
+            $result = $traccarSmsService->sendSms($phone, $message);
             
-            if ($result['success']) {
+            if ($result) {
+                $this->info("SMS reminder sent to {$recipientName} ({$phone})");
+            } else {
+                $this->warn("Failed to send SMS reminder to {$recipientName}");
+                Log::warning('Failed to send SMS reminder', [
+                    'phone' => $phone,
+                    'recipient' => $recipientName,
+                ]);
+            }
+        } catch (\Exception $e) {
+            $this->error("Exception while sending SMS reminder to {$recipientName}: " . $e->getMessage());
+            Log::error('Exception while sending SMS reminder', [
+                'phone' => $phone,
+                'recipient' => $recipientName,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    public function whatsappReminder(string $phone, string $recipientName, string $otherPartyName, string $scheduledTime, string $recipientType): void
+    {
+        try {
+            $ultramsgService = new UltraMsgService();
+            
+            if ($recipientType === 'patient') {
+                $message = "Consultation Reminder: You have a consultation scheduled with Dr. {$otherPartyName} at {$scheduledTime}. Please be ready.";
+            } else {
+                $message = "Consultation Reminder: You have a consultation scheduled with {$otherPartyName} at {$scheduledTime}. Please be ready.";
+            }
+
+            $result = $ultramsgService->sendWhatsAppMessage($phone, $message);
+            
+            if ($result) {
                 $this->info("WhatsApp reminder sent to {$recipientName} ({$phone})");
             } else {
-                $this->warn("Failed to send WhatsApp reminder to {$recipientName}: {$result['message']}");
+                $this->warn("Failed to send WhatsApp reminder to {$recipientName}");
                 Log::warning('Failed to send WhatsApp reminder', [
                     'phone' => $phone,
                     'recipient' => $recipientName,
-                    'error' => $result['message']
                 ]);
             }
         } catch (\Exception $e) {
@@ -205,6 +246,8 @@ class SendConsultationReminders extends Command
                 'error' => $e->getMessage()
             ]);
         }
+        
     }
+    
 }
 
