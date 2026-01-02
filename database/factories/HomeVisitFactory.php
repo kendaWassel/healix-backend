@@ -24,14 +24,14 @@ class HomeVisitFactory extends Factory
         $serviceType = fake()->randomElement(['nurse', 'physiotherapist']);
 
         return [
-            'patient_id' => Patient::factory()->state(fn () => [ 'role' => 'patient' ]),
+            'patient_id' => Patient::factory(),
             'doctor_id' => Doctor::factory(),
-            'care_provider_id' => CareProvider::factory()->state(fn () => [ 'type' => $serviceType ]),
+            'care_provider_id' => null,
             'consultation_id' => Consultation::factory(),
             'scheduled_at' => fake()->dateTimeBetween('+1 days', '+30 days'),
             'service_type' => $serviceType,
             'reason' => $serviceType === 'nurse' ? 'Nursing Care' : 'Physiotherapy Session',
-            'status' => fake()->randomElement(['pending', 'accepted', 'rejected', 'completed', 'cancelled']),
+            'status' => fake()->randomElement(['pending', 'accepted', 'completed', 'cancelled']),
         ];
     }
 }

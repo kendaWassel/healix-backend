@@ -17,7 +17,7 @@ class ConsultationReminderNotification extends Notification
     protected $consultation;
     protected $recipientType; // 'patient' or 'doctor'
     protected $otherParty; // The other person (doctor if recipient is patient, patient if recipient is doctor)
-    
+
 
     /**
      * Create a new notification instance.
@@ -36,7 +36,7 @@ class ConsultationReminderNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database', 'broadcast', 'sms'];
+        return ['mail', 'database'];
     }
 
     /**
@@ -44,33 +44,35 @@ class ConsultationReminderNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $scheduledTime = $this->consultation->scheduled_at 
-            ? $this->consultation->scheduled_at->format('Y-m-d H:i') 
+        $scheduledTime = $this->consultation->scheduled_at
+            ? $this->consultation->scheduled_at->format('Y-m-d H:i')
             : 'now';
-        
+
         $otherName = $this->otherParty->full_name ?? $this->otherParty->name;
-        
+
         if ($this->recipientType === 'patient') {
             $message = "Reminder: You have a consultation with Dr. {$otherName} scheduled for {$scheduledTime}";
         } else {
             $message = "Reminder: You have a consultation with {$otherName} scheduled for {$scheduledTime}";
         }
-
+        Log::info($message);
         return (new MailMessage)
-                    ->subject('Consultation Reminder')
-                    ->line($message)
-                    ->action('View Consultation', url('/consultations/' . $this->consultation->id))
-                    ->line('Thank you for using our application!');
+            ->subject('Consultation Reminder')
+            ->line($message)
+            ->line('Please be ready for the consultation.')
+            ->line('Thank you for using our platform!')
+            ->salutation('Healix Team'."\n");
+
     }
 
     public function toDatabase(object $notifiable)
     {
-        $scheduledTime = $this->consultation->scheduled_at 
-            ? $this->consultation->scheduled_at->format('Y-m-d H:i') 
+        $scheduledTime = $this->consultation->scheduled_at
+            ? $this->consultation->scheduled_at->format('Y-m-d H:i')
             : 'now';
-        
+
         $otherName = $this->otherParty->full_name ?? $this->otherParty->name;
-        
+
         if ($this->recipientType === 'patient') {
             $title = 'Consultation Reminder';
             $message = "You have a consultation with Dr. {$otherName} scheduled for {$scheduledTime}";
@@ -91,5 +93,38 @@ class ConsultationReminderNotification extends Notification
         ];
     }
 
-}
+    /**
+     * Get the SMS representation of the notification.
+     */
+    public function toSms(object $notifiable): string
+    {
+        $scheduledTime = $this->consultation->scheduled_at
+            ? $this->consultation->scheduled_at->format('Y-m-d H:i')
+            : 'now';
 
+        $otherName = $this->otherParty->full_name ?? $this->otherParty->name;
+
+        if ($this->recipientType === 'patient') {
+            return "Reminder: You have a consultation with Dr. {$otherName} at {$scheduledTime}. Please be ready.";
+        } else {
+            return "Reminder: You have a consultation with {$otherName} at {$scheduledTime}. Please be ready.";
+        }
+    }
+    /**
+     * Get the WhatsApp representation of the notification.
+     */
+    public function toWhatsApp(object $notifiable): string
+    {
+        $scheduledTime = $this->consultation->scheduled_at
+            ? $this->consultation->scheduled_at->format('Y-m-d H:i')
+            : 'now';
+
+        $otherName = $this->otherParty->full_name ?? $this->otherParty->name;
+
+        if ($this->recipientType === 'patient') {
+            return "Reminder: You have a consultation with Dr. {$otherName} at {$scheduledTime}. Please be ready.";
+        } else {
+            return "Reminder: You have a consultation with {$otherName} at {$scheduledTime}. Please be ready.";
+        }
+    }
+}

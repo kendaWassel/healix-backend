@@ -35,6 +35,7 @@ class PharmacistController extends Controller
             'pharmacist',
             'patient.user'
         ])->where('pharmacist_id', $pharmacist->id)
+        ->where('status', 'pending')
             ->orderBy('created_at', 'desc');
 
         $orders = $ordersQuery->paginate($perPage, ['*'], 'page', $page);
@@ -56,10 +57,6 @@ class PharmacistController extends Controller
         $data = $orders->getCollection()->map(function ($order) {
             $prescription = $order->prescription;
 
-            if ($prescription && $prescription->status === 'accepted') {
-                return null;
-            }
-
             $patientName = $order->patient->user->full_name ?? $prescription->patient->user->full_name ?? null;
 
             $medicines = $prescription->medications->map(function ($item) {
@@ -73,7 +70,7 @@ class PharmacistController extends Controller
 
             $totalBoxes = $prescription->medications->sum('boxes');
 
-            if ($prescription->source === 'doctor_written') {
+            if ($prescription->source === 'doctor_written' ) {
                 return [
                     'id' => $prescription->id,
                     'order_id' => $order->id,
@@ -397,7 +394,7 @@ class PharmacistController extends Controller
                 $imageUrl = $prescriptionImage && $prescriptionImage->file_path
                     ? asset('storage/' . ltrim($prescriptionImage->file_path, '/'))
                     : null;
-                $result['prescription_image_url'] = $imageUrl;
+                $result['image_url'] = $imageUrl;
             }
 
             return $result;
@@ -446,7 +443,7 @@ class PharmacistController extends Controller
         }
 
         // Check if order can be rejected (not already delivered or rejected)
-        if (in_array($order->status, ['delivered', 'rejected'])) {
+        if (in_array($order->status, ['delivered', 'rejected', 'ready_for_delivery'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Order cannot be rejected. Current status: ' . $order->status
@@ -457,7 +454,7 @@ class PharmacistController extends Controller
         $order->rejection_reason = $validated['reason'];
         $order->save();
 
-        // Also update prescription status if needed
+        // Update prescription status to rejected
         if ($order->prescription) {
             $order->prescription->update(['status' => 'rejected']);
         }
@@ -602,7 +599,6 @@ class PharmacistController extends Controller
             $patientUser = $patient->user;
             
             // Get delivery info
-            $deliveryData = null;
             $deliveryTask = $order->delivery;
             if ($deliveryTask && $deliveryTask->delivery_id) {
                 $delivery = $deliveryTask->delivery;

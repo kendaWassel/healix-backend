@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 
 class Pharmacist extends Model
 {
@@ -35,10 +37,11 @@ class Pharmacist extends Model
     }
     public function isOpen()
     {
-        $currentTime = now()->format('H:i:s');
-        $pharmacy = $this; // Assuming this model represents the pharmacy
+        $currentTime = Carbon::now('Asia/Damascus');
+        $from = Carbon::createFromFormat('H:i:s', $this->from, 'Asia/Damascus');
+        $to = Carbon::createFromFormat('H:i:s', $this->to, 'Asia/Damascus');
 
-        return $currentTime >= $pharmacy->from && $currentTime <= $pharmacy->to;
+        return $currentTime->between($from, $to);
     }
 
 }

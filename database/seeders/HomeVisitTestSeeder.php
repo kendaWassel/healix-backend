@@ -8,6 +8,7 @@ use App\Models\HomeVisit;
 use App\Models\CareProvider;
 use App\Models\Consultation;
 use Illuminate\Database\Seeder;
+use ParagonIE\Sodium\Core\Curve25519\H;
 
 class HomeVisitTestSeeder extends Seeder
 {
@@ -24,6 +25,7 @@ class HomeVisitTestSeeder extends Seeder
             'reason' => 'Insulin injection + Blood pressure',
             'status' => 'pending',
         ]);
+
         // Get existing doctors and care providers
         $doctors = Doctor::all();
         $nurses = CareProvider::where('type', 'nurse')->get();
@@ -109,5 +111,6 @@ class HomeVisitTestSeeder extends Seeder
                 'status' => 'accepted',
             ])->create();
         }
+        HomeVisit::factory()->count(10)->create();
     }
 }

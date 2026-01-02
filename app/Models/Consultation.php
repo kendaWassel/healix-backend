@@ -20,7 +20,10 @@ class Consultation extends Model
 
     protected $casts = [
         'scheduled_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
+    
 
     public function patient(): BelongsTo
     {

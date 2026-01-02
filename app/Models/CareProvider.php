@@ -24,6 +24,11 @@ class CareProvider extends Model
     {
         return $this->belongsTo(User::class);
     }
+    public function medicalRecord()
+    {
+        return $this->hasMany(MedicalRecord::class);
+    }
+
     public function homeVisits()
     {
         return $this->hasMany(HomeVisit::class);

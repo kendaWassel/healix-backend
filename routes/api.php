@@ -57,7 +57,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // Specializations for Consultation
         Route::get('/specializations', [SpecializationController::class, 'listForConsultation']);
 
-
         Route::get('/my-schedules', [PatientController::class, 'getPatientScheduledConsultations']);
 
         // related to Doctors
@@ -67,18 +66,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
         // Consultations
         Route::post('/consultations/book', [ConsultationController::class, 'bookConsultation']);
-        Route::post('/consultations/{id}/call', [ConsultationController::class, 'startConsultation']);
-        Route::post('/consultations/{id}/end', [ConsultationController::class, 'endConsultation']);
 
-        // Medical Recored
+        // Medical Record
         Route::get('/medical-record', [MedicalRecordController::class, 'getPatientMedicalRecord']);
 
         // Ratings
         Route::post('ratings/doctors/{doctor_id}', [RatingController::class, 'rateDoctor']);
-        Route::get('ratings/consultations/{consultation_id}', [RatingController::class, 'getMyRatingForConsultation']);
         Route::post('pharmacies/{pharmacy_id}/rate', [RatingController::class, 'ratePharmacy']);
         Route::post('deliveries/{delivery_id}/rate', [RatingController::class, 'rateDelivery']);
-
 
         // Prescription (patient)
         Route::prefix('prescriptions')->group(function () {
@@ -87,22 +82,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::post('/upload', [PatientController::class, 'uploadPaperPrescription']);
             Route::post('/{prescription_id}/send', [PatientController::class, 'sendPrescriptionToPharmacy']);
         });
+
         //get prescriptions with pricing info
         Route::get('/view-prescriptions-with-pricing', [PatientController::class, 'getPrescriptionsWithPricing']);
-
         // Orders (patient)
         Route::get('/orders/status', [PatientController::class, 'getOrdersStatus']);
     });
 
     // Doctor
     Route::prefix('doctor')->group(function () {
-
         Route::get('/my-schedules', [DoctorController::class, 'getDoctorSchedules']);
-        Route::post('/consultations/{id}/call', [ConsultationController::class, 'startConsultation']);
-        Route::post('/consultations/{id}/end', [ConsultationController::class, 'endConsultation']);
 
-        Route::get('/patients/{patient_id}/view-details', [MedicalRecordController::class, 'viewDetails']);
-        Route::put('patients/{patient_id}/medical-record/update', [MedicalRecordController::class, 'updateMedicalRecord']);
         Route::post('/home-visit/request', [HomeVisitController::class, 'requestHomeVisit']);
         // Prescription (doctor)
         Route::post('/prescriptions', [DoctorController::class, 'createPrescription']);
@@ -143,6 +133,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/prescriptions/{id}/add-price', [PharmacistController::class, 'addPrice']);
         
     });
+
     // Medical Record view details or update (Doctor, Nurse, Physiotherapist)
     Route::get('/patients/{patient_id}/view-details',[MedicalRecordController::class,'viewDetails']);
     Route::put('/patients/{patient_id}/medical-record/update', [MedicalRecordController::class, 'updateMedicalRecord']);
@@ -157,10 +148,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/schedules/{id}/start-session', [NurseController::class, 'startSession']);
         Route::post('/schedules/{id}/end-session', [NurseController::class, 'endSession']);
 
-        // view details
-        Route::get('/patients/{patient_id}/view-details',[MedicalRecordController::class,'viewDetails']);
-
     });
+
     // Provider Physiotherapist
     Route::prefix('provider/physiotherapist')->group(function () {
         Route::get('/orders', [PhysiotherapistController::class, 'orders']);
@@ -169,8 +158,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/schedules/{id}/start-session', [PhysiotherapistController::class, 'startSession']);
         Route::post('/schedules/{id}/end-session', [PhysiotherapistController::class, 'endSession']);
 
-        //view details
-        Route::get('/patients/{patient_id}/view-details',[MedicalRecordController::class,'viewDetails']);
 
 
 
