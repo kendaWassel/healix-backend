@@ -29,7 +29,10 @@ return new class extends Migration
             
             $table->enum('status', [
                 'created', 
-                'sent_to_pharmacy',
+                'sent_to_pharmacy', 
+                'pending', 
+                'accepted', 
+                'rejected'
             ])->default('created');
 
             // if patient uploaded paper prescription instead of doctor writing
