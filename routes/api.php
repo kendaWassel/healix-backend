@@ -165,12 +165,30 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Delivery
-    Route::prefix('delivery')->group(function () {
-        Route::get('/new-orders', [DeliveryController::class, 'newOrders']);
-        Route::post('/new-orders/{order_id}/accept', [DeliveryController::class, 'accept']);
-        Route::get('/tasks', [DeliveryController::class, 'tasks']);
-        Route::put('/tasks/{task_id}/update-status', [DeliveryController::class, 'updateTaskStatus']);
-    });
+Route::prefix('delivery')->middleware('auth:sanctum')->group(function () {
+
+    // الطلبات الجاهزة للتوصيل
+    Route::get('/new-orders', [DeliveryController::class, 'newOrders']);
+
+    // قبول طلب توصيل
+    Route::post('/new-orders/{order_id}/accept', [DeliveryController::class, 'accept']);
+
+    // مهام الدليفري
+    Route::get('/tasks', [DeliveryController::class, 'tasks']);
+
+    // إدخال سعر التوصيل (قبل delivered)
+    Route::post(
+        '/tasks/{task_id}/set-delivery-fee',
+        [DeliveryController::class, 'setDeliveryFee']
+    );
+
+    // تحديث حالة مهمة التوصيل
+    Route::put(
+        '/tasks/{task_id}/update-status',
+        [DeliveryController::class, 'updateTaskStatus']
+    );
+
+});
 
 
     //Payment Gateway

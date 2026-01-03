@@ -16,7 +16,8 @@ class DeliveryTask extends Model
         'status',
         'assigned_at',
         'picked_at',
-        'delivered_at'
+        'delivered_at',
+        'delivery_fee'
     ];
     protected $casts = [
         'assigned_at' => 'datetime',
