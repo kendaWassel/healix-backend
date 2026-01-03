@@ -42,6 +42,7 @@ class DatabaseSeeder extends Seeder
             OrderSeeder::class,
             UploadSeeder::class,
             MedicalRecordSeeder::class,
+            DeliveryTaskSeeder::class,
         ]);
 
     }

@@ -86,7 +86,7 @@ class DeliveryController extends Controller
             'data' => [
                 'task_id' => $task->id,
                 'order_id' => $order->id,
-                'status' => 'picked up the order',
+                'status' => 'picked_up_the_order',
             ],
         ]);
     }
@@ -118,6 +118,7 @@ class DeliveryController extends Controller
                 'status' => $task->status,
                 'pharmacy_name' => $task->order->pharmacist->pharmacy_name ?? null,
                 'pharmacy_phone' => $task->order->pharmacist->user->phone ?? null,
+                'pharmacy_address' => $task->order->pharmacist->address ?? null,
                 'patient_name' => $task->order->patient->user->full_name ?? null,
                 'patient_phone' => $task->order->patient->user->phone ?? null,
                 'patient_address' => $task->order->patient->address ?? null,
@@ -129,6 +130,7 @@ class DeliveryController extends Controller
             'data' => $data,
             'meta' => [
                 'current_page' => $tasks->currentPage(),
+                'per_page' => $tasks->perPage(),
                 'last_page' => $tasks->lastPage(),
                 'total' => $tasks->total(),
             ],

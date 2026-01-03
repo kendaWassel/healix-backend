@@ -122,6 +122,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         //  Order Management
         Route::get('/my-orders', [PharmacistController::class, 'myOrders']);
         Route::get('/orders/track', [PharmacistController::class, 'trackOrders']);
+        Route::get('/orders/{orderId}/track', [PharmacistController::class, 'trackOrder']);
         Route::get('/orders/history', [PharmacistController::class, 'ordersHistory']);
         // Set order as ready
         Route::post('/orders/{id}/ready', [OrderController::class, 'markReadyForDelivery']);
