@@ -125,7 +125,7 @@ class DeliveryController extends Controller
         'data' => [
             'task_id' => $task->id,
             'delivery_fee' => $task->delivery_fee,
-            'final_total' =>
+            'total_amount' =>
                 $task->order->total_amount + $task->delivery_fee,
         ],
     ]);
@@ -165,7 +165,7 @@ class DeliveryController extends Controller
                 'patient_address' => $task->order->patient->address ?? null,
                 'order_price' => $task->order->total_amount,
                 'delivery_fee' => $task->delivery_fee,
-                'final_total' => $task->order->final_total ?? ($task->order->total_amount + ($task->delivery_fee ?? 0)),
+                'total_amount' => $task->order->total_amount + ($task->delivery_fee ?? 0),
 
             ];
         });
@@ -177,7 +177,7 @@ class DeliveryController extends Controller
                 'current_page' => $tasks->currentPage(),
                 'per_page' => $tasks->perPage(),
                 'last_page' => $tasks->lastPage(),
-                'total' => $tasks->total(),
+                'total' => $tasks->total(), 
             ],
         ]);
     }
@@ -223,11 +223,11 @@ class DeliveryController extends Controller
         if ($request->status === 'delivered') {
             $task->delivered_at = now();
 
-            $finalTotal =
+            $totalAmount =
             $task->order->total_amount + ($task->delivery_fee ?? 0);
             $task->order->update([
             'status' => 'delivered',
-            'final_total' => $finalTotal,
+            'total_amount' => $totalAmount,
     ]);
         }
 
