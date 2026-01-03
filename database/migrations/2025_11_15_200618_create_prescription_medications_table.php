@@ -18,10 +18,6 @@ return new class extends Migration
             $table->string('boxes')->nullable();      //the same as quantity 
             $table->string('instructions')->nullable();
             $table->decimal('price', 10, 2)->nullable();
-            // total price can be calculated as boxes * medication price
-            $table->decimal('total_price', 10, 2)->nullable();
-            //total quantity can be derived from boxes * medication per box
-            $table->integer('total_quantity')->nullable();
 
             $table->timestamps();
         });

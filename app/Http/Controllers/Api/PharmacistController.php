@@ -77,7 +77,7 @@ class PharmacistController extends Controller
                     'source' => 'doctor',
                     'patient' => $patientName,
                     'medicines' => $medicines,
-                    'total_quantity' => $totalBoxes,
+                    'total_quantity' => $prescription->total_quantity ?? $totalBoxes,
                     'status' => $order->status,
                     'created_at' => $prescription->created_at->toIso8601String(),
                 ];
@@ -99,7 +99,7 @@ class PharmacistController extends Controller
 
                 if ($medicines->isNotEmpty()) {
                     $result['medicines'] = $medicines;
-                    $result['total_quantity'] = $totalBoxes;
+                    $result['total_quantity'] = $prescription->total_quantity ?? $totalBoxes;
                 }
 
                 return $result;
@@ -257,6 +257,7 @@ class PharmacistController extends Controller
 
             $totalPrice = 0;
         $updatedItems = [];
+        $totalQuantity = 0;
         // Create order medications with prices
         foreach ($validated['items'] as $item) {
             $medicineName = $item['medicine_name'];
@@ -282,6 +283,7 @@ class PharmacistController extends Controller
             ]);
 
             $totalPrice += $itemTotalPrice;
+            $totalQuantity += $quantity;
             $updatedItems[] = [
                 'medicine_name' => $medicineName,
                 'dosage' => $dosage,
@@ -295,6 +297,12 @@ class PharmacistController extends Controller
             ->selectRaw('SUM(price * boxes) as total')
             ->value('total') ?? 0;
 
+        // Update prescription with totals
+        $prescription->update([
+            'total_quantity' => $totalQuantity,
+            'total_price' => $calculatedTotalPrice,
+        ]);
+
             DB::commit();
 
             return response()->json([
@@ -304,7 +312,7 @@ class PharmacistController extends Controller
                     'prescription_id' => $prescription->id,
                     'order_id' => $order->id,
                     'items' => $updatedItems,
-                    'total_quantity' => array_sum(array_column($updatedItems, 'quantity')),
+                    'total_quantity' => $totalQuantity,
                     'total_price' => $calculatedTotalPrice,
                     'status' => $prescription->status,
                 ],
@@ -373,8 +381,8 @@ class PharmacistController extends Controller
                 ];
             });
 
-            $totalQuantity = $medicines->sum('quantity');
-            $totalMedicinePrice = $medicines->sum(function ($medicine) {
+            $totalQuantity = $prescription->total_quantity ?? $medicines->sum('quantity');
+            $totalMedicinePrice = $prescription->total_price ?? $medicines->sum(function ($medicine) {
                 return $medicine['quantity'] * $medicine['price_per_unit'];
             });
 
@@ -703,7 +711,9 @@ class PharmacistController extends Controller
                 return $med['medication_name'] !== null;
             })->values();
 
-            $totalMedicinePrice = $medications->sum('price');
+            $totalMedicinePrice = $prescription->total_price ?? $medications->sum(function ($med) {
+                return $med['quantity'] * $med['price'];
+            });
 
             return [
                 'order_id' => $order->id,
