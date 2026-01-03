@@ -36,6 +36,7 @@ class DeliveryController extends Controller
                     'address' => $order->pharmacist->address ?? null,
                 ],
                 'patient_address' => $order->patient->address ?? null,
+                'order_price' => (float) $order->total_amount,
             ];
         });
 
@@ -90,6 +91,46 @@ class DeliveryController extends Controller
             ],
         ]);
     }
+    public function setDeliveryFee(Request $request, $task_id)
+{
+    $request->validate([
+        'delivery_fee' => 'required|numeric|min:0',
+    ]);
+
+    $delivery = Auth::user()->delivery;
+    if (!$delivery) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    $task = DeliveryTask::with('order')
+        ->where('id', $task_id)
+        ->where('delivery_id', $delivery->id)
+        ->whereIn('status', ['picked_up_the_order', 'on_the_way'])
+        ->first();
+
+    if (!$task) {
+        return response()->json(['message' => 'Task not found'], 404);
+    }
+
+    if ($task->delivery_fee !== null) {
+        return response()->json(['message' => 'Delivery fee already set'], 400);
+    }
+
+    $task->update([
+        'delivery_fee' => $request->delivery_fee,
+    ]);
+
+    return response()->json([
+        'status' => 'success',
+        'data' => [
+            'task_id' => $task->id,
+            'delivery_fee' => $task->delivery_fee,
+            'final_total' =>
+                $task->order->total_amount + $task->delivery_fee,
+        ],
+    ]);
+}
+
 
     /**
      * مهام التوصيل الخاصة بالمندوب
@@ -118,9 +159,14 @@ class DeliveryController extends Controller
                 'status' => $task->status,
                 'pharmacy_name' => $task->order->pharmacist->pharmacy_name ?? null,
                 'pharmacy_phone' => $task->order->pharmacist->user->phone ?? null,
+                'pharmacy_address' => $task->order->pharmacist->address ?? null,
                 'patient_name' => $task->order->patient->user->full_name ?? null,
                 'patient_phone' => $task->order->patient->user->phone ?? null,
                 'patient_address' => $task->order->patient->address ?? null,
+                'order_price' => $task->order->total_amount,
+                'delivery_fee' => $task->delivery_fee,
+                'final_total' => $task->order->final_total ?? ($task->order->total_amount + ($task->delivery_fee ?? 0)),
+
             ];
         });
 
@@ -175,14 +221,23 @@ class DeliveryController extends Controller
 
         if ($request->status === 'delivered') {
             $task->delivered_at = now();
-            $task->order->update(['status' => 'delivered']);
+
+            $finalTotal =
+            $task->order->total_amount + ($task->delivery_fee ?? 0);
+            $task->order->update([
+            'status' => 'delivered',
+            'final_total' => $finalTotal,
+    ]);
         }
+
 
         $task->save();
 
         return response()->json([
             'status' => 'success',
             'message' => 'Task updated',
+            'updated_at' => $task->updated_at ? $task->updated_at->toDateTimeString() : null,
+      
         ]);
     }
 }
