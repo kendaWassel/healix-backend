@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('prescription_id')->constrained()->cascadeOnDelete();
             $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('pharmacist_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('pharmacist_id')->nullable()->change()->constrained()->nullOnDelete();
             $table->enum('status', [
                 'pending',
                 'sent_to_pharmacy',
