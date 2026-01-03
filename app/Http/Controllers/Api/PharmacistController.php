@@ -35,7 +35,7 @@ class PharmacistController extends Controller
             'pharmacist',
             'patient.user'
         ])->where('pharmacist_id', $pharmacist->id)
-        ->where('status', 'pending')
+        ->where('status', 'sent_to_pharmacy')
             ->orderBy('created_at', 'desc');
 
         $orders = $ordersQuery->paginate($perPage, ['*'], 'page', $page);
@@ -492,17 +492,18 @@ class PharmacistController extends Controller
 
         $perPage = $request->get('per_page', 10);
 
-        // Get active orders (not delivered, not rejected)
+        // Get all orders
         $orders = Order::with([
-            'delivery.delivery.user'
+            'deliveryTask.delivery','patient.user','prescription.medications.medication'
         ])
         ->where('pharmacist_id', $pharmacist->id)
-        ->whereNotIn('status', ['delivered', 'rejected'])
+
+        ->whereIn('status', ['accepted', 'ready_for_delivery','out_for_delivery'])
         ->orderByDesc('created_at')
         ->paginate($perPage)->appends($request->query());
 
         $data = $orders->getCollection()->map(function ($order) {
-            $deliveryTask = $order->delivery;
+            $deliveryTask = $order->deliveryTask;
             $deliveryData = null;
 
             if ($deliveryTask && $deliveryTask->delivery_id) {
@@ -520,13 +521,13 @@ class PharmacistController extends Controller
 
                 $deliveryData = [
                     'task_id' => $deliveryTask->id,
-                    'status' => $deliveryTask->status,
                     'delivery_agent' => [
                         'name' => $deliveryUser ? $deliveryUser->full_name : null,
                         'driver_image' => $deliveryImageUrl,
                         'phone' => $deliveryUser ? $deliveryUser->phone : null,
                         'vehicle_type' => $delivery->vehicle_type,
                         'plate_number' => $delivery->plate_number,
+                        'driver_status' => $deliveryTask->status,
                     ],
                     'assigned_at' => $deliveryTask->assigned_at ? $deliveryTask->assigned_at->format('Y-m-d H:i:s') : null,
                 ];
@@ -534,7 +535,6 @@ class PharmacistController extends Controller
 
             $result = [
                 'order_id' => $order->id,
-                'order_status' => $order->status,
                 'created_at' => $order->created_at->format('Y-m-d H:i:s'),
             ];
 
@@ -557,6 +557,89 @@ class PharmacistController extends Controller
                 'per_page' => $orders->perPage(),
                 'total' => $orders->total()
             ],
+        ], 200);
+    }
+
+    /**
+     * Pharmacist: Track a specific active order
+     * 
+     * Endpoint: GET /api/pharmacist/orders/{orderId}/track
+     */
+    public function trackOrder(Request $request, $orderId)
+    {
+        $pharmacist = Auth::user()->pharmacist;
+        if (!$pharmacist) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pharmacist profile not found.'
+            ], 404);
+        }
+
+        $order = Order::with([
+            'deliveryTask.delivery.user',
+            'patient.user',
+            'prescription.medications.medication'
+        ])
+        ->where('id', $orderId)
+        ->where('pharmacist_id', $pharmacist->id)
+        ->whereNotIn('status', ['delivered', 'rejected'])
+        ->first();
+
+        if (!$order) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Order not found or not accessible.'
+            ], 404);
+        }
+
+        $deliveryTask = $order->deliveryTask;
+        $deliveryData = null;
+
+        if ($deliveryTask && $deliveryTask->delivery_id) {
+            $delivery = $deliveryTask->delivery;
+            $deliveryUser = $delivery->user;
+            
+            // Get delivery image
+            $deliveryImageUrl = null;
+            if ($delivery->delivery_image_id) {
+                $upload = \App\Models\Upload::find($delivery->delivery_image_id);
+                if ($upload && $upload->file_path) {
+                    $deliveryImageUrl = asset('storage/' . ltrim($upload->file_path, '/'));
+                }
+            }
+
+            $deliveryData = [
+                'task_id' => $deliveryTask->id,
+                'status' => $deliveryTask->status,
+                'delivery_agent' => [
+                    'name' => $deliveryUser ? $deliveryUser->full_name : null,
+                    'driver_image' => $deliveryImageUrl,
+                    'phone' => $deliveryUser ? $deliveryUser->phone : null,
+                    'vehicle_type' => $delivery->vehicle_type,
+                    'plate_number' => $delivery->plate_number,
+                ],
+                'assigned_at' => $deliveryTask->assigned_at ? $deliveryTask->assigned_at->format('Y-m-d H:i:s') : null,
+                'picked_at' => $deliveryTask->picked_at ? $deliveryTask->picked_at->format('Y-m-d H:i:s') : null,
+                'delivered_at' => $deliveryTask->delivered_at ? $deliveryTask->delivered_at->format('Y-m-d H:i:s') : null,
+            ];
+        }
+
+        $result = [
+            'order_id' => $order->id,
+            'order_status' => $order->status,
+            'created_at' => $order->created_at->format('Y-m-d H:i:s'),
+        ];
+
+        if ($deliveryData) {
+            $result['delivery'] = $deliveryData;
+        } else {
+            $result['delivery'] = null;
+            $result['message'] = 'No delivery agent has accepted this order yet';
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $result,
         ], 200);
     }
 
@@ -586,11 +669,10 @@ class PharmacistController extends Controller
         $orders = Order::with([
             'patient.user',
             'prescription.medications.medication',
-            'delivery.delivery.user',
+            'deliveryTask.delivery.user',
         ])
         ->where('pharmacist_id', $pharmacist->id)
         ->where('status', 'delivered')
-        ->orderByDesc('delivered_at')
         ->orderByDesc('created_at')
         ->paginate($perPage)->appends($request->query());
 
@@ -600,6 +682,7 @@ class PharmacistController extends Controller
             
             // Get delivery info
             $deliveryTask = $order->delivery;
+            $deliveryData = null;
             if ($deliveryTask && $deliveryTask->delivery_id) {
                 $delivery = $deliveryTask->delivery;
                 $deliveryUser = $delivery->user;
