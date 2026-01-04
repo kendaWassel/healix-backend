@@ -18,7 +18,7 @@ return new class extends Migration {
                 'on_the_way',
                 'delivered',
             ])->default('pending');
-            $table->decimal('delivery_fee', 10, 2)->nullable()->after('status');
+            $table->decimal('delivery_fee', 10, 2)->nullable();
 
 
             

@@ -74,7 +74,7 @@ class DeliveryController extends Controller
         $task = DeliveryTask::create([
             'order_id'   => $order->id,
             'delivery_id'=> $delivery->id,
-            'status'     => 'picked_up_the_order',
+            'status'     => 'picking_up_the_order',
             'assigned_at'=> now(),
         ]);
 
