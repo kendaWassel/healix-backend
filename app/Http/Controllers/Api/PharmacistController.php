@@ -541,9 +541,24 @@ class PharmacistController extends Controller
                 ];
             }
 
+            // Map medications with name, quantity, price, and dosage
+            $medications = $order->prescription && $order->prescription->medications 
+                ? $order->prescription->medications->map(function ($item) {
+                    return [
+                        'name' => $item->medication->name ?? null,
+                        'quantity' => (int) ($item->boxes ?? 0),
+                        'price' => (float) ($item->price ?? 0),
+                        'dosage' => $item->medication->dosage ?? null,
+                    ];
+                })->filter(function ($med) {
+                    return $med['name'] !== null;
+                })->values()
+                : [];
+
             $result = [
                 'order_id' => $order->id,
                 'created_at' => $order->created_at->format('Y-m-d H:i:s'),
+                'medications' => $medications,
             ];
 
             if ($deliveryData) {
@@ -689,7 +704,7 @@ class PharmacistController extends Controller
             $patientUser = $patient->user;
             
             // Get delivery info
-            $deliveryTask = $order->delivery;
+            $deliveryTask = $order->deliveryTask;
             $deliveryData = null;
             if ($deliveryTask && $deliveryTask->delivery_id) {
                 $delivery = $deliveryTask->delivery;
