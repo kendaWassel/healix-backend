@@ -137,6 +137,11 @@ class DeliveryController extends Controller
      */
     public function tasks(Request $request)
     {
+        $request->validate([
+            'per_page' => 'sometimes|integer|min:1|max:100',
+            'status' => 'sometimes|in:picking_up_the_order,picked_up_the_order,on_the_way,delivered',
+        ]);
+
         $delivery = Auth::user()->delivery;
 
         if (!$delivery) {
@@ -145,13 +150,17 @@ class DeliveryController extends Controller
 
         $perPage = $request->get('per_page', 10);
 
-        $tasks = DeliveryTask::with([
+        $tasksQuery = DeliveryTask::with([
             'order.pharmacist.user',
             'order.patient.user'
         ])
-        ->where('delivery_id', $delivery->id)
-        ->orderByDesc('created_at')
-        ->paginate($perPage);
+        ->where('delivery_id', $delivery->id);
+
+        if ($request->filled('status')) {
+            $tasksQuery->where('status', $request->status);
+        }
+
+        $tasks = $tasksQuery->orderByDesc('created_at')->paginate($perPage);
 
         $data = $tasks->getCollection()->map(function ($task) {
             return [
