@@ -1,6 +1,5 @@
 <?php
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\NurseController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\DoctorController;
 use App\Http\Controllers\Api\RatingController;
@@ -15,8 +14,10 @@ use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\SpecializationController;
-use App\Http\Controllers\Api\PhysiotherapistController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
+use App\Http\Controllers\Api\CareProvider\NurseController;
+
+use App\Http\Controllers\Api\CareProvider\PhysiotherapistController;
 
 //public APIs (no auth required)
 Route::prefix('auth')->group(function () {
@@ -70,6 +71,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // Schedule with care provider
         Route::get('/care-provider-schedules', [PatientController::class, 'getPatientScheduledCareProviders']);
         Route::post('/home-visits/{visit_id}/re-request', [HomeVisitController::class, 'reRequestHomeVisit']);
+        Route::post('/home-visits/{visit_id}/request-new-care-provider', [PatientController::class, 'requestNewCareProvider']);
         // Medical Record
         Route::get('/medical-record', [MedicalRecordController::class, 'getPatientMedicalRecord']);
 

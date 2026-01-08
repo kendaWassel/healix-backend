@@ -553,9 +553,14 @@ class PatientService
             throw new \Exception('Patient not found for this user.', 404);
         }
 
-        return CareProvider::with(['user', 'homeVisits'])
+        // Include all home visits including cancelled ones
+        return CareProvider::with(['user', 'homeVisits' => function ($query) use ($patient) {
+            $query->where('patient_id', $patient->id)
+                    
+                  ->orderBy('created_at', 'desc');
+        }])
             ->whereHas('homeVisits', function ($query) use ($patient) {
-                $query->where('patient_id', $patient->id);
+                $query->where('patient_id', $patient->id);                                                                                                                                                                                                                                                  
             })
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
@@ -573,6 +578,9 @@ class PatientService
             }
         }
         
+        // Get the latest home visit (most recent)
+        $visit = $provider->homeVisits->first();
+        
         // Collect all sessions with their statuses
         $sessions = $provider->homeVisits->map(function ($visit) {
             return [
@@ -581,22 +589,80 @@ class PatientService
                 'session_reason' => $visit->reason,
                 'session_fee' => $visit->session_fee,
                 'scheduled_at' => $visit->scheduled_at ? $visit->scheduled_at->toIso8601String() : null,
+
             ];
         })->values();
-
-        return [
+        $result = [
             'care_provider_id' => $provider->id,
             'care_provider_name' => $provider->user ? $provider->user->full_name : null,
             'care_provider_phone' => $provider->user ? $provider->user->phone : null,
             'gender' => $provider->user ? $provider->gender : null,
             'type' => $provider->type,
             'image' => $image,
-            'session_id' => $provider->homeVisits->id,
-            'status' =>$provider->homeVisits->status,
-            'session_reason' => $provider->homeVisits->reason,
-            'session_fee' => $provider->homeVisits->session_fee,
-            'scheduled_at' => $provider->homeVisits->scheduled_at ? $provider->homeVistis->scheduled_at->toIso8601String() : null,
+            'session_id' => $visit ? $visit->id : null,
+            'status' => $visit ? $visit->status : null,
+            'session_reason' => $visit ? $visit->reason : null,
+            'session_fee' => $visit ? $visit->session_fee : null,
+            'scheduled_at' => ($visit && $visit->scheduled_at)
+                ? $visit->scheduled_at->toIso8601String()
+                : null,
             // 'sessions' => $sessions,
+        ];
+        return $result;
+    }
+
+    /**
+     * Request a new care provider for a cancelled home visit
+     *
+     * @param int $visitId
+     * @param int $careProviderId
+     * @param string $scheduledAt
+     * @return array
+     */
+    public function requestNewCareProvider(int $visitId, string $scheduledAt): array
+    {
+        $user = Auth::user();
+        $patient = Patient::where('user_id', $user->id)->first();
+
+        if (!$patient) {
+            throw new \Exception('Patient not found for this user.', 404);
+        }
+
+        // Get the old cancelled visit
+        $oldVisit = HomeVisit::where('id', $visitId)
+            ->where('patient_id', $patient->id)
+            ->first();
+
+        if (!$oldVisit) {
+            throw new \Exception('Home visit not found.', 404);
+        }
+
+        // Only allow cancelled visits to be re-requested
+        if (!in_array($oldVisit->status, ['cancelled'])) {
+            throw new \Exception('Only cancelled  home visits can be re-requested with a new schedule time.', 400);
+        }
+        
+        // Check if the new scheduled at is in the past
+        if ($scheduledAt < now()) {
+            throw new \Exception('The scheduled time cannot be in the past.', 400);
+        }
+        
+        // Create a new home visit with status 'pending' so a care provider can accept it
+        $newVisit = HomeVisit::create([
+            'consultation_id' => $oldVisit->consultation_id,
+            'patient_id' => $patient->id,
+            'doctor_id' => $oldVisit->doctor_id,
+            'service_type' => $oldVisit->service_type,
+            'reason' => $oldVisit->reason,
+            'scheduled_at' => $scheduledAt,
+            'status' => 'pending', // New visit should be pending for care provider to accept
+            'address' => $oldVisit->address,
+        ]);
+
+        return [
+            'home_visit_id' => $newVisit->id,
+            'scheduled_at' => $newVisit->scheduled_at ? $newVisit->scheduled_at->toIso8601String() : null,
+            'status' => $newVisit->status,
         ];
     }
 }

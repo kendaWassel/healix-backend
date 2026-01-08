@@ -379,5 +379,37 @@ class PatientController extends Controller
             ], $statusCode);
         }
     }
+
+    /**
+     * Request a new care provider for a cancelled home visit
+     * 
+     * Endpoint: POST /api/patient/home-visits/{visit_id}/request-new-care-provider
+     */
+    public function requestNewCareProvider(Request $request, $visitId)
+    {
+        $validated = $request->validate([
+            'scheduled_at' => 'required|date',
+        ]);
+
+        try {
+            $data = $this->patientService->requestNewCareProvider(
+                $visitId,
+                $validated['scheduled_at']
+            );
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'New care provider requested successfully.',
+                'data' => $data,
+            ], 200);
+        } catch (\Exception $e) {
+            $code = $e->getCode();
+            $statusCode = (is_int($code) && $code >= 400 && $code < 600) ? $code : 500;
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], $statusCode);
+        }
+    }
 }
 
