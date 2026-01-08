@@ -25,7 +25,8 @@ return new class extends Migration
                 'accepted', 
                 'in_progress', 
                 'completed', 
-                'cancelled'
+                'cancelled',
+                'rescheduled'
             ])->default('pending');
             $table->string('address')->nullable();
             $table->timestamp('started_at')->nullable();
