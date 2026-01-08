@@ -7,9 +7,7 @@ use App\Models\Prescription;
 use App\Models\PrescriptionMedication;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories.Factory<\App\Models\PrescriptionMedication>
- */
+
 class PrescriptionMedicationFactory extends Factory
 {
     protected $model = PrescriptionMedication::class;

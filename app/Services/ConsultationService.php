@@ -119,7 +119,6 @@ class ConsultationService
             // Send WhatsApp message to doctor
             $ultraMsgService = new UltraMsgService();
             $result = $ultraMsgService->sendWhatsAppMessage($doctor->user->phone, "Hello {$doctor->user->full_name}, You have a new consultation booked.");
-            
             if (!$result) {
                 Log::warning('Failed to send WhatsApp notification', [
                     'doctor_id' => $doctor->id,
@@ -278,5 +277,8 @@ class ConsultationService
         ];
     }
 }
+
+
+
 
 

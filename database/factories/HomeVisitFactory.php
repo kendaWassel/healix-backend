@@ -31,7 +31,96 @@ class HomeVisitFactory extends Factory
             'scheduled_at' => fake()->dateTimeBetween('+1 days', '+30 days'),
             'service_type' => $serviceType,
             'reason' => $serviceType === 'nurse' ? 'Nursing Care' : 'Physiotherapy Session',
-            'status' => fake()->randomElement(['pending', 'accepted', 'completed', 'cancelled']),
+            'status' => 'pending', // Default status
+            'address' => fake()->address(),
+            'started_at' => null,
+            'ended_at' => null,
         ];
+    }
+
+    /**
+     * Indicate that the home visit is pending
+     */
+    public function pending()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'status' => 'pending',
+                'care_provider_id' => null,
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the home visit has been accepted by care provider
+     */
+    public function accepted()
+    {
+        return $this->state(function (array $attributes) {
+            $serviceType = $attributes['service_type'] ?? fake()->randomElement(['nurse', 'physiotherapist']);
+            $careProvider = CareProvider::where('type', $serviceType)
+                ->inRandomOrder()
+                ->first() ?? CareProvider::factory()->create(['type' => $serviceType]);
+            
+            return [
+                'status' => 'accepted',
+                'care_provider_id' => $careProvider->id,
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the home visit is in progress
+     */
+    public function inProgress()
+    {
+        return $this->state(function (array $attributes) {
+            $serviceType = $attributes['service_type'] ?? fake()->randomElement(['nurse', 'physiotherapist']);
+            $careProvider = CareProvider::where('type', $serviceType)
+                ->inRandomOrder()
+                ->first() ?? CareProvider::factory()->create(['type' => $serviceType]);
+            
+            return [
+                'status' => 'in_progress',
+                'care_provider_id' => $careProvider->id,
+                'started_at' => now(),
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the home visit is completed
+     */
+    public function completed()
+    {
+        return $this->state(function (array $attributes) {
+            $serviceType = $attributes['service_type'] ?? fake()->randomElement(['nurse', 'physiotherapist']);
+            $careProvider = CareProvider::where('type', $serviceType)
+                ->inRandomOrder()
+                ->first() ?? CareProvider::factory()->create(['type' => $serviceType]);
+            
+            $startedAt = now()->subHours(2);
+            return [
+                'status' => 'completed',
+                'care_provider_id' => $careProvider->id,
+                'started_at' => $startedAt,
+                'ended_at' => $startedAt->copy()->addHours(1),
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the home visit is cancelled
+     */
+    public function cancelled()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'status' => 'cancelled',
+                'care_provider_id' => fake()->optional()->randomElement(
+                    CareProvider::pluck('id')->toArray()
+                ),
+            ];
+        });
     }
 }

@@ -46,6 +46,11 @@ class Prescription extends Model
     return $this->hasMany(PrescriptionMedication::class);
     }
     
+    public function order()
+    {
+        return $this->hasMany(Order::class);
+        
+    }
     public function prescriptionImage()
     {
         return $this->belongsTo(Upload::class, 'prescription_image_id');

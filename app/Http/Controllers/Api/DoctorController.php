@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Services\DoctorService;
+use App\Models\Doctor;
+use App\Models\Rating;
 use Illuminate\Http\Request;
+use App\Services\DoctorService;
 use App\Http\Controllers\Controller;
 
 class DoctorController extends Controller
@@ -138,6 +140,58 @@ class DoctorController extends Controller
                 'status'  => 'error',
                 'message' => $e->getMessage(),
             ], $statusCode);
+        }
+    }
+        public function getDoctorRatings(Request $request, $doctorId)
+    
+    {
+        $validated = $request->validate([
+            'page' => 'sometimes|integer|min:1',
+            'per_page' => 'sometimes|integer|min:1|max:50'
+        ]);
+
+        try {
+            $doctor = Doctor::findOrFail($doctorId);
+            
+            $query = Rating::with('user')
+                ->where('target_type', 'doctor')
+                ->where('target_id', $doctorId)
+                ->orderBy('created_at', 'desc');
+
+            $perPage = $request->get('per_page', 10);
+            $ratings = $query->paginate($perPage);
+
+            $data = $ratings->map(function ($rating) {
+                return [
+                    'id' => $rating->id,
+                    'stars' => $rating->stars,
+                    'user_name' => $rating->user->full_name ?? 'Unknown',
+                    'created_at' => $rating->created_at->format('Y-m-d H:i:s')
+                ];
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'doctor_id' => $doctorId,
+                    'average_rating' => $doctor->rating_avg,
+                    'total_ratings' => $ratings->total(),
+                    'ratings' => $data
+                ],
+                'meta' => [
+                    'current_page' => $ratings->currentPage(),
+                    'last_page' => $ratings->lastPage(),
+                    'per_page' => $ratings->perPage(),
+                    'total' => $ratings->total()
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to retrieve ratings',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 }

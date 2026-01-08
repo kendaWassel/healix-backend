@@ -7,6 +7,7 @@ use App\Models\Medication;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Models\Prescription;
 use App\Models\PrescriptionMedication;
 use Illuminate\Support\Facades\Auth;
 
@@ -28,36 +29,39 @@ class PharmacistController extends Controller
         $perPage = $request->get('per_page', 10);
         $page = $request->get('page', 1);
 
-        $ordersQuery = Order::with([
-            'prescription.medications.medication',
-            'prescription.prescriptionImage',
-            'prescription.patient.user',
-            'pharmacist',
-            'patient.user'
-        ])->where('pharmacist_id', $pharmacist->id)
-        ->where('status', 'sent_to_pharmacy')
-            ->orderBy('created_at', 'desc');
+        $prescriptionsQuery = Prescription::with([
+            'patient',
+            'patient.user',
+            'prescriptionImage',
+            'medications.medication',
+            'order' => function ($query) {
+                $query->orderByDesc('created_at')->limit(1);
+            },
+        ])->where('status', 'sent_to_pharmacy');
 
-        $orders = $ordersQuery->paginate($perPage, ['*'], 'page', $page);
+        // Filter by pharmacist if needed - prescriptions assigned to this pharmacist
+        $prescriptionsQuery->where('pharmacist_id', $pharmacist->id);
 
-        if ($orders->isEmpty()) {
+        $prescriptions = $prescriptionsQuery->paginate($perPage, ['*'], 'page', $page);
+
+        if ($prescriptions->isEmpty()) {
             return response()->json([
                 'status' => 'empty',
                 'message' => 'No prescriptions found.',
                 'data' => [],
                 'meta' => [
-                    'current_page' => $orders->currentPage(),
-                    'last_page' => $orders->lastPage(),
-                    'per_page' => $orders->perPage(),
-                    'total' => $orders->total(),
+                    'current_page' => $prescriptions->currentPage(),
+                    'last_page' => $prescriptions->lastPage(),
+                    'per_page' => $prescriptions->perPage(),
+                    'total' => $prescriptions->total(),
                 ],
             ], 200);
         }
 
-        $data = $orders->getCollection()->map(function ($order) {
-            $prescription = $order->prescription;
-
-            $patientName = $order->patient->user->full_name ?? $prescription->patient->user->full_name ?? null;
+        $data = $prescriptions->getCollection()->map(function ($prescription) {
+            $patientName = $prescription->patient && $prescription->patient->user 
+                ? $prescription->patient->user->full_name 
+                : null;
 
             $medicines = $prescription->medications->map(function ($item) {
                 return [
@@ -69,16 +73,19 @@ class PharmacistController extends Controller
             })->filter();
 
             $totalBoxes = $prescription->medications->sum('boxes');
+            
+            // Get the latest order (since order() is hasMany)
+            $order = $prescription->order->first();
 
-            if ($prescription->source === 'doctor_written' ) {
+            if ($prescription->source === 'doctor_written') {
                 return [
-                    'id' => $prescription->id,
-                    'order_id' => $order->id,
+                    'prescription_id' => $prescription->id,
+                    'order_id' => $order ? $order->id : null,
                     'source' => 'doctor',
                     'patient' => $patientName,
                     'medicines' => $medicines,
                     'total_quantity' => $prescription->total_quantity ?? $totalBoxes,
-                    'status' => $order->status,
+                    'status' => $prescription->status, // Use prescription status instead of order status
                     'created_at' => $prescription->created_at->toIso8601String(),
                 ];
             } else { // patient_upload
@@ -88,12 +95,12 @@ class PharmacistController extends Controller
                     : null;
 
                 $result = [
-                    'id' => $prescription->id,
-                    'order_id' => $order->id,
+                    'prescription_id' => $prescription->id,
+                    'order_id' => $order ? $order->id : null,
                     'source' => 'patient_upload',
                     'patient' => $patientName,
                     'image_url' => $imageUrl,
-                    'status' => $order->status,
+                    'status' => $prescription->status, // Use prescription status instead of order status
                     'created_at' => $prescription->created_at->toIso8601String(),
                 ];
 
@@ -110,10 +117,10 @@ class PharmacistController extends Controller
             'status' => 'success',
             'data' => $data->values(),
             'meta' => [
-                'current_page' => $orders->currentPage(),
-                'last_page' => $orders->lastPage(),
-                'per_page' => $orders->perPage(),
-                'total' => $orders->total(),
+                'current_page' => $prescriptions->currentPage(),
+                'last_page' => $prescriptions->lastPage(),
+                'per_page' => $prescriptions->perPage(),
+                'total' => $prescriptions->total(),
             ],
         ], 200);
     }
@@ -168,42 +175,91 @@ class PharmacistController extends Controller
     }
 
     // Accept prescription
-    public function accept($orderId)
+    public function accept($prescriptionId)
     {
         try {
+            DB::beginTransaction();
+
             $pharmacist = Auth::user()->pharmacist;
             if (!$pharmacist) {
+                DB::rollBack();
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Pharmacist profile not found.'
                 ], 404);
             }
 
-            $order = Order::where('id', $orderId)
-                ->where('pharmacist_id', $pharmacist->id)
+            // Find prescription
+            $prescription = Prescription::with('order')
+                ->where('id', $prescriptionId)
                 ->first();
 
-            if (!$order) {
+            if (!$prescription) {
+                DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Order not found or not authorized.'
+                    'message' => 'Prescription not found.'
                 ], 404);
             }
 
-            $order->update(['status' => 'accepted']);
+            // Validate prescription is assigned to this pharmacist
+            if ($prescription->pharmacist_id !== $pharmacist->id) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'You are not authorized to accept this prescription.'
+                ], 403);
+            }
+
+            // Validate prescription can be accepted (should be in sent_to_pharmacy or pending status)
+            if (!in_array($prescription->status, ['sent_to_pharmacy', 'pending', 'created'])) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Prescription cannot be accepted. Current status: ' . $prescription->status
+                ], 422);
+            }
+
+            // Update prescription status to accepted
+            $prescription->update([
+                'status' => 'accepted',
+                'pharmacist_id' => $pharmacist->id,
+            ]);
+
+            // Find or create order and update status
+            $order = $prescription->order->first();
+            if ($order) {
+                $order->update([
+                    'status' => 'accepted',
+                    'pharmacist_id' => $pharmacist->id,
+                ]);
+            } else {
+                // Create order if it doesn't exist
+                $order = Order::create([
+                    'prescription_id' => $prescription->id,
+                    'patient_id' => $prescription->patient_id,
+                    'pharmacist_id' => $pharmacist->id,
+                    'status' => 'accepted',
+                ]);
+            }
+
+            DB::commit();
 
             return response()->json([
                 'status' => 'success',
                 'data' => [
+                    'prescription_id' => $prescription->id,
                     'order_id' => $order->id,
-                    'status' => $order->status,
+                    'prescription_status' => $prescription->status,
+                    'order_status' => $order->status,
                 ],
-                'message' => 'Order accepted'
+                'message' => 'Prescription accepted successfully'
             ], 200);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to accept order.',
+                'message' => 'Failed to accept prescription.',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -248,10 +304,18 @@ class PharmacistController extends Controller
             $prescription = $order->prescription;
 
             // Check if prescription is already priced
-            if ($prescription->status === 'accepted') {
+            if ($prescription->status === 'priced') {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Prescription is already priced.'
+                ], 422);
+            }
+
+            // Only allow pricing when prescription is accepted
+            if ($prescription->status !== 'accepted') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Prescription must be accepted before adding prices.'
                 ], 422);
             }
 
@@ -297,11 +361,15 @@ class PharmacistController extends Controller
             ->selectRaw('SUM(price * boxes) as total')
             ->value('total') ?? 0;
 
-        // Update prescription with totals
+        // Update prescription with totals and change status to priced
         $prescription->update([
             'total_quantity' => $totalQuantity,
             'total_price' => $calculatedTotalPrice,
+            'status' => 'priced',
         ]);
+
+        // Refresh to get updated status
+        $prescription->refresh();
 
             DB::commit();
 
@@ -344,14 +412,11 @@ class PharmacistController extends Controller
         $perPage = $request->get('per_page', 10);
         $page = $request->get('page', 1);
 
-        $ordersQuery = Order::with([
-            'prescription.prescriptionImage',
-            'prescription.patient.user',
-            'prescription.medications.medication'
-        ])
-        ->where('pharmacist_id', $pharmacist->id)
-        ->where('status', 'accepted')
-        ->orderBy('created_at', 'desc');
+        $ordersQuery = Order::select('orders.*')
+            ->join('prescriptions', 'orders.prescription_id', '=', 'prescriptions.id')
+            ->join('pharmacists', 'orders.pharmacist_id', '=', 'pharmacists.id')
+            ->where('pharmacists.id', $pharmacist->id)
+            ->where('orders.status', 'accepted');
 
         $orders = $ordersQuery->paginate($perPage, ['*'], 'page', $page);
 
@@ -421,61 +486,104 @@ class PharmacistController extends Controller
     }
 
     /**
-     * Pharmacist: Reject order
+     * Pharmacist: Reject prescription
      * 
-     * Endpoint: POST /api/pharmacist/prescriptions/{order_id}/reject
+     * Endpoint: POST /api/pharmacist/prescriptions/{prescription_id}/reject
      */
-    public function reject(Request $request, $order_id)
+    public function reject(Request $request, $prescriptionId)
     {
         $validated = $request->validate([
             'reason' => 'required|string|max:500',
         ]);
 
-        $pharmacist = Auth::user()->pharmacist;
-        if (!$pharmacist) {
+        try {
+            DB::beginTransaction();
+
+            $pharmacist = Auth::user()->pharmacist;
+            if (!$pharmacist) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Pharmacist profile not found.'
+                ], 404);
+            }
+
+            // Find prescription
+            $prescription = Prescription::with('order')
+                ->where('id', $prescriptionId)
+                ->first();
+
+            if (!$prescription) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Prescription not found.'
+                ], 404);
+            }
+
+            // Validate prescription is assigned to this pharmacist
+            if ($prescription->pharmacist_id !== $pharmacist->id) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'You are not authorized to reject this prescription.'
+                ], 403);
+            }
+
+            // Check if prescription can be rejected (not already delivered, rejected, or priced)
+            if (in_array($prescription->status, ['delivered', 'rejected', 'priced', 'accepted'])) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Prescription cannot be rejected. Current status: ' . $prescription->status
+                ], 422);
+            }
+
+            // Update prescription status to rejected
+            $prescription->update([
+                'status' => 'rejected',
+            ]);
+
+            // Update order status if exists
+            $order = $prescription->order->first();
+            if ($order) {
+                $order->update([
+                    'status' => 'rejected',
+                    'rejection_reason' => $validated['reason'],
+                    'pharmacist_id' => $pharmacist->id,
+                ]);
+            } else {
+                // Create order if it doesn't exist
+                $order = Order::create([
+                    'prescription_id' => $prescription->id,
+                    'patient_id' => $prescription->patient_id,
+                    'pharmacist_id' => $pharmacist->id,
+                    'status' => 'rejected',
+                    'rejection_reason' => $validated['reason'],
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'prescription_id' => $prescription->id,
+                    'order_id' => $order->id,
+                    'prescription_status' => $prescription->status,
+                    'order_status' => $order->status,
+                    'rejection_reason' => $order->rejection_reason,
+                ],
+                'message' => 'Prescription rejected successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pharmacist profile not found.'
-            ], 404);
+                'message' => 'Failed to reject prescription.',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $order = Order::where('id', $order_id)
-            ->where('pharmacist_id', $pharmacist->id)
-            ->first();
-
-        if (!$order) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Order not found or not authorized.'
-            ], 404);
-        }
-
-        // Check if order can be rejected (not already delivered or rejected)
-        if (in_array($order->status, ['delivered', 'rejected', 'ready_for_delivery'])) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Order cannot be rejected. Current status: ' . $order->status
-            ], 422);
-        }
-
-        $order->status = 'rejected';
-        $order->rejection_reason = $validated['reason'];
-        $order->save();
-
-        // Update prescription status to rejected
-        if ($order->prescription) {
-            $order->prescription->update(['status' => 'rejected']);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'order_id' => $order->id,
-                'status' => $order->status,
-                'rejection_reason' => $order->rejection_reason,
-            ],
-            'message' => 'Order rejected successfully'
-        ], 200);
     }
 
     /**

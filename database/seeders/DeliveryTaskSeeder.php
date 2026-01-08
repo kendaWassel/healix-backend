@@ -13,6 +13,6 @@ class DeliveryTaskSeeder extends Seeder
      */
     public function run(): void
     {
-        \App\Models\DeliveryTask::factory()->count(10)->create();
+        \App\Models\DeliveryTask::factory()->count(30)->create();
     }
 }

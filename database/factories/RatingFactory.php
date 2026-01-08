@@ -8,9 +8,6 @@ use App\Models\Patient;
 use App\Models\Rating;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories.Factory<\App\Models\Rating>
- */
 class RatingFactory extends Factory
 {
     protected $model = Rating::class;

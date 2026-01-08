@@ -12,10 +12,12 @@ class DeliveryController extends Controller
 {
     /**
      * الطلبات الجاهزة للتوصيل وغير محجوزة
+     * GET /api/
      */
     public function newOrders(Request $request)
     {
         $request->validate([
+            'page' => 'sometimes|integer|min:1',
             'per_page' => 'sometimes|integer|min:1|max:100',
         ]);
 
@@ -23,7 +25,7 @@ class DeliveryController extends Controller
 
         $orders = Order::with(['pharmacist', 'patient'])
             ->where('status', 'ready_for_delivery')
-            ->whereDoesntHave('deliveryTask')
+            ->whereDoesntHave('deliveryTask')// Check if the order doesn't have a delivery task
             ->orderByDesc('created_at')
             ->paginate($perPage);
 
@@ -36,7 +38,6 @@ class DeliveryController extends Controller
                     'address' => $order->pharmacist->address ?? null,
                 ],
                 'patient_address' => $order->patient->address ?? null,
-                'order_price' => (float) $order->total_amount,
             ];
         });
 
@@ -46,6 +47,7 @@ class DeliveryController extends Controller
             'meta' => [
                 'current_page' => $orders->currentPage(),
                 'last_page' => $orders->lastPage(),
+                'per_page' => $orders->perPage(),
                 'total' => $orders->total(),
             ],
         ]);
@@ -87,10 +89,17 @@ class DeliveryController extends Controller
             'data' => [
                 'task_id' => $task->id,
                 'order_id' => $order->id,
-                'status' => 'picked_up_the_order',
+                'status' => $task->status,
             ],
         ]);
     }
+    /**
+     * Summary of setDeliveryFee
+     * @param Request $request
+     * @param mixed $task_id
+     * @return \Illuminate\Http\JsonResponse
+     * 
+     */
     public function setDeliveryFee(Request $request, $task_id)
 {
     $request->validate([
@@ -105,7 +114,7 @@ class DeliveryController extends Controller
     $task = DeliveryTask::with('order')
         ->where('id', $task_id)
         ->where('delivery_id', $delivery->id)
-        ->whereIn('status', ['picked_up_the_order', 'on_the_way'])
+        ->whereIn('status', ['picking_up_the_order', 'on_the_way'])
         ->first();
 
     if (!$task) {
@@ -139,7 +148,7 @@ class DeliveryController extends Controller
     {
         $request->validate([
             'per_page' => 'sometimes|integer|min:1|max:100',
-            'status' => 'sometimes|in:picking_up_the_order,picked_up_the_order,on_the_way,delivered',
+            'status' => 'sometimes|in:pending,picking_up_the_order,on_the_way,delivered',
         ]);
 
         $delivery = Auth::user()->delivery;
@@ -160,11 +169,12 @@ class DeliveryController extends Controller
             $tasksQuery->where('status', $request->status);
         }
 
-        $tasks = $tasksQuery->orderByDesc('created_at')->paginate($perPage);
+        $tasks = $tasksQuery->orderByDesc('assigned_at')->paginate($perPage);
 
         $data = $tasks->getCollection()->map(function ($task) {
             return [
                 'task_id' => $task->id,
+                'order_id' => $task->order->id,
                 'status' => $task->status,
                 'pharmacy_name' => $task->order->pharmacist->pharmacy_name ?? null,
                 'pharmacy_phone' => $task->order->pharmacist->user->phone ?? null,
@@ -175,7 +185,6 @@ class DeliveryController extends Controller
                 'order_price' => $task->order->total_amount,
                 'delivery_fee' => $task->delivery_fee,
                 'total_amount' => $task->order->total_amount + ($task->delivery_fee ?? 0),
-
             ];
         });
 
@@ -197,7 +206,7 @@ class DeliveryController extends Controller
     public function updateTaskStatus(Request $request, $task_id)
     {
         $request->validate([
-            'status' => 'required|in:picked_up_the_order,on_the_way,delivered',
+            'status' => 'required|in:pending,picking_up_the_order,on_the_way,delivered',
         ]);
 
         $delivery = Auth::user()->delivery;
@@ -215,7 +224,8 @@ class DeliveryController extends Controller
         }
 
         $allowed = [
-            'picked_up_the_order' => ['on_the_way'],
+            'pending' => ['picking_up_the_order'],
+            'picking_up_the_order' => ['on_the_way'],
             'on_the_way' => ['delivered'],
         ];
 
@@ -245,7 +255,7 @@ class DeliveryController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Task updated',
+            'message' => 'Task status updated successfully',
             'updated_at' => $task->updated_at ? $task->updated_at->toDateTimeString() : null,
       
         ]);

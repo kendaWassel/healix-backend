@@ -58,9 +58,82 @@ class ConsultationFactory extends Factory
                 ];
             }),
             'type' => $type,
-            'status' => $status,
-            'scheduled_at' => $scheduledAt,
+            'status' => 'pending', // Default status
+            'scheduled_at' => $type === 'schedule' ? $this->faker->dateTimeBetween('now', '+7 days') : null,
         ];
     }
 
+    /**
+     * Indicate that the consultation is pending
+     */
+    public function pending()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'status' => 'pending',
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the consultation is in progress
+     */
+    public function inProgress()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'status' => 'in_progress',
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the consultation is completed
+     */
+    public function completed()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'status' => 'completed',
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the consultation is cancelled
+     */
+    public function cancelled()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'status' => 'cancelled',
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the consultation is call_now type
+     */
+    public function callNow()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'type' => 'call_now',
+                'scheduled_at' => null,
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the consultation is scheduled type
+     */
+    public function scheduled()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'type' => 'schedule',
+                'scheduled_at' => $this->faker->dateTimeBetween('now', '+7 days'),
+            ];
+        });
+    }
 }

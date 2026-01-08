@@ -32,7 +32,7 @@ class ConsultationController extends Controller
 
             $responseData = [
                 'status' => 'success',
-                'message' => 'Consultation created',
+                'message' => 'Consultation booked successfully.',
                 'data' => [
                     'consultation_id' => $consultation->id,
                     'doctor_id' => $consultation->doctor_id,

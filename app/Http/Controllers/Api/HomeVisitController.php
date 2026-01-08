@@ -58,4 +58,57 @@ class HomeVisitController extends Controller
             'data' => $homeVisit
         ]);
     }
+
+    public function reRequestHomeVisit(Request $request, $visitId)
+    {
+        $validated = $request->validate([
+            'scheduled_at' => 'required',
+        ]);
+
+        $user = auth()->user();
+        $patient = \App\Models\Patient::where('user_id', $user->id)->first();
+
+        if (!$patient) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Patient not found.'
+            ], 404);
+        }
+
+        $oldVisit = HomeVisit::where('id', $visitId)
+            ->where('patient_id', $patient->id)
+            ->first();
+
+        if (!$oldVisit) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Home visit not found.'
+            ], 404);
+        }
+
+        if ($oldVisit->status !== 'cancelled') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Only cancelled home visits can be re-requested.'
+            ], 400);
+        }
+
+        $newVisit = HomeVisit::updateOrCreate([
+            'consultation_id' => $oldVisit->consultation_id,
+            'patient_id' => $patient->id,
+            'doctor_id' => $oldVisit->doctor_id,
+            'service_type' => $oldVisit->service_type,
+            'reason' => $oldVisit->reason,
+            'scheduled_at' => $validated['scheduled_at'],
+            'status' => 'pending',
+            'address' => $oldVisit->address
+
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Home visit re-requested successfully.',
+            'data' => $newVisit
+        ]);
+    }
 }
