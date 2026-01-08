@@ -51,9 +51,10 @@ class PatientController extends Controller
                 'meta' => $meta
             ], 200);
         } catch (\Exception $e) {
-            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            $code = $e->getCode();
+            $statusCode = (is_int($code) && $code >= 400 && $code < 600) ? $code : 500;
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => $e->getMessage(),
             ], $statusCode);
         }
@@ -110,7 +111,8 @@ class PatientController extends Controller
                 'message' => 'Prescriptions retrieved successfully.',
             ], 200);
         } catch (\Exception $e) {
-            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            $code = $e->getCode();
+            $statusCode = (is_int($code) && $code >= 400 && $code < 600) ? $code : 500;
             return response()->json([
                 'status'  => 'error',
                 'message' => $e->getMessage(),
@@ -128,9 +130,10 @@ class PatientController extends Controller
                 'data' => $data,
             ], 200);
         } catch (\Exception $e) {
-            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            $code = $e->getCode();
+            $statusCode = (is_int($code) && $code >= 400 && $code < 600) ? $code : 500;
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => $e->getMessage(),
             ], $statusCode);
         }
@@ -162,7 +165,8 @@ class PatientController extends Controller
                 'errors'  => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            $code = $e->getCode();
+            $statusCode = (is_int($code) && $code >= 400 && $code < 600) ? $code : 500;
             return response()->json([
                 'status'  => 'error',
                 'message' => $e->getMessage(),
@@ -195,7 +199,8 @@ class PatientController extends Controller
                 'message' => 'Prescription sent to pharmacy',
             ], 200);
         } catch (\Exception $e) {
-            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            $code = $e->getCode();
+            $statusCode = (is_int($code) && $code >= 400 && $code < 600) ? $code : 500;
             return response()->json([
                 'status'  => 'error',
                 'message' => $e->getMessage(),
@@ -213,7 +218,8 @@ class PatientController extends Controller
                 'message' => ''
             ], 200);
         } catch (\Exception $e) {
-            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            $code = $e->getCode();
+            $statusCode = (is_int($code) && $code >= 400 && $code < 600) ? $code : 500;
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
@@ -243,8 +249,8 @@ class PatientController extends Controller
                     'meta' => [
                         'current_page' => $prescriptions->currentPage(),
                         'per_page' => $prescriptions->perPage(),
-                        'total_pages' => $prescriptions->lastPage(),
-                        'total_items' => $prescriptions->total(),
+                        'last_page' => $prescriptions->lastPage(),
+                        'total' => $prescriptions->total(),
                     ],
                 ], 200);
             }
@@ -259,12 +265,13 @@ class PatientController extends Controller
                 'meta' => [
                     'current_page' => $prescriptions->currentPage(),
                     'per_page' => $prescriptions->perPage(),
-                    'total_pages' => $prescriptions->lastPage(),
-                    'total_items' => $prescriptions->total(),
+                    'last_page' => $prescriptions->lastPage(),
+                    'total' => $prescriptions->total(),
                 ],
             ], 200);
         } catch (\Exception $e) {
-            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            $code = $e->getCode();
+            $statusCode = (is_int($code) && $code >= 400 && $code < 600) ? $code : 500;
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
@@ -275,9 +282,9 @@ class PatientController extends Controller
     /**
      * Patient: View Order & Delivery Status
      * 
-     * Endpoint: GET /api/patient/orders/status
+     * Endpoint: GET /api/patient/orders/delivery-info
      */
-    public function getOrdersStatus(Request $request)
+    public function getDeliveryInfo(Request $request)
     {
         $validated = $request->validate([
             'page'     => 'sometimes|integer|min:1',
@@ -286,10 +293,10 @@ class PatientController extends Controller
 
         try {
             $perPage = $request->get('per_page', 10);
-            $orders = $this->patientService->getOrdersStatus($perPage);
+            $orders = $this->patientService->getDeliveryInfo($perPage);
 
             $data = $orders->getCollection()->map(function ($order) {
-                return $this->patientService->formatOrderStatusData($order);
+                return $this->patientService->formatDeliveryInfo($order);
             })->values();
 
             return response()->json([
@@ -303,7 +310,69 @@ class PatientController extends Controller
                 ],
             ], 200);
         } catch (\Exception $e) {
-            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            $code = $e->getCode();
+            $statusCode = (is_int($code) && $code >= 400 && $code < 600) ? $code : 500;
+            return response()->json([
+                'status'  => 'error',
+                'message' => $e->getMessage(),
+            ], $statusCode);
+        }
+    }
+
+    /**
+     * Patient: Get delivery info for a specific order
+     * 
+     * Endpoint: GET /api/patient/orders/{order_id}/delivery-info
+     */
+    public function getOrderDeliveryInfo($orderId)
+    {
+        try {
+            $order = $this->patientService->getOrderDeliveryInfo($orderId);
+            $data = $this->patientService->formatDeliveryInfo($order);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $data,
+            ], 200);
+        } catch (\Exception $e) {
+            $code = $e->getCode();
+            $statusCode = (is_int($code) && $code >= 400 && $code < 600) ? $code : 500;
+            return response()->json([
+                'status'  => 'error',
+                'message' => $e->getMessage(),
+            ], $statusCode);
+        }
+    }
+    public function getPatientScheduledCareProviders(Request $request)
+    {
+        $validated = $request->validate([
+            'page' => 'sometimes|integer|min:1',
+            'per_page' => 'sometimes|integer|min:1|max:100',
+        ]);
+
+        try {
+            $perPage = $request->get('per_page', 10);
+            $providers = $this->patientService->getPatientScheduledCareProviders($perPage);
+
+            $data = $providers->getCollection()->map(function ($provider) {
+                return $this->patientService->formatPatientScheduledCareProviders($provider);
+            })->values();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $data,
+                'meta' => [
+                    'current_page' => $providers->currentPage(),
+                    'last_page' => $providers->lastPage(),
+                    'per_page' => $providers->perPage(),
+                    'total' => $providers->total()
+                ],
+            ]);
+        }
+
+        catch (\Exception $e) {
+            $code = $e->getCode();
+            $statusCode = (is_int($code) && $code >= 400 && $code < 600) ? $code : 500;
             return response()->json([
                 'status'  => 'error',
                 'message' => $e->getMessage(),
@@ -311,3 +380,4 @@ class PatientController extends Controller
         }
     }
 }
+

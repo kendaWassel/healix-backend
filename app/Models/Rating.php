@@ -11,6 +11,10 @@ class Rating extends Model
         'target_type',
         'target_id',
         'stars',
+        'consultation_id',
+        'order_id',
+        'home_visit_id',
+        'delivery_task_id',
     ];
     
     public function user()

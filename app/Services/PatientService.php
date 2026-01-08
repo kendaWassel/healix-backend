@@ -5,12 +5,13 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\Upload;
 use App\Models\Patient;
+use App\Models\HomeVisit;
+use App\Models\Pharmacist;
+use App\Models\CareProvider;
 use App\Models\Consultation;
 use App\Models\Prescription;
-use App\Models\Pharmacist;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class PatientService
 {
@@ -354,7 +355,7 @@ class PatientService
         }
 
         return Prescription::where('patient_id', $patient->id)
-            ->whereIn('status', ['accepted'])
+            ->whereIn('status', ['accepted','priced'])
             ->orderByDesc('created_at')
             ->paginate($perPage);
     }
@@ -383,6 +384,7 @@ class PatientService
         if ($prescription->status === 'rejected') {
             return [
                 'prescription_id' => $prescription->id,
+                'order_id' => $order->id,
                 'status' => $prescription->status,
                 'source' => $prescription->source === 'patient_uploaded' ? 'paper' : 'electronic',
                 'pharmacy' => $pharmacy,
@@ -402,6 +404,7 @@ class PatientService
                 'medicine_name' => $medication->medication->name ?? 'Unknown',
                 'quantity' => $medication->boxes ?? 1,
                 'price' => (float) ($medication->price ?? 0),
+
             ];
         })->values();
 
@@ -410,12 +413,14 @@ class PatientService
 
         return [
             'prescription_id' => $prescription->id,
+            'order_id' => $order->id,
             'status' => $prescription->status,
             'source' => $prescription->source === 'patient_uploaded' ? 'patient uploaded' : 'doctor',
             'pharmacy' => $pharmacy,
             'items' => $items,
             'total_quantity' => $totalQuantity,
             'total_price' => (float) ($prescription->total_price ?? 0),
+            'total_amount' => (float) ($order->total_amount ?? 0),
             'priced_at' => $prescription->updated_at->toIso8601String(),
         ];
     }
@@ -426,7 +431,7 @@ class PatientService
      * @param int $perPage
      * @return LengthAwarePaginator
      */
-    public function getOrdersStatus(int $perPage = 10): LengthAwarePaginator
+    public function getDeliveryInfo(int $perPage = 10): LengthAwarePaginator
     {
         $user = Auth::user();
         $patient = Patient::where('user_id', $user->id)->first();
@@ -437,8 +442,8 @@ class PatientService
 
         return Order::with([
             'prescription',
-            'delivery.delivery.user',
-            'delivery.delivery' => function ($query) {
+            'deliveryTask.delivery.user',
+            'deliveryTask.delivery' => function ($query) {
                 $query->with('user');
             }
         ])
@@ -453,9 +458,9 @@ class PatientService
      * @param Order $order
      * @return array
      */
-    public function formatOrderStatusData(Order $order): array
+    public function formatDeliveryInfo(Order $order): array
     {
-        $deliveryTask = $order->delivery;
+        $deliveryTask = $order->deliveryTask;
         $deliveryData = null;
 
         if ($deliveryTask && $deliveryTask->delivery_id) {
@@ -476,14 +481,16 @@ class PatientService
                 'name' => $deliveryUser ? $deliveryUser->full_name : null,
                 'phone' => $deliveryUser ? $deliveryUser->phone : null,
                 'image' => $deliveryImageUrl,
+                'delivery_fee' => $deliveryTask->delivery_fee,
                 'plate_number' => $delivery->plate_number,
+                'vehicle_type' => $delivery->vehicle_type,
             ];
         }
 
         $result = [
             'order_id' => $order->id,
             'order_status' => $order->status,
-            'total_amount' => $order->total_amount ? (float) $order->total_amount : null,
+            // 'total_amount' => $order->total_amount ? (float) $order->total_amount : null,
         ];
 
         // Include rejection reason if order is rejected
@@ -501,5 +508,95 @@ class PatientService
         }
 
         return $result;
+    }
+
+    /**
+     * Get delivery info for a specific order
+     *
+     * @param int $orderId
+     * @return Order
+     * @throws \Exception
+     */
+    public function getOrderDeliveryInfo(int $orderId): Order
+    {
+        $user = Auth::user();
+        $patient = Patient::where('user_id', $user->id)->first();
+
+        if (!$patient) {
+            throw new \Exception('Patient not found for this user.', 404);
+        }
+
+        $order = Order::with([
+            'prescription',
+            'deliveryTask.delivery.user',
+            'deliveryTask.delivery' => function ($query) {
+                $query->with('user');
+            }
+        ])
+            ->where('id', $orderId)
+            ->where('patient_id', $patient->id)
+            ->first();
+
+        if (!$order) {
+            throw new \Exception('Order not found or not authorized.', 404);
+        }
+
+        return $order;
+    }
+
+    public function getPatientScheduledCareProviders(int $perPage = 10): LengthAwarePaginator
+    {
+        $user = Auth::user();
+        $patient = Patient::where('user_id', $user->id)->first();
+
+        if (!$patient) {
+            throw new \Exception('Patient not found for this user.', 404);
+        }
+
+        return CareProvider::with(['user', 'homeVisits'])
+            ->whereHas('homeVisits', function ($query) use ($patient) {
+                $query->where('patient_id', $patient->id);
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+        
+
+    }
+    public function formatPatientScheduledCareProviders($provider)
+    {
+        // return care provider image
+        $image=null;
+        if ($provider->user && $provider->care_provider_image_id) {
+            $upload = Upload::find($provider->care_provider_image_id);
+            if ($upload && $upload->file_path) {
+                $image = asset('storage/' . ltrim($upload->file_path, '/'));
+            }
+        }
+        
+        // Collect all sessions with their statuses
+        $sessions = $provider->homeVisits->map(function ($visit) {
+            return [
+                'session_id' => $visit->id,
+                'status' => $visit->status,
+                'session_reason' => $visit->reason,
+                'session_fee' => $visit->session_fee,
+                'scheduled_at' => $visit->scheduled_at ? $visit->scheduled_at->toIso8601String() : null,
+            ];
+        })->values();
+
+        return [
+            'care_provider_id' => $provider->id,
+            'care_provider_name' => $provider->user ? $provider->user->full_name : null,
+            'care_provider_phone' => $provider->user ? $provider->user->phone : null,
+            'gender' => $provider->user ? $provider->gender : null,
+            'type' => $provider->type,
+            'image' => $image,
+            'session_id' => $provider->homeVisits->id,
+            'status' =>$provider->homeVisits->status,
+            'session_reason' => $provider->homeVisits->reason,
+            'session_fee' => $provider->homeVisits->session_fee,
+            'scheduled_at' => $provider->homeVisits->scheduled_at ? $provider->homeVistis->scheduled_at->toIso8601String() : null,
+            // 'sessions' => $sessions,
+        ];
     }
 }

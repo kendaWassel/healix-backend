@@ -14,7 +14,7 @@ return new class extends Migration {
 
             $table->enum('status', [
                 'pending',
-                'picked_up_the_order',
+                'picking_up_the_order',
                 'on_the_way',
                 'delivered',
             ])->default('pending');

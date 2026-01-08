@@ -67,13 +67,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // Consultations
         Route::post('/consultations/book', [ConsultationController::class, 'bookConsultation']);
 
+        // Schedule with care provider
+        Route::get('/care-provider-schedules', [PatientController::class, 'getPatientScheduledCareProviders']);
+        Route::post('/home-visits/{visit_id}/re-request', [HomeVisitController::class, 'reRequestHomeVisit']);
         // Medical Record
         Route::get('/medical-record', [MedicalRecordController::class, 'getPatientMedicalRecord']);
 
         // Ratings
-        Route::post('ratings/doctors/{doctor_id}', [RatingController::class, 'rateDoctor']);
-        Route::post('pharmacies/{pharmacy_id}/rate', [RatingController::class, 'ratePharmacy']);
-        Route::post('deliveries/{delivery_id}/rate', [RatingController::class, 'rateDelivery']);
+        Route::post('consultations/{consultation_id}/rate/{doctor_id}', [RatingController::class, 'rateDoctor']);
+        Route::post('order/{order_id}/rate/{pharmacist_id}', [RatingController::class, 'ratePharmacy']);
+        Route::post('task/{task_id}/rate/{delivery_id}', [RatingController::class, 'rateDelivery']);
+        Route::post('session/{session_id}/rate/{care_provider_id}', [RatingController::class, 'rateCareProvider']);
 
         // Prescription (patient)
         Route::prefix('prescriptions')->group(function () {
@@ -83,10 +87,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::post('/{prescription_id}/send', [PatientController::class, 'sendPrescriptionToPharmacy']);
         });
 
+
         //get prescriptions with pricing info
         Route::get('/view-prescriptions-with-pricing', [PatientController::class, 'getPrescriptionsWithPricing']);
         // Orders (patient)
-        Route::get('/orders/status', [PatientController::class, 'getOrdersStatus']);
+        Route::get('/orders/delivery-info', [PatientController::class, 'getDeliveryInfo']);
+        Route::get('/orders/{order_id}/delivery-info', [PatientController::class, 'getOrderDeliveryInfo']);
     });
 
     // Doctor
@@ -115,9 +121,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // Prescription Management
         Route::get('/prescriptions', [PharmacistController::class, 'listPrescriptions']);
         Route::get('/prescriptions/{order_id}', [PharmacistController::class, 'viewPrescription']);
-        Route::post('/prescriptions/{order_id}/deliver', [PharmacistController::class, 'complete']);
-        Route::post('/prescriptions/{order_id}/accept', [PharmacistController::class, 'accept']);
-        Route::post('/prescriptions/{order_id}/reject', [PharmacistController::class, 'reject']);
+        Route::post('/prescriptions/{prescription_id}/accept', [PharmacistController::class, 'accept']);
+        Route::post('/prescriptions/{prescription_id}/reject', [PharmacistController::class, 'reject']);
 
         //  Order Management
         Route::get('/my-orders', [PharmacistController::class, 'myOrders']);
@@ -165,35 +170,27 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Delivery
-Route::prefix('delivery')->middleware('auth:sanctum')->group(function () {
+    Route::prefix('delivery')->middleware('auth:sanctum')->group(function () {
+        // New Orders for Delivery
+        Route::get('/new-orders', [DeliveryController::class, 'newOrders']);
 
-    // الطلبات الجاهزة للتوصيل
-    Route::get('/new-orders', [DeliveryController::class, 'newOrders']);
+        // Accept Order
+        Route::post('/new-orders/{order_id}/accept', [DeliveryController::class, 'accept']);
 
-    // قبول طلب توصيل
-    Route::post('/new-orders/{order_id}/accept', [DeliveryController::class, 'accept']);
+        // Tasks for Delivery
+        Route::get('/tasks', [DeliveryController::class, 'tasks']);
 
-    // مهام الدليفري
-    Route::get('/tasks', [DeliveryController::class, 'tasks']);
+        // Set Delivery Fee for Task When Picking Up
+        Route::post(
+            '/tasks/{task_id}/set-delivery-fee',
+            [DeliveryController::class, 'setDeliveryFee']
+        );
 
-    // إدخال سعر التوصيل (قبل delivered)
-    Route::post(
-        '/tasks/{task_id}/set-delivery-fee',
-        [DeliveryController::class, 'setDeliveryFee']
-    );
+        // Update Task Status
+        Route::put(
+            '/tasks/{task_id}/update-status',
+            [DeliveryController::class, 'updateTaskStatus']
+        );
 
-    // تحديث حالة مهمة التوصيل
-    Route::put(
-        '/tasks/{task_id}/update-status',
-        [DeliveryController::class, 'updateTaskStatus']
-    );
-
-});
-
-
-    //Payment Gateway
-    // Route::prefix('payment')->group(function () {
-    //     Route::post('/create-checkout-session', [StripeController::class, 'createCheckoutSession']);
-
-    // });
+    });
 });
