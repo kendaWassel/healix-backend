@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('bank_account')->nullable();
             $table->unsignedBigInteger('driving_license_id')->nullable();
             $table->decimal('rating_avg', 2, 1)->default(0);
+            $table->enum('gender', ['male', 'female'])->nullable();
             $table->timestamps(); 
         });
     }

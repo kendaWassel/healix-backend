@@ -27,6 +27,10 @@ Route::prefix('auth')->group(function () {
         ->middleware(['signed'])
         ->name('verification.verify');
 });
+// Faq
+Route::get('/faqs', [App\Http\Controllers\FaqController::class, 'index']);
+// First Aid
+Route::get('/first-aid', [App\Http\Controllers\FirstAidController::class, 'index']);
 
 // Uploads (public for registration before auth)
 Route::post('/uploads', [UploadController::class, 'uploadFile']);

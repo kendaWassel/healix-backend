@@ -388,7 +388,7 @@ class PatientController extends Controller
     public function requestNewCareProvider(Request $request, $visitId)
     {
         $validated = $request->validate([
-            'scheduled_at' => 'required|date',
+            'scheduled_at' => 'required', // YYYY-MM-DD HH:MM:S   
         ]);
 
         try {

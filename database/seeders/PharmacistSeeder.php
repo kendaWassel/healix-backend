@@ -29,6 +29,15 @@ class PharmacistSeeder extends Seeder
                 ]
             );
         }
+        Pharmacist::create([
+            'user_id' => User::where('role', 'pharmacist')->first()->id,
+            'pharmacy_name' => 'Pharmacy',
+            'cr_number' => 1234567890,
+            'address' => '123 Main St',
+            'license_file_id' => null,
+            'from' => '09:00:00',
+            'to' => '17:00:00',
+        ]);
 
         // Create additional pharmacists via factory
         Pharmacist::factory()->count(5)->create();

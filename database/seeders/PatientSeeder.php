@@ -24,6 +24,14 @@ class PatientSeeder extends Seeder
             'latitude' => null,
             'longitude' => null,
         ]);
+        Patient::create([
+            'user_id' => User::where('role', 'patient')->first()->id,
+            'birth_date' => now()->subYears(30)->toDateString(),
+            'gender' => 'female',
+            'address' => '123 Main St',
+            'latitude' => null,
+            'longitude' => null,
+        ]);
         Patient::factory()->count(5)->create();
 
 

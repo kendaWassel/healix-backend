@@ -11,6 +11,7 @@ use App\Models\CareProvider;
 use App\Models\Consultation;
 use App\Models\Prescription;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class PatientService
@@ -34,7 +35,6 @@ class PatientService
             ->where('patient_id', $patient->id)
             ->paginate($perPage);
     }
-
     /**
      * Format consultation data for response
      *
@@ -381,10 +381,12 @@ class PatientService
             'name' => $order->pharmacist->pharmacy_name ?? 'Unknown Pharmacy',
         ];
 
+        // For rejected prescriptions, show rejection reason
         if ($prescription->status === 'rejected') {
             return [
                 'prescription_id' => $prescription->id,
                 'order_id' => $order->id,
+                'order_status' => $order->status,
                 'status' => $prescription->status,
                 'source' => $prescription->source === 'patient_uploaded' ? 'paper' : 'electronic',
                 'pharmacy' => $pharmacy,
@@ -414,7 +416,10 @@ class PatientService
         return [
             'prescription_id' => $prescription->id,
             'order_id' => $order->id,
-            'status' => $prescription->status,
+            'task_id' => $order->deliveryTask ? $order->deliveryTask->id : null,
+            'delivery_id' => $order->deliveryTask && $order->deliveryTask->delivery_id ? $order->deliveryTask->delivery_id : null,
+            'order_status' => $order->status,
+            'prescription_status' => $prescription->status,
             'source' => $prescription->source === 'patient_uploaded' ? 'patient uploaded' : 'doctor',
             'pharmacy' => $pharmacy,
             'items' => $items,
@@ -553,14 +558,43 @@ class PatientService
             throw new \Exception('Patient not found for this user.', 404);
         }
 
-        // Include all home visits including cancelled ones
+        // Exclude canceled visits that have been replaced by a new request
         return CareProvider::with(['user', 'homeVisits' => function ($query) use ($patient) {
             $query->where('patient_id', $patient->id)
-                    
+                  ->where(function ($q) use ($patient) {
+                      // Exclude canceled visits if there's a newer non-canceled visit for the same consultation
+                      $q->where('status', '!=', 'canceled')
+                        ->orWhere(function ($canceledQuery) use ($patient) {
+                            $canceledQuery->where('status', 'canceled')
+                                ->whereNotExists(function ($subQuery) use ($patient) {
+                                    $subQuery->select(DB::raw(1))
+                                        ->from('home_visits as hv2')
+                                        ->whereColumn('hv2.consultation_id', 'home_visits.consultation_id')
+                                        ->where('hv2.patient_id', $patient->id)
+                                        ->where('hv2.status', '!=', 'canceled')
+                                        ->whereRaw('hv2.id > home_visits.id');
+                                });
+                        });
+                  })
                   ->orderBy('created_at', 'desc');
         }])
             ->whereHas('homeVisits', function ($query) use ($patient) {
-                $query->where('patient_id', $patient->id);                                                                                                                                                                                                                                                  
+                $query->where('patient_id', $patient->id)
+                      ->where(function ($q) use ($patient) {
+                          // Exclude canceled visits if there's a newer non-canceled visit for the same consultation
+                          $q->where('status', '!=', 'canceled')
+                            ->orWhere(function ($canceledQuery) use ($patient) {
+                                $canceledQuery->where('status', 'canceled')
+                                    ->whereNotExists(function ($subQuery) use ($patient) {
+                                        $subQuery->select(DB::raw(1))
+                                            ->from('home_visits as hv2')
+                                            ->whereColumn('hv2.consultation_id', 'home_visits.consultation_id')
+                                            ->where('hv2.patient_id', $patient->id)
+                                            ->where('hv2.status', '!=', 'canceled')
+                                            ->whereRaw('hv2.id > home_visits.id');
+                                    });
+                            });
+                      });
             })
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
@@ -569,50 +603,28 @@ class PatientService
     }
     public function formatPatientScheduledCareProviders($provider)
     {
-        // return care provider image
-        $image=null;
-        if ($provider->user && $provider->care_provider_image_id) {
-            $upload = Upload::find($provider->care_provider_image_id);
-            if ($upload && $upload->file_path) {
-                $image = asset('storage/' . ltrim($upload->file_path, '/'));
-            }
-        }
-        
-        // Get the latest home visit (most recent)
-        $visit = $provider->homeVisits->first();
-        
-        // Collect all sessions with their statuses
-        $sessions = $provider->homeVisits->map(function ($visit) {
-            return [
-                'session_id' => $visit->id,
-                'status' => $visit->status,
-                'session_reason' => $visit->reason,
-                'session_fee' => $visit->session_fee,
-                'scheduled_at' => $visit->scheduled_at ? $visit->scheduled_at->toIso8601String() : null,
-
-            ];
-        })->values();
+        $homeVisits = $provider->homeVisits;
+        foreach ($homeVisits as $homeVisit) {   
         $result = [
-            'care_provider_id' => $provider->id,
-            'care_provider_name' => $provider->user ? $provider->user->full_name : null,
-            'care_provider_phone' => $provider->user ? $provider->user->phone : null,
-            'gender' => $provider->user ? $provider->gender : null,
-            'type' => $provider->type,
-            'image' => $image,
-            'session_id' => $visit ? $visit->id : null,
-            'status' => $visit ? $visit->status : null,
-            'session_reason' => $visit ? $visit->reason : null,
-            'session_fee' => $visit ? $visit->session_fee : null,
-            'scheduled_at' => ($visit && $visit->scheduled_at)
-                ? $visit->scheduled_at->toIso8601String()
-                : null,
-            // 'sessions' => $sessions,
-        ];
+            'id' => $provider->id,
+            'care_provider_name' => $provider->user->full_name,
+            'care_provider_phone' => $provider->user->phone,
+            'care_provider_image' => $provider->care_provider_image ? asset('storage/' . ltrim($provider->user->image, '/')) : null,
+            'gender' => $provider->gender,
+            'type' => $provider->type,//physiotherapist, nurse
+            
+            
+            'session_id' => $homeVisit->id,
+            'session_fee' => $provider->session_fee,
+            'session_reason' => $homeVisit->reason,
+            'session_scheduled_at' => $homeVisit->scheduled_at ? $homeVisit->scheduled_at->toIso8601String() : null,
+            'session_status' => $homeVisit->status,
+            ];
+        }
         return $result;
     }
-
     /**
-     * Request a new care provider for a cancelled home visit
+     * Request a new care provider for a canceled home visit
      *
      * @param int $visitId
      * @param int $careProviderId
@@ -628,7 +640,7 @@ class PatientService
             throw new \Exception('Patient not found for this user.', 404);
         }
 
-        // Get the old cancelled visit
+        // Get the old canceled visit
         $oldVisit = HomeVisit::where('id', $visitId)
             ->where('patient_id', $patient->id)
             ->first();
@@ -637,9 +649,9 @@ class PatientService
             throw new \Exception('Home visit not found.', 404);
         }
 
-        // Only allow cancelled visits to be re-requested
-        if (!in_array($oldVisit->status, ['cancelled'])) {
-            throw new \Exception('Only cancelled  home visits can be re-requested with a new schedule time.', 400);
+        // Only allow canceled visits to be re-requested
+        if (!in_array($oldVisit->status, ['canceled'])) {
+            throw new \Exception('Only canceled  home visits can be re-requested with a new schedule time.', 400);
         }
         
         // Check if the new scheduled at is in the past

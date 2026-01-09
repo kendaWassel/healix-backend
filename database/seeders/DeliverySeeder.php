@@ -27,6 +27,18 @@ class DeliverySeeder extends Seeder
             );
         }
 
+        Delivery::create([
+            'user_id' => User::where('role', 'delivery')->first()->id, 
+            'gender' => 'female',
+            'delivery_image_id' => null,
+            'vehicle_type' => 'motorcycle',
+            'plate_number' => 'DEV1000',
+            'bank_account' => '1234567890',
+            'driving_license_id' => null,
+            
+
+        ]);
+
         // Create additional delivery profiles via factory
         Delivery::factory()->count(5)->create();
     }

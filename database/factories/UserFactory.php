@@ -32,6 +32,7 @@ class UserFactory extends Factory
             'remember_token' => Str::random(10),
             'phone' => fake()->phoneNumber(),
             'role' => fake()->randomElement(['patient', 'doctor', 'pharmacist', 'care_provider', 'delivery']),
+            
         ];
     }
     public function unverified(): static

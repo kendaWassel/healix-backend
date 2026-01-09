@@ -16,6 +16,7 @@ class Delivery extends Model
         'plate_number',
         'bank_account',
         'driving_license_id',
+        'gender',
         'rating_avg'
     ];
     public function user()
