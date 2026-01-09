@@ -43,6 +43,8 @@ class DatabaseSeeder extends Seeder
             UploadSeeder::class,
             MedicalRecordSeeder::class,
             DeliveryTaskSeeder::class,
+            FaqSeeder::class,
+            FirstAidSeeder::class,
         ]);
 
     }

@@ -36,6 +36,16 @@ class DoctorSeeder extends Seeder
                 ]
             );
         }
+        Doctor::create([
+            'user_id' => User::where('role', 'doctor')->first()->id,
+            'specialization_id' => 1,
+            'gender' => 'male',
+            'doctor_image_id' => null,
+            'from' => '09:00:00',
+            'to' => '17:00:00',
+            'certificate_file_id' => null,
+        ]); 
+
 
         // Create additional doctors via factory
         Doctor::factory()->count(10)->create();
