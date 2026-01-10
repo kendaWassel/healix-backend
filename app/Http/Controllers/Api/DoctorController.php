@@ -7,6 +7,7 @@ use App\Models\Rating;
 use Illuminate\Http\Request;
 use App\Services\DoctorService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CreatePrescriptionRequest;
 
 class DoctorController extends Controller
 {
@@ -109,18 +110,9 @@ class DoctorController extends Controller
         }
     }
 
-    public function createPrescription(Request $request)
+    public function createPrescription(CreatePrescriptionRequest $request)
     {
-        $validated = $request->validate([
-            'consultation_id' => 'required|integer|exists:consultations,id',
-            'diagnosis'       => 'required|string|max:500',
-            'notes'           => 'nullable|string',
-            'medicines'       => 'required|array|min:1',
-            'medicines.*.name'         => 'required|string|max:255',
-            'medicines.*.dosage'       => 'required|string|max:255',
-            'medicines.*.boxes'        => 'required',
-            'medicines.*.instructions' => 'nullable|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         try {
             $prescription = $this->doctorService->createPrescription($validated);
@@ -142,7 +134,7 @@ class DoctorController extends Controller
             ], $statusCode);
         }
     }
-        public function getDoctorRatings(Request $request, $doctorId)
+    public function getDoctorRatings(Request $request, $doctorId)
     
     {
         $validated = $request->validate([

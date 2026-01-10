@@ -13,7 +13,7 @@ class OrderController extends Controller
         * Mark order as ready for delivery
         * POST /api/pharmacist/orders/{order_id}/ready
      */
-    public function markReadyForDelivery(Request $request, $orderId)
+    public function markReadyForDelivery($orderId)
     {
         try {
             $user = Auth::user();

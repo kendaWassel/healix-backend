@@ -1,23 +1,15 @@
 <?php
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\OrderController;
-use App\Http\Controllers\Api\DoctorController;
-use App\Http\Controllers\Api\RatingController;
-use App\Http\Controllers\Api\UploadController;
-use App\Http\Controllers\Api\PatientController;
-use App\Http\Controllers\Api\DeliveryController;
+use App\Http\Controllers\Api\Auth\{RegisterController,VerifyEmailController,LoginController};
+use App\Http\Controllers\Api\CareProvider\{PhysiotherapistController, NurseController};
+use App\Http\Controllers\Api\{OrderController,HomeVisitController,RatingController,UploadController};
+use App\Http\Controllers\Api\{PatientController,DoctorController,DeliveryController,PharmacistController};
+
 use App\Http\Controllers\Api\PharmacyController;
-use App\Http\Controllers\Api\HomeVisitController;
-use App\Http\Controllers\Api\Auth\LoginController;
-use App\Http\Controllers\Api\PharmacistController;
 use App\Http\Controllers\Api\ConsultationController;
-use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\SpecializationController;
-use App\Http\Controllers\Api\Auth\VerifyEmailController;
-use App\Http\Controllers\Api\CareProvider\NurseController;
 
-use App\Http\Controllers\Api\CareProvider\PhysiotherapistController;
 
 //public APIs (no auth required)
 Route::prefix('auth')->group(function () {
@@ -161,6 +153,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/schedules/{id}/end-session', [NurseController::class, 'endSession']);
 
     });
+    
 
     // Provider Physiotherapist
     Route::prefix('provider/physiotherapist')->group(function () {
@@ -174,6 +167,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 
     });
+
+    // If care provider booking home visit(after the first one by doctor)
+    Route::post('/home-visits/{visit_id}/follow-up', [HomeVisitController::class, 'createFollowUpHomeVisit']);
 
     // Delivery
     Route::prefix('delivery')->middleware('auth:sanctum')->group(function () {

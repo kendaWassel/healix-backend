@@ -1,18 +1,7 @@
 <?php
-
-use App\Models\User;
-use App\Models\Doctor;
-use App\Models\Patient;
-use App\Models\Consultation;
-use App\Events\ConsultationCreated;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
-// Route::get('/', function () {
 
-//     return view('welcome');
-
-// });
 
 // Route::get('/test', function () {
 

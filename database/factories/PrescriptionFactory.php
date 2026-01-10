@@ -49,7 +49,7 @@ class PrescriptionFactory extends Factory
             'diagnosis' => fake()->randomElement(['Flu', 'Bacterial throat infection', 'Migraine', 'Allergy']),
             'notes' => fake()->optional()->sentence(),
             'source' => $source,
-            'status' => 'created', // Default status
+            'status' => fake()->randomElement(['created', 'sent_to_pharmacy','accepted']), // Default status
             'total_quantity' => null, // Will be set when priced
             'total_price' => null,  // Will be set when priced
             'prescription_image_id' => $prescriptionImageId,

@@ -17,15 +17,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\RateRequest;
  
 
 class RatingController extends Controller
 {
-    public function rateDoctor(Request $request, int $consultationId, int $doctorId)
+    public function rateDoctor(RateRequest $request, int $consultationId, int $doctorId)
     {
-        $validated = $request->validate([
-            'stars' => 'required|integer|min:1|max:5',
-        ]);
+        $validated = $request->validated();
 
         try {
             DB::beginTransaction();
@@ -109,11 +108,9 @@ class RatingController extends Controller
         }
     }
 
-    public function rateDelivery(Request $request, int $taskId, int $deliveryId)
+    public function rateDelivery(RateRequest $request, int $taskId, int $deliveryId)
     {
-        $validated = $request->validate([
-            'stars' => 'required|integer|min:1|max:5',
-        ]);
+        $validated = $request->validated();
 
         try {
             DB::beginTransaction();
@@ -214,11 +211,9 @@ class RatingController extends Controller
         }
     }
     
-    public function ratePharmacy(Request $request, int $orderId, int $pharmacyId)
+    public function ratePharmacy(RateRequest $request, int $orderId, int $pharmacyId)
     {
-        $validated = $request->validate([
-            'stars' => 'required|integer|min:1|max:5',
-        ]);
+        $validated = $request->validated();
 
         try {
             DB::beginTransaction();
@@ -298,11 +293,9 @@ class RatingController extends Controller
             ], 500);
         }
     }
-    public function rateCareProvider(Request $request, int $sessionId, int $careProviderId)
+    public function rateCareProvider(RateRequest $request, int $sessionId, int $careProviderId)
     {
-        $validated = $request->validate([
-            'stars' => 'required|integer|min:1|max:5',
-        ]);
+        $validated = $request->validated();
 
         try {
             DB::beginTransaction();
