@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Services\PatientService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UploadRequest;
 
 class PatientController extends Controller
 {
@@ -140,13 +141,10 @@ class PatientController extends Controller
     }
 
     // Endpoint: POST /api/patient/prescriptions/upload
-    public function uploadPaperPrescription(Request $request)
+    public function uploadPaperPrescription(UploadRequest $request)
     {
         try {
-            $validated = $request->validate([
-                'image'    => 'required|image|max:5120', // 5MB
-                'category' => 'required|string|max:50',
-            ]);
+            $validated = $request->validated();
 
             $data = $this->patientService->uploadPaperPrescription($validated);
 

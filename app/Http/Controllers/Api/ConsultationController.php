@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\BookConsultationRequest;
 use App\Models\Doctor;
+use App\Http\Controllers\Controller;
 use App\Services\ConsultationService;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 
 class ConsultationController extends Controller
 {
@@ -16,13 +17,9 @@ class ConsultationController extends Controller
         $this->consultationService = $consultationService;
     }
 
-    public function bookConsultation(Request $request)
+    public function bookConsultation(BookConsultationRequest $request)
     {
-        $validated = $request->validate([
-            'doctor_id' => 'required|exists:doctors,id',
-            'call_type' => 'required|in:call_now,schedule',
-            'scheduled_at' => 'nullable|date',
-        ]);
+        $validated = $request->validated();
 
         try {
             $consultation = $this->consultationService->bookConsultation($validated);

@@ -86,7 +86,7 @@ class PharmacistController extends Controller
                     'medicines' => $medicines,
                     'total_quantity' => $prescription->total_quantity ?? $totalBoxes,
                     'status' => $prescription->status, // Use prescription status instead of order status
-                    'created_at' => $prescription->created_at->toIso8601String(),
+                    // 'created_at' => $prescription->created_at->toIso8601String(),
                 ];
             } else { // patient_upload
                 $prescriptionImage = $prescription->prescriptionImage;
@@ -401,6 +401,10 @@ class PharmacistController extends Controller
      */
     public function myOrders(Request $request)
     {
+        $request->validate([
+            'page' => 'sometimes|integer|min:1',
+            'per_page' => 'sometimes|integer|min:1|max:100',
+        ]);
         $pharmacist = Auth::user()->pharmacist;
         if (!$pharmacist) {
             return response()->json([
@@ -693,7 +697,7 @@ class PharmacistController extends Controller
 
     /**
      * Pharmacist: Track a specific active order
-     * 
+     * See details and delivery status
      * Endpoint: GET /api/pharmacist/orders/{orderId}/track
      */
     public function trackOrder(Request $request, $orderId)

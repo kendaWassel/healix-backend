@@ -7,14 +7,14 @@ use Illuminate\Http\Request;
 use App\Models\MedicalRecord;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\UpdateMedicalRecordRequest;
+use App\Http\Resources\MedicalRecordResource;
 
 class MedicalRecordController extends Controller
 {
  
     /**
-     * Doctor: View patient medical record details.
-     * 
-     * Endpoint: GET api/pa
+     * Doctor, Nurse, Physiotherapist: View patient medical record details.
      */
     public function viewDetails($patientId)
     {
@@ -78,23 +78,15 @@ class MedicalRecordController extends Controller
             ]
         ], 200);
     }
+
     /**
-     * Doctor: Update or create patient medical record.
+     * Doctor , Nurse, Physiotherapist: Create or update a patient's medical record.
      * 
-     * Endpoint: PUT /api/doctor/patients/{patient_id}/medical-record/update
+     * Endpoint: PUT /api/medical-records/{patientId}
      */
-    public function updateMedicalRecord(Request $request, $patientId)
+    public function updateMedicalRecord(UpdateMedicalRecordRequest $request, $patientId)
     {
-        $user = Auth::user();
-        $doctor = $user->doctor;
-        $care_provider = $user->careProvider;
-        $isAuthorized = $doctor || ($care_provider && in_array($care_provider->type, ['nurse', 'physiotherapist']));
-        if (!$user || !$isAuthorized) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized - only doctors, nurses, and physiotherapists can update medical records.'
-            ], 403);
-        }
+        $validated = $request->validated();
 
         $patient = Patient::find($patientId);
         if (!$patient) {
@@ -104,18 +96,9 @@ class MedicalRecordController extends Controller
             ], 404);
         }
 
-        $validated = $request->validate([
-            'diagnosis' => 'nullable|string',
-            'treatment_plan' => 'nullable|string',
-            'current_medications' => 'nullable|string',
-            'chronic_diseases' => 'nullable|string',
-            'previous_surgeries' => 'nullable|string',
-            'allergies' => 'nullable|string',
-            'attachments_id' => 'nullable|array',
-            'attachments_id.*' => 'integer|exists:uploads,id',
-        ]);
-
+        $user = Auth::user();
         $doctor = $user->doctor;
+        $care_provider = $user->careProvider;
         
         // Use updateOrCreate to handle both create and update
         $medicalRecord = MedicalRecord::updateOrCreate(
@@ -157,7 +140,7 @@ class MedicalRecordController extends Controller
      * 
      * Endpoint: GET /api/patient/medical-record
      */
-    public function getPatientMedicalRecord(Request $request)
+    public function getPatientMedicalRecord()
     {
         $user = Auth::user();
         $patient = Patient::where('user_id', $user->id)->first();
@@ -178,30 +161,11 @@ class MedicalRecordController extends Controller
                 'data' => null
             ], 200);
         }
-
-        $attachments = $record->attachments->map(function ($attachment) {
-            return [
-                'id' => $attachment->id,
-                'file_name' => basename($attachment->file_path),
-                'file_url' => asset('storage/' . ltrim($attachment->file_path, '/')),
-            ];
-        });
-
         return response()->json([
             'status' => 'success',
-            'data' => [
-                'id' => $record->id,
-                'doctor_name' => $record->doctor?->user ? 'Dr. ' . $record->doctor->user->full_name : null,
-                'diagnosis' => $record->diagnosis,
-                'treatment_plan' => $record->treatment_plan,
-                'chronic_diseases' => $record->chronic_diseases,
-                'previous_surgeries' => $record->previous_surgeries,
-                'allergies' => $record->allergies,
-                'current_medications' => $record->current_medications,
-                'attachments' => $attachments,
-                'created_at' => $record->created_at?->toDateTimeString(),
-                'updated_at' => $record->updated_at?->toDateTimeString(),
-            ]
+            'message' => 'Medical record retrieved successfully.',
+            'data' => 
+                new MedicalRecordResource($record)
         ], 200);
     }
 

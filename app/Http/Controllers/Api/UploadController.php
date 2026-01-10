@@ -5,19 +5,17 @@ namespace App\Http\Controllers\Api;
 use App\Models\Upload;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UploadRequest;
 
 class UploadController extends Controller
 {
     
-    public function uploadFile(Request $request)
+    public function uploadFile(UploadRequest $request)
     {
-        $request->validate([
-            'file' => 'required|file|max:10240', // max 10MB
-            'category' => 'string|in:certificate,report,document,prescription,profile'
-        ]);
+        $validated = $request->validated();
 
         $file = $request->file('file');
-        $category = $request->input('category');
+        $category = $validated['category'];
 
         $filename = time() . '.' . $file->getClientOriginalExtension();
         $filepath = $file->storeAs("public/{$category}", $filename);
@@ -38,15 +36,12 @@ class UploadController extends Controller
     }
 
    
-    public function uploadImage(Request $request)
+    public function uploadImage(UploadRequest $request)
     {
-        $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB
-            'category' => 'string|in:profile,prescription,report'
-        ]);
+        $validated = $request->validated();
 
         $image = $request->file('image');
-        $category = $request->input('category');
+        $category = $validated['category'];
 
         $filename = time() . '.' . $image->getClientOriginalExtension();
         $path = $image->storeAs("public/{$category}", $filename);

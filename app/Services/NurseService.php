@@ -125,9 +125,9 @@ class NurseService
         }
 
         // Check if the scheduled time has arrived   
-        if (now()->lt($visit->scheduled_at)) {
-            throw new \Exception('Cannot start session before the scheduled time.', 400);
-        }
+        // if (now()->lt($visit->scheduled_at)) {
+        //     throw new \Exception('Cannot start session before the scheduled time.', 400);
+        // }
         // Check if the status is cancelled
         if ($visit->status === 'cancelled') {
             throw new \Exception('You can not start the session because the session is cancelled.', 400);

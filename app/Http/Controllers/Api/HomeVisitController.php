@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Patient;
 use App\Models\HomeVisit;
 use App\Models\Consultation;
 use Illuminate\Http\Request;
@@ -59,56 +60,55 @@ class HomeVisitController extends Controller
         ]);
     }
 
-    public function reRequestHomeVisit(Request $request, $visitId)
+    /**
+     * POST /api/home-visits/{visit_id}/follow-up
+     * Description: Allows a care provider to create a follow-up home visit for a completed session.
+     */
+    public function createFollowUpHomeVisit(Request $request, $visitId)
     {
         $validated = $request->validate([
-            'scheduled_at' => 'required',
+            'scheduled_at' => 'required|date_format:Y-m-d H:i:s',
         ]);
 
-        $user = auth()->user();
-        $patient = \App\Models\Patient::where('user_id', $user->id)->first();
+        $careProvider = auth()->user()->careProvider;
 
-        if (!$patient) {
+        if (!$careProvider) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Patient not found.'
-            ], 404);
+                'message' => 'Not authorized. Only care providers can create follow-ups.'
+            ], 403);
         }
-
-        $oldVisit = HomeVisit::where('id', $visitId)
-            ->where('patient_id', $patient->id)
+        // Find the original home visit and ensure it belongs to the doctor and is completed
+        $originalVisit = HomeVisit::where('id', $visitId)
+            ->where('care_provider_id', $careProvider->id)
+            ->where('status', 'completed')
             ->first();
 
-        if (!$oldVisit) {
+        if (!$originalVisit) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Home visit not found.'
+                'message' => 'Original home visit not found or not eligible for follow-up.'
             ], 404);
         }
 
-        if ($oldVisit->status !== 'cancelled') {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Only cancelled home visits can be re-requested.'
-            ], 400);
-        }
-
-        $newVisit = HomeVisit::updateOrCreate([
-            'consultation_id' => $oldVisit->consultation_id,
-            'patient_id' => $patient->id,
-            'doctor_id' => $oldVisit->doctor_id,
-            'service_type' => $oldVisit->service_type,
-            'reason' => $oldVisit->reason,
+        // Create the follow-up visit
+        $followUpVisit = HomeVisit::create([
+            'consultation_id' => $originalVisit->consultation_id,
+            'patient_id' => $originalVisit->patient_id,
+            'doctor_id' => $careProvider->id,
+            'service_type' => $originalVisit->service_type,
+            'reason' => $originalVisit->reason ?: 'Follow-up session',
             'scheduled_at' => $validated['scheduled_at'],
-            'status' => 'pending',
-            'address' => $oldVisit->address
+            'status' => 'accepted', // Directly accepted since it's a follow-up
+            'address' => $originalVisit->address, 
 
         ]);
+
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Home visit re-requested successfully.',
-            'data' => $newVisit
+            'message' => 'Follow-up home visit created successfully.',
+            'data' => $followUpVisit
         ]);
     }
 }
