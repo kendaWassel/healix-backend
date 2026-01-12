@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\PharmacyController;
 use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\SpecializationController;
+use App\Http\Controllers\Api\Admin\AdminController;
 
 
 //public APIs (no auth required)
@@ -47,6 +48,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/notifications/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
     Route::delete('/notifications/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'destroy']);
 
+    // Admin
+    Route::prefix('admin')->group(function(){
+    Route::get('/dashboard', [AdminController::class, 'dashboard']);
+	Route::get('/users', [AdminController::class, 'users']);
+	Route::get('/users/{id}/attachments', [AdminController::class, 'attachments']);
+	Route::patch('/users/{id}/approve', [AdminController::class, 'approveUser']);
+	Route::patch('/users/{id}/reject', [AdminController::class, 'rejectUser']);
+    });
 
     // Patient
     Route::prefix('patient')->group(function () {
