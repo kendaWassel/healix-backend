@@ -34,4 +34,7 @@ class DeliveryTask extends Model
     {
         return $this->belongsTo(Delivery::class, 'delivery_id');
     }
+    public function ratings(){
+        return $this->hasMany(Rating::class, 'delivery_task_id');
+    }
 }

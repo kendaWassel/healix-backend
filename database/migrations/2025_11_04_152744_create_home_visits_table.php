@@ -28,7 +28,6 @@ return new class extends Migration
                 'canceled',
                 'rescheduled'
             ])->default('pending');
-            $table->string('address')->nullable();
             $table->timestamp('started_at')->nullable();
             $table->timestamp('ended_at')->nullable();
             $table->timestamps();

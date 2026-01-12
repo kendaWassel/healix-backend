@@ -8,6 +8,11 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+Schedule::command('telescope:prune --hours=48')
+    ->daily()
+    ->withoutOverlapping()
+    ->runInBackground();
+
 // Schedule consultation reminder notifications to run every minute
 // Sends reminders 15 minutes before consultation starts
 Schedule::command('consultations:send-reminders --minutes=15 --window=1')

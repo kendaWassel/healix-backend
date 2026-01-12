@@ -18,7 +18,6 @@ return new class extends Migration
             $table->unsignedBigInteger('delivery_image_id')->nullable();
             $table->string('vehicle_type')->nullable();
             $table->string('plate_number')->nullable();
-            $table->string('bank_account')->nullable();
             $table->unsignedBigInteger('driving_license_id')->nullable();
             $table->decimal('rating_avg', 2, 1)->default(0);
             $table->enum('gender', ['male', 'female'])->nullable();
