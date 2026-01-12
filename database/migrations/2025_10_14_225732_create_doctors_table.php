@@ -23,7 +23,6 @@ return new class extends Migration
             $table->time('to');
             $table->unsignedBigInteger('certificate_file_id')->nullable();
             $table->decimal('consultation_fee', 10, 2)->nullable();
-            $table->string('bank_account')->nullable();
             $table->decimal('rating_avg', 2, 1)->default(0);
             $table->timestamps();
         });

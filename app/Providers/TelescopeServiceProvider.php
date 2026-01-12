@@ -7,6 +7,8 @@ use Laravel\Telescope\IncomingEntry;
 use Laravel\Telescope\Telescope;
 use Laravel\Telescope\TelescopeApplicationServiceProvider;
 
+use function Symfony\Component\Translation\t;
+
 class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 {
     /**
@@ -56,9 +58,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     protected function gate(): void
     {
         Gate::define('viewTelescope', function ($user) {
-            return in_array($user->email, [
-                //
-            ]);
+            return true; // TODO: Restrict access to admins only
         });
     }
 }

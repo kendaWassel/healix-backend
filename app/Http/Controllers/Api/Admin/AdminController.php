@@ -84,7 +84,7 @@ class AdminController extends Controller
 					'delivered' => $ordersDelivered,
 					'pending' => $ordersPending,
 				],
-				'revenue' => [
+				'revenue' => [//
 					'total' => $revenueTotal,
 					'currency' => 'SYP',
 				],

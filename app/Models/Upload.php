@@ -24,7 +24,7 @@ class Upload extends Model
     
     public function medicalRecords()
     {
-        return $this->belongsToMany(MedicalRecord::class, 'medical_record_uploads');
+        return $this->hasMany(MedicalRecord::class, 'attachment_id');
     }
     
     public function url(){

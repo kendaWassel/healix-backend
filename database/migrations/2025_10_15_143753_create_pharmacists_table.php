@@ -23,7 +23,6 @@ return new class extends Migration
             $table->time('to')->nullable();
             $table->decimal('latitude', 9, 6)->nullable();
             $table->decimal('longitude', 9, 6)->nullable();
-            $table->string('bank_account')->nullable();
             $table->decimal('rating_avg', 2, 1)->default(0);
             $table->timestamps();
         });

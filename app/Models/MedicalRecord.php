@@ -19,6 +19,7 @@ class MedicalRecord extends Model
         'previous_surgeries',
         'allergies',
         'current_medications',
+        'attachment_id'
     ]; 
     protected $casts = [        
     ];
@@ -41,6 +42,6 @@ class MedicalRecord extends Model
 
     public function attachments()
     {
-        return $this->belongsToMany(Upload::class, 'medical_record_uploads');
+        return $this->belongsTo(Upload::class, 'attachment_id');
     }
 }

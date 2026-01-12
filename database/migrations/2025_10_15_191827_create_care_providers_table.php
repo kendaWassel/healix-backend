@@ -20,7 +20,6 @@ return new class extends Migration
             $table->decimal('session_fee', 10, 2);
             $table->enum('gender', ['male', 'female'])->nullable();
             $table->enum('type', ['nurse', 'physiotherapist'])->nullable();
-            $table->string('bank_account')->nullable();
             $table->decimal('rating_avg', 2, 1)->default(0);
             $table->timestamps();
         });

@@ -36,12 +36,13 @@ class Consultation extends Model
     }
     public function prescriptions()
     {
-        return $this->hasMany(Prescription::class);
+        return $this->hasOne(Prescription::class);
     }
 
     public function rating()
     {
         return $this->hasMany(Rating::class);
     }
+
 
 }

@@ -30,8 +30,8 @@ class Patient extends Model
     public function ratings()
     {
         return $this->hasManyThrough(
-            Rating::class,
-            User::class,
+            Rating::class, // Final model
+            User::class, // Intermediate model
             'id',        // Foreign key on users table
             'user_id',   // Foreign key on ratings table
             'user_id',   // Local key on patients table
