@@ -13,11 +13,178 @@ use App\Models\Consultation;
 use App\Models\Order;
 use App\Models\Upload;
 use App\Models\User;
+use App\Models\Rating;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Auth;
+
 
 
 class AdminController extends Controller
 {
+    /**
+     * GET /api/admin/services
+     * Query params: service_type (consultation, home_visit, delivery), page, per_page
+     * Returns completed services with low ratings (<= 2 stars)
+     */
+    public function services(Request $request)
+    {
+        $request->validate([
+            'service_type' => 'required|in:consultation,home_visit,delivery',
+            'page' => 'sometimes|integer|min:1',
+            'per_page' => 'sometimes|integer|min:1|max:100',
+        ]);
+
+        $serviceType = $request->query('service_type');
+        $perPage = (int) $request->query('per_page', 10);
+
+        if ($serviceType === 'consultation') {
+            $query = Rating::query()
+                ->where('target_type', 'doctor')
+                ->whereNotNull('consultation_id')
+                ->where('stars', '<=', 2)
+                ->join('consultations', 'consultations.id', '=', 'ratings.consultation_id')
+                ->join('doctors', 'doctors.id', '=', 'ratings.target_id')
+                ->join('users as doctor_users', 'doctor_users.id', '=', 'doctors.user_id')
+                ->join('patients', 'patients.id', '=', 'consultations.patient_id')
+                ->join('users as patient_users', 'patient_users.id', '=', 'patients.user_id')
+                ->where('consultations.status', 'completed')
+                ->select([
+                    'ratings.id as rating_id',
+                    'ratings.stars',
+                    'consultations.id as service_id',
+                    'consultations.updated_at as completed_at',
+                    'patient_users.full_name as patient_name',
+                    'patient_users.phone as patient_phone',
+                    'doctor_users.full_name as provider_name',
+                ])
+                ->orderByDesc('ratings.created_at');
+
+            $paginated = $query->paginate($perPage, ['*'], 'page', (int) $request->query('page', 1));
+
+            $data = collect($paginated->items())->map(function ($r) {
+                return [
+                    'id' => $r->service_id,
+                    'patient_name' => $r->patient_name,
+                    'patient_phone' => $r->patient_phone,
+                    'service_name' => 'Consultation',
+                    'service_provider' => $r->provider_name,
+                    'provider_type' => 'doctor',
+                    'rating' => (int) $r->stars,
+                    'date' => optional($r->completed_at)->toDateString(),
+                ];
+            })->values();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $data,
+                'meta' => [
+                    'current_page' => $paginated->currentPage(),
+                    'per_page' => $paginated->perPage(),
+                    'last_page' => $paginated->lastPage(),
+                    'total' => $paginated->total(),
+                ],
+            ]);
+        }
+
+        if ($serviceType === 'home_visit') {
+            $query = Rating::query()
+                ->where('target_type', 'care_provider')
+                ->whereNotNull('home_visit_id')
+                ->where('stars', '<=', 2)
+                ->join('home_visits', 'home_visits.id', '=', 'ratings.home_visit_id')
+                ->join('care_providers', 'care_providers.id', '=', 'ratings.target_id')
+                ->join('users as provider_users', 'provider_users.id', '=', 'care_providers.user_id')
+                ->join('patients', 'patients.id', '=', 'home_visits.patient_id')
+                ->join('users as patient_users', 'patient_users.id', '=', 'patients.user_id')
+                ->where('home_visits.status', 'completed')
+                ->select([
+                    'ratings.id as rating_id',
+                    'ratings.stars',
+                    'home_visits.id as service_id',
+                    'home_visits.ended_at as completed_at',
+                    'patient_users.full_name as patient_name',
+                    'patient_users.phone as patient_phone',
+                    'provider_users.full_name as provider_name',
+                    'care_providers.type as provider_type',
+                ])
+                ->orderByDesc('ratings.created_at');
+
+            $paginated = $query->paginate($perPage, ['*'], 'page', (int) $request->query('page', 1));
+
+            $data = collect($paginated->items())->map(function ($r) {
+                return [
+                    'id' => $r->service_id,
+                    'patient_name' => $r->patient_name,
+                    'patient_phone' => $r->patient_phone,
+                    'service_name' => 'Home Visit - ' . ($r->provider_type === 'nurse' ? 'Nurse' : 'Physiotherapist'),
+                    'service_provider' => $r->provider_name,
+                    'provider_type' => 'care_provider',
+                    'rating' => (int) $r->stars,
+                    'date' => optional($r->completed_at)->toDateString(),
+                ];
+            })->values();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $data,
+                'meta' => [
+                    'current_page' => $paginated->currentPage(),
+                    'per_page' => $paginated->perPage(),
+                    'last_page' => $paginated->lastPage(),
+                    'total' => $paginated->total(),
+                ],
+            ]);
+        }
+
+        // delivery
+        $query = Rating::query()
+            ->where('target_type', 'delivery')
+            ->whereNotNull('delivery_task_id')
+            ->where('stars', '<=', 2)
+            ->join('delivery_tasks', 'delivery_tasks.id', '=', 'ratings.delivery_task_id')
+            ->join('orders', 'orders.id', '=', 'delivery_tasks.order_id')
+            ->join('patients', 'patients.id', '=', 'orders.patient_id')
+            ->join('users as patient_users', 'patient_users.id', '=', 'patients.user_id')
+            ->join('deliveries', 'deliveries.id', '=', 'ratings.target_id')
+            ->join('users as delivery_users', 'delivery_users.id', '=', 'deliveries.user_id')
+            ->whereNotNull('delivery_tasks.delivered_at')
+            ->select([
+                'ratings.id as rating_id',
+                'ratings.stars',
+                'orders.id as service_id',
+                'delivery_tasks.delivered_at as completed_at',
+                'patient_users.full_name as patient_name',
+                'patient_users.phone as patient_phone',
+                'delivery_users.full_name as provider_name',
+            ])
+            ->orderByDesc('ratings.created_at');
+
+        $paginated = $query->paginate($perPage, ['*'], 'page', (int) $request->query('page', 1));
+
+        $data = collect($paginated->items())->map(function ($r) {
+            return [
+                'id' => $r->service_id,
+                'patient_name' => $r->patient_name,
+                'patient_phone' => $r->patient_phone,
+                'service_name' => 'Medication Delivery',
+                'service_provider' => $r->provider_name,
+                'provider_type' => 'delivery',
+                'rating' => (int) $r->stars,
+                'date' => optional($r->completed_at)->toDateString(),
+            ];
+        })->values();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $data,
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'per_page' => $paginated->perPage(),
+                'last_page' => $paginated->lastPage(),
+                'total' => $paginated->total(),
+            ],
+        ]);
+    }
 	/**
 	 * GET /api/admin/dashboard
 	 * Returns aggregated statistics for admin dashboard
@@ -227,68 +394,131 @@ class AdminController extends Controller
 		]);
 	}
 
-	/**
- * PATCH /api/admin/users/{id}/approve
- * Approve & activate account
- */
-public function approveUser($id)
-{
-	$user = User::find($id);
-
-	if (!$user) {
-		return response()->json([
-			'status' => 'error',
-			'message' => 'User not found'
-		], 404);
-	}
-
-	if ($user->status === 'approved') {
-		return response()->json([
-			'status' => 'success',
-			'message' => 'Account already approved'
-		]);
-	}
-
-	$user->status = 'approved';
-	$user->is_active = true;
-	$user->approved_at = now();
-	$user->rejection_reason = null;
-	$user->save();
-
-	return response()->json([
-		'status' => 'success',
-		'message' => 'Account approved and activated'
-	]);
-}
 /**
- * PATCH /api/admin/users/{id}/reject
- * Reject account with reason
+     * PATCH /api/admin/users/{id}/approve
+     * Approve & activate account
+     */
+    public function approveUser($id)
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        if ($user->status === 'approved') {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Account already approved'
+            ]);
+        }
+
+        $user->status = 'approved';
+        $user->is_active = true;
+        $user->approved_at = now();
+        $user->rejection_reason = null;
+        // سجل الأدمن اللي وافق
+        $user->admin_note = 'Approved by admin ID: ' . Auth::id();
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Account approved and activated'
+        ]);
+    }
+
+    /**
+     * PATCH /api/admin/users/{id}/reject
+     * Reject account with reason
+     */
+    public function rejectUser(Request $request, $id)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:255',
+        ]);
+
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        $user->status = 'rejected';
+        $user->is_active = false;
+        $user->approved_at = null;
+        $user->rejection_reason = $request->reason;
+        // سجل الأدمن اللي رفض
+        $user->admin_note = 'Rejected by admin ID: ' . Auth::id();
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Account rejected',
+            'rejection_reason' => $user->rejection_reason,
+        ]);
+    }
+
+/**
+ * PUT /api/admin/users/{id}/edit
+ * Editable Fields: full_name, email, phone
  */
-public function rejectUser(Request $request, $id)
+public function editUser(Request $request, $id)
 {
-	$request->validate([
-		'reason' => 'required|string|max:255',
-	]);
+    $request->validate([
+        'full_name' => 'sometimes|string|max:255',
+        'email' => 'sometimes|email|unique:users,email,' . $id,
+        'phone' => 'sometimes|string|max:20',
+    ]);
 
-	$user = User::find($id);
+    $user = User::find($id);
+    if (!$user) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'User not found'
+        ], 404);
+    }
 
-	if (!$user) {
-		return response()->json([
-			'status' => 'error',
-			'message' => 'User not found'
-		], 404);
-	}
+    $user->fill($request->only(['full_name', 'email', 'phone']));
+    $user->save();
 
-	$user->status = 'rejected';
-	$user->is_active = false;
-	$user->approved_at = null;
-	$user->rejection_reason = $request->reason;
-	$user->save();
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Account updated successfully',
+        'user' => [
+            'id' => $user->id,
+            'full_name' => $user->full_name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+        ]
+    ]);
+}
 
-	return response()->json([
-		'status' => 'success',
-		'message' => 'Account rejected'
-	]);
+
+/**
+ * DELETE /api/admin/users/{id}/delete
+ */
+public function deleteUser($id)
+{
+    $user = User::find($id);
+    if (!$user) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'User not found'
+        ], 404);
+    }
+
+    $user->delete();
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Account deleted successfully',
+    ]);
 }
 
 	

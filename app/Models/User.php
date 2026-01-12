@@ -86,7 +86,7 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /* =======================
-     | Scopes (مفيدة جدًا)
+     | Scopes 
      ======================= */
 
     public function scopePending($query)
