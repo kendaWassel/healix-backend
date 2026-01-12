@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\RoleMiddleware;
+
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,15 +18,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('consultations:send-reminders')->everyMinute();
     })
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->api(prepend: [
-            \Illuminate\Http\Middleware\HandleCors::class,
-        ]);
-        
-        $middleware->alias([
-            'auth:sanctum' => \Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,  
-            'api' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        ]);
-    })
+
+    $middleware->api(prepend: [
+        \Illuminate\Http\Middleware\HandleCors::class,
+    ]);
+
+    $middleware->alias([
+        'auth:sanctum' => \Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,
+    'api' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+
+    'role' => \App\Http\Middleware\RoleMiddleware::class,
+    'active.account' => \App\Http\Middleware\EnsureAccountIsActive::class,
+    ]);
+})
     ->withExceptions(function (Exceptions $exceptions) {
         // 
     })
