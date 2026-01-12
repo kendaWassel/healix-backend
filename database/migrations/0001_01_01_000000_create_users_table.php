@@ -24,12 +24,26 @@ return new class extends Migration
                 'delivery',
                 'admin'
             ]);
+
+            // Account approval (ADMIN)
+            $table->enum('status', [
+                'pending',
+                'approved',
+                'rejected',
+            ])->default('pending');
+
+            $table->boolean('is_active')->default(false);
+
+            $table->string('rejection_reason')->nullable(); // يظهر للمستخدم
+            $table->text('admin_note')->nullable();         // داخلي فقط
+            $table->timestamp('approved_at')->nullable();   // وقت القبول
+
+            // Auth
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();
         });
-        
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
@@ -52,8 +66,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('users');
     }
 };
