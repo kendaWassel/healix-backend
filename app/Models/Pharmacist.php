@@ -18,7 +18,6 @@ class Pharmacist extends Model
         'address',
         'latitude',
         'longitude',
-        'bank_account',
         'from',
         'to',
         'rating_avg',

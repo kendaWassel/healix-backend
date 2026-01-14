@@ -32,7 +32,6 @@ class HomeVisitFactory extends Factory
             'service_type' => $serviceType,
             'reason' => $serviceType === 'nurse' ? 'Nursing Care' : 'Physiotherapy Session',
             'status' => 'pending', // Default status
-            'address' => fake()->address(),
             'started_at' => null,
             'ended_at' => null,
         ];

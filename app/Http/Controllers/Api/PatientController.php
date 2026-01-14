@@ -352,9 +352,16 @@ class PatientController extends Controller
             $perPage = $request->get('per_page', 10);
             $providers = $this->patientService->getPatientScheduledCareProviders($perPage);
 
-            $data = $providers->getCollection()->map(function ($provider) {
-                return $this->patientService->formatPatientScheduledCareProviders($provider);
-            })->values();
+            if ($providers->isEmpty()) {
+                return response()->json([
+                    'status' => 'empty',
+                    'message' => 'No scheduled care providers found',
+                    'data' => []
+                ], 200);
+            }
+
+            // Flatten all sessions across providers into a single matrix
+            $data = $this->patientService->formatPatientScheduledCareProviders($providers->getCollection());
 
             return response()->json([
                 'status' => 'success',

@@ -50,7 +50,7 @@ class ConsultationController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
-            ], $statusCode);
+            ], 500);
         }
     }
     public function startConsultation($id)

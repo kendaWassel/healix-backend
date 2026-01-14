@@ -21,7 +21,6 @@ class DeliverySeeder extends Seeder
                     'delivery_image_id' => null,
                     'vehicle_type' => 'motorbike',
                     'plate_number' => 'DEV' . ($user->id + 1000),
-                    'bank_account' => null,
                     'driving_license_id' => null,
                 ]
             );
@@ -33,11 +32,9 @@ class DeliverySeeder extends Seeder
             'delivery_image_id' => null,
             'vehicle_type' => 'motorcycle',
             'plate_number' => 'DEV1000',
-            'bank_account' => '1234567890',
             'driving_license_id' => null,
-            
-
         ]);
+
 
         // Create additional delivery profiles via factory
         Delivery::factory()->count(5)->create();

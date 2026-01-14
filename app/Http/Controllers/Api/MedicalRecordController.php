@@ -9,6 +9,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\UpdateMedicalRecordRequest;
 use App\Http\Resources\MedicalRecordResource;
+use Illuminate\Support\Facades\Storage;
+use App\Models\Upload;
 
 class MedicalRecordController extends Controller
 {
@@ -38,16 +40,29 @@ class MedicalRecordController extends Controller
         }
 
         // Get the latest medical record for the patient (if any)
-        $record = $patient->medicalRecords()->with(['doctor.user', 'attachments'])->latest()->first();
+        $record = $patient->medicalRecords()->with(['doctor.user', 'uploads'])->latest()->first();
         
         $medicalRecordData = null;
         if ($record) {
-            $attachments = $record->attachments->map(function ($attachment) {
-                return [
-                    'id' => $attachment->id,
-                    'file_name' => basename($attachment->file_path),
-                    'file_url' => asset('storage/' . ltrim($attachment->file_path, '/')),
+            $images = [];
+            $files = [];
+
+            $record->uploads->each(function ($upload) use (&$images, &$files) {
+                $uploadData = [
+                    'id' => $upload->id,
+                    'file_name' => basename($upload->file_path),
+                    'file_url' => str_starts_with($upload->mime, 'image/')
+                        ? asset('storage/' . ltrim($upload->file_path, '/'))
+                        : route('medical-record.attachment.download', ['id' => $upload->id])
+                        
                 ];
+
+                // Check if it's an image based on MIME type
+                if (str_starts_with($upload->mime, 'image/')) {
+                    $images[] = $uploadData;
+                } else {
+                    $files[] = $uploadData;
+                }
             });
             
             $medicalRecordData = [
@@ -61,7 +76,8 @@ class MedicalRecordController extends Controller
                 'previous_surgeries' => $record->previous_surgeries,
                 'allergies' => $record->allergies,
                 'current_medications' => $record->current_medications,
-                'attachments' => $attachments,
+                'images' => $images,
+                'files' => $files,
                 'created_at' => $record->created_at?->toDateTimeString(),
                 'updated_at' => $record->updated_at?->toDateTimeString(),
             ];
@@ -77,6 +93,25 @@ class MedicalRecordController extends Controller
                 'medical_record' => $medicalRecordData,
             ]
         ], 200);
+    }
+
+    /**
+     * Download a medical record attachment with authorization checks.
+     */
+    public function downloadAttachment($id)
+    {
+        $upload = Upload::findOrFail($id);
+
+        $path = Storage::disk('public')->path($upload->file_path);
+        if (!file_exists($path)) {
+            abort(404);
+        }
+
+        $headers = [
+            'Content-Type' => $upload->mime,
+        ];
+
+        return response()->download($path, $upload->file, $headers);
     }
 
     /**
@@ -116,9 +151,13 @@ class MedicalRecordController extends Controller
             ]
         );
 
-        // Sync attachments if provided
+        // Update attachments if provided (set medical_record_id on uploads)
         if (isset($validated['attachments_id'])) {
-            $medicalRecord->attachments()->sync($validated['attachments_id']);
+            // First, remove medical_record_id from any uploads that were previously attached to this record
+            \App\Models\Upload::where('medical_record_id', $medicalRecord->id)->update(['medical_record_id' => null]);
+            
+            // Then, attach the new uploads to this medical record
+            \App\Models\Upload::whereIn('id', $validated['attachments_id'])->update(['medical_record_id' => $medicalRecord->id]);
         }
 
         return response()->json([
@@ -152,7 +191,7 @@ class MedicalRecordController extends Controller
             ], 404);
         }
 
-        $record = $patient->medicalRecords()->with(['doctor.user', 'attachments'])->latest()->first();
+        $record = $patient->medicalRecords()->with(['doctor.user', 'uploads'])->latest()->first();
 
         if (!$record) {
             return response()->json([

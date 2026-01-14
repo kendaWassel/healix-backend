@@ -20,7 +20,6 @@ class DeliveryFactory extends Factory
             'delivery_image_id' => null,
             'vehicle_type' => fake()->randomElement(['motorcycle', 'car', 'van', 'truck']),
             'plate_number' => fake()->regexify('[A-Z]{2}[0-9]{4}'),
-            'bank_account' => (string) fake()->bankAccountNumber(),
             'driving_license_id' => null,
             'rating_avg' => fake()->randomFloat(1, 3, 5),
         ];

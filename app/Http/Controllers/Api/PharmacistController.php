@@ -869,4 +869,98 @@ class PharmacistController extends Controller
             ],
         ], 200);
     }
+
+    /**
+     * Get pharmacist profile
+     */
+    public function getProfile(Request $request)
+    {
+        $user = $request->user();
+        $pharmacist = $user->pharmacist;
+
+        if (!$pharmacist) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pharmacist profile not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile retrieved successfully',
+            'data' => [
+                'id' => $pharmacist->id,
+                'full_name' => $user->full_name,
+                'pharmacy_name' => $pharmacist->pharmacy_name,
+                'address' => $pharmacist->address,
+                'working_hours' => [
+                    'from' => $pharmacist->from,
+                    'to' => $pharmacist->to,
+                ],
+                'bank_account' => $pharmacist->bank_account,
+                'rating_avg' => $pharmacist->rating_avg,
+            ]
+        ]);
+    }
+
+    /**
+     * Update pharmacist profile
+     */
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'from' => 'sometimes|date_format:H:i',
+            'to' => 'sometimes|date_format:H:i',
+            'address' => 'sometimes|string|max:500',
+            'latitude' => 'sometimes|numeric',
+            'longitude' => 'sometimes|numeric',
+            'bank_account' => 'sometimes|string|max:255',
+        ]);
+
+        $user = $request->user();
+        $pharmacist = $user->pharmacist;
+
+        if (!$pharmacist) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pharmacist profile not found'
+            ], 404);
+        }
+
+        if ($request->has('from')) {
+            $pharmacist->from = $request->from;
+        }
+        if ($request->has('to')) {
+            $pharmacist->to = $request->to;
+        }
+        if ($request->has('address')) {
+            $pharmacist->address = $request->address;
+        }
+        if ($request->has('latitude')) {
+            $pharmacist->latitude = $request->latitude;
+        }
+        if ($request->has('longitude')) {
+            $pharmacist->longitude = $request->longitude;
+        }
+        if ($request->has('bank_account')) {
+            $pharmacist->bank_account = $request->bank_account;
+        }
+        $pharmacist->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile updated successfully',
+            'data' => [
+                'pharmacist' => [
+                    'id' => $pharmacist->id,
+                    'address' => $pharmacist->address,
+                    'working_hours' => [
+                        'from' => $pharmacist->from,
+                        'to' => $pharmacist->to,
+                    ],
+                    'bank_account' => $pharmacist->bank_account,
+                ]
+            ]
+        ]);
+    }
 }

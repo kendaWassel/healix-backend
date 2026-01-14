@@ -20,6 +20,26 @@ class MedicalRecordResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $images = [];
+        $files = [];
+
+        $this->uploads->each(function ($upload) use (&$images, &$files) {
+            $uploadData = [
+                'id' => $upload->id,
+                'file_name' => basename($upload->file_path),
+                    'file_url' => str_starts_with($upload->mime, 'image/')
+                        ? asset('storage/' . ltrim($upload->file_path, '/'))
+                        : ($request->getSchemeAndHttpHost() . route('medical-record.attachment.download', ['id' => $upload->id], false)),
+            ];
+
+            // Check if it's an image based on MIME type
+            if (str_starts_with($upload->mime, 'image/')) {
+                $images[] = $uploadData;
+            } else {
+                $files[] = $uploadData;
+            }
+        });
+
         return [
                 'id' => $this->id,
                 'patient_id' => $this->patient_id,
@@ -31,13 +51,8 @@ class MedicalRecordResource extends JsonResource
                 'previous_surgeries' => $this->previous_surgeries,
                 'allergies' => $this->allergies,
                 'current_medications' => $this->current_medications,
-                'attachments' => $this->attachments->map(function ($attachment) {
-                    return [
-                        'id' => $attachment->id,
-                        'file_name' => basename($attachment->file_path),
-                        'file_url' => asset('storage/' . ltrim($attachment->file_path, '/')),
-                    ];
-                }),
+                'images' => $images,
+                'files' => $files,
                 'created_at' => $this->created_at?->toDateTimeString(),
                 'updated_at' => $this->updated_at?->toDateTimeString(),
         ];

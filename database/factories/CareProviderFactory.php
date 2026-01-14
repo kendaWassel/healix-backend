@@ -22,7 +22,6 @@ class CareProviderFactory extends Factory
             'session_fee' => fake()->numberBetween(50, 200),
             'gender' => fake()->randomElement(['male', 'female']),
             'type' => fake()->randomElement(['nurse', 'physiotherapist']),
-            'bank_account' => (string) fake()->bankAccountNumber(),
             'rating_avg' => fake()->randomFloat(1, 3, 5),
         ];
     }

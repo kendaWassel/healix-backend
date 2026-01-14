@@ -15,20 +15,22 @@ class VerifyEmailController extends Controller
     //send email verification to user
     public static function sendVerificationEmail(User $user)
     {
-        
+       
+        // Check if the user has already verified their email
 
         if ($user->hasVerifiedEmail()) {
             return response()->json([
                 'message' => 'Email already verified'
             ], 400);
         }
-
+        // Generate a signed verification URL valid for 60 minutes
         $verificationUrl = URL::temporarySignedRoute(
             'verification.verify',
             now()->addMinutes(60),
             ['id' => $user->id, 'hash' => sha1($user->email)]
         );
 
+        // Send the verification email
         try {
             Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
 

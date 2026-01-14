@@ -260,4 +260,80 @@ class DeliveryController extends Controller
       
         ]);
     }
+
+    /**
+     * Get delivery agent profile
+     */
+    public function getProfile(Request $request)
+    {
+        $user = $request->user();
+        $delivery = $user->delivery;
+
+        if (!$delivery) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Delivery profile not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile retrieved successfully',
+            'data' => [
+                'id' => $delivery->id,
+                'full_name' => $user->full_name,
+                'phone' => $user->phone,
+                'vehicle_type' => $delivery->vehicle_type,
+                'plate_number' => $delivery->plate_number,
+                'bank_account' => $delivery->bank_account,
+                'rating_avg' => $delivery->rating_avg,
+            ]
+        ]);
+    }
+
+    /**
+     * Update delivery agent profile
+     */
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'vehicle_type' => 'sometimes|string|max:255',
+            'plate_number' => 'sometimes|string|max:255',
+            'bank_account' => 'sometimes|string|max:255',
+        ]);
+
+        $user = $request->user();
+        $delivery = $user->delivery;
+
+        if (!$delivery) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Delivery profile not found'
+            ], 404);
+        }
+
+        if ($request->has('vehicle_type')) {
+            $delivery->vehicle_type = $request->vehicle_type;
+        }
+        if ($request->has('plate_number')) {
+            $delivery->plate_number = $request->plate_number;
+        }
+        if ($request->has('bank_account')) {
+            $delivery->bank_account = $request->bank_account;
+        }
+        $delivery->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile updated successfully',
+            'data' => [
+                'delivery' => [
+                    'id' => $delivery->id,
+                    'vehicle_type' => $delivery->vehicle_type,
+                    'plate_number' => $delivery->plate_number,
+                    'bank_account' => $delivery->bank_account,
+                ]
+            ]
+        ]);
+    }
 }

@@ -16,28 +16,23 @@ class CreatePrescriptionRequest extends FormRequest
     {
         return [
             'consultation_id' => ['nullable', 'integer', 'exists:consultations,id'],
-            'patient_id'      => ['required', 'integer', 'exists:patients,id'],
-            'doctor_id'       => ['required', 'integer', 'exists:doctors,id'],
-            'pharmacist_id'   => ['nullable', 'integer', 'exists:pharmacists,id'],
             'diagnosis'       => ['nullable', 'string', 'max:1000'],
             'notes'           => ['nullable', 'string', 'max:2000'],
             'source'          => ['nullable', Rule::in(['consultation', 'upload', 'external'])],
 
-            'medications'                 => ['required', 'array', 'min:1'],
-            'medications.*.medication_id' => ['required', 'integer', 'exists:medications,id'],
-            'medications.*.boxes'         => ['required', 'integer', 'min:1'],
-            'medications.*.price'         => ['nullable', 'numeric', 'min:0'],
-            'medications.*.instructions'  => ['nullable', 'string', 'max:1000'],
+            'medicines'                 => ['required', 'array', 'min:1'],
+            'medicines.*.name'          => ['required', 'string', 'max:255'],
+            'medicines.*.boxes'         => ['required', 'integer', 'min:1'],
+            'medicines.*.dosage'         => ['nullable', 'string', 'max:500'],
+            'medicines.*.instructions'  => ['nullable', 'string', 'max:1000'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'patient_id.required' => 'Patient is required.',
-            'doctor_id.required'  => 'Doctor is required.',
-            'medications.required'=> 'At least one medication must be provided.',
-            'medications.array'   => 'Medications must be an array list.',
+            'medicines.required'=> 'At least one medication must be provided.',
+            'medicines.array'   => 'Medications must be an array list.',
         ];
     }
 }

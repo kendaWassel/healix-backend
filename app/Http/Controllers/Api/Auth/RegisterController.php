@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Auth;
 
 
 use App\Services\AuthService;
-use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterRequest;
 
@@ -18,11 +17,9 @@ class RegisterController extends Controller
     public function register(RegisterRequest $request)
     {
         try {
-            
             $result = $this->authService->register($request->validated());
 
             return response()->json($result, 201);
-            
             
         } catch (\Exception $e) {
             return response()->json([

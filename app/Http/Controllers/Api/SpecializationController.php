@@ -77,4 +77,3 @@ class SpecializationController extends Controller
 
 
 }
-

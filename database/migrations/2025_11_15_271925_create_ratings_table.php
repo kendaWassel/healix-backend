@@ -14,6 +14,10 @@ return new class extends Migration
         Schema::create('ratings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('consultation_id')->nullable()->constrained('consultations')->nullOnDelete();
+            $table->foreignId('order_id')->nullable()->constrained('orders')->nullOnDelete();
+            $table->foreignId('home_visit_id')->nullable()->constrained('home_visits')->nullOnDelete();
+            $table->foreignId('delivery_task_id')->nullable()->constrained('delivery_tasks')->nullOnDelete();
             $table->enum('target_type', ['doctor', 'pharmacist', 'care_provider', 'delivery']);
             $table->unsignedInteger('target_id');
             $table->tinyInteger('stars')->check('stars BETWEEN 1 AND 5');

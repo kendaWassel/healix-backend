@@ -1,21 +1,23 @@
 <?php
 namespace App\Http\Controllers\Api\Admin;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Patient;
+use Carbon\Carbon;
+use App\Models\User;
+use App\Models\Order;
 use App\Models\Doctor;
+use App\Models\Rating;
+use App\Models\Upload;
+use App\Models\Patient;
+use App\Models\Delivery;
 use App\Models\Pharmacist;
 use App\Models\CareProvider;
-use App\Models\Delivery;
-use App\Models\DeliveryTask;
 use App\Models\Consultation;
-use App\Models\Order;
-use App\Models\Upload;
-use App\Models\User;
-use App\Models\Rating;
-use Illuminate\Support\Facades\Schema;
+use App\Models\DeliveryTask;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 
 
@@ -41,7 +43,6 @@ class AdminController extends Controller
             $query = Rating::query()
                 ->where('target_type', 'doctor')
                 ->whereNotNull('consultation_id')
-                ->where('stars', '<=', 2)
                 ->join('consultations', 'consultations.id', '=', 'ratings.consultation_id')
                 ->join('doctors', 'doctors.id', '=', 'ratings.target_id')
                 ->join('users as doctor_users', 'doctor_users.id', '=', 'doctors.user_id')
@@ -90,7 +91,6 @@ class AdminController extends Controller
             $query = Rating::query()
                 ->where('target_type', 'care_provider')
                 ->whereNotNull('home_visit_id')
-                ->where('stars', '<=', 2)
                 ->join('home_visits', 'home_visits.id', '=', 'ratings.home_visit_id')
                 ->join('care_providers', 'care_providers.id', '=', 'ratings.target_id')
                 ->join('users as provider_users', 'provider_users.id', '=', 'care_providers.user_id')
@@ -101,7 +101,7 @@ class AdminController extends Controller
                     'ratings.id as rating_id',
                     'ratings.stars',
                     'home_visits.id as service_id',
-                    'home_visits.ended_at as completed_at',
+                    'home_visits.ended_at as ended_at',
                     'patient_users.full_name as patient_name',
                     'patient_users.phone as patient_phone',
                     'provider_users.full_name as provider_name',
@@ -140,7 +140,6 @@ class AdminController extends Controller
         $query = Rating::query()
             ->where('target_type', 'delivery')
             ->whereNotNull('delivery_task_id')
-            ->where('stars', '<=', 2)
             ->join('delivery_tasks', 'delivery_tasks.id', '=', 'ratings.delivery_task_id')
             ->join('orders', 'orders.id', '=', 'delivery_tasks.order_id')
             ->join('patients', 'patients.id', '=', 'orders.patient_id')
@@ -304,7 +303,7 @@ class AdminController extends Controller
 
 		$usersPaginated = $query->orderByDesc('created_at')->paginate($perPage);
 
-		$data = $usersPaginated->getCollection()->map(function ($user) {
+        $data = $usersPaginated->getCollection()->map(function ($user) use ($request) {
 			$userType = 'patient';
 			if ($user->doctor) $userType = 'doctor';
 			elseif ($user->pharmacist) $userType = 'pharmacist';
@@ -326,13 +325,13 @@ class AdminController extends Controller
 				$attachment = Upload::where('user_id', $user->id)->latest()->first();
 			}
 
-			$attachmentData = null;
-			if ($attachment) {
-				$attachmentData = [
-					'id' => $attachment->id,
-					'file_url' => $attachment->file_path ? asset('storage/' . $attachment->file_path) : null,
-				];
-			}
+            $attachmentData = null;
+            if ($attachment) {
+                $attachmentData = [
+                    'id' => $attachment->id,
+                    'file_url' => $attachment->file_path ? $request->getSchemeAndHttpHost() . Storage::url($attachment->file_path) : null,
+                ];
+            }
 
 			$status = null;
 			if (Schema::hasColumn('users', 'status')) {
@@ -376,16 +375,16 @@ class AdminController extends Controller
 		}
 
 		$uploads = Upload::where('user_id', $user->id)->orderByDesc('created_at')->get();
-
+        
 		$data = $uploads->map(function ($u) {
 			$fileName = $u->file ?? ($u->file_path ? basename($u->file_path) : null);
-			return [
-				'id' => $u->id,
-				'file_name' => $fileName,
-				'category' => $u->category,
-				'file_url' => $u->file_path ? asset('storage/' . $u->file_path) : null,
-				'uploaded_at' => optional($u->created_at)->toDateString(),
-			];
+            return [
+                'id' => $u->id,
+                'file_name' => $fileName,
+                'category' => $u->category,
+                'file_url' => $u->file_path ? request()->getSchemeAndHttpHost() . route('download.file', ['id' => $u->id], false) : null,
+                'uploaded_at' => optional($u->created_at)->toDateString(),
+            ];
 		})->values();
 
 		return response()->json([
@@ -434,12 +433,8 @@ class AdminController extends Controller
      * PATCH /api/admin/users/{id}/reject
      * Reject account with reason
      */
-    public function rejectUser(Request $request, $id)
+    public function rejectUser($id)
     {
-        $request->validate([
-            'reason' => 'required|string|max:255',
-        ]);
-
         $user = User::find($id);
 
         if (!$user) {
@@ -451,16 +446,14 @@ class AdminController extends Controller
 
         $user->status = 'rejected';
         $user->is_active = false;
-        $user->approved_at = null;
-        $user->rejection_reason = $request->reason;
+        $user->approved_at = Carbon::now();
         // سجل الأدمن اللي رفض
         $user->admin_note = 'Rejected by admin ID: ' . Auth::id();
         $user->save();
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Account rejected',
-            'rejection_reason' => $user->rejection_reason,
+            'message' => 'Account rejected successfully',
         ]);
     }
 
@@ -483,7 +476,19 @@ public function editUser(Request $request, $id)
             'message' => 'User not found'
         ], 404);
     }
-
+    // simple: only allow editing active accounts
+    if (isset($user->is_active)) {
+        if (!$user->is_active) {
+            return response()->json(['status' => 'error', 'message' => 'Only active accounts can be edited.'], 403);
+        }
+    } elseif (isset($user->status)) {
+        if (!in_array($user->status, ['approved', 'activated', 'active'])) {
+            return response()->json(['status' => 'error', 'message' => 'Only active accounts can be edited.'], 403);
+        }
+    } elseif (method_exists($user, 'hasVerifiedEmail') && !$user->hasVerifiedEmail()) {
+        return response()->json(['status' => 'error', 'message' => 'Only active accounts can be edited.'], 403);
+    }
+    
     $user->fill($request->only(['full_name', 'email', 'phone']));
     $user->save();
 
@@ -511,6 +516,19 @@ public function deleteUser($id)
             'status' => 'error',
             'message' => 'User not found'
         ], 404);
+    }
+
+    // simple: only allow deleting active accounts
+    if (isset($user->is_active)) {
+        if (!$user->is_active) {
+            return response()->json(['status' => 'error', 'message' => 'Only active accounts can be deleted.'], 403);
+        }
+    } elseif (isset($user->status)) {
+        if (!in_array($user->status, ['approved', 'activated', 'active'])) {
+            return response()->json(['status' => 'error', 'message' => 'Only active accounts can be deleted.'], 403);
+        }
+    } elseif (method_exists($user, 'hasVerifiedEmail') && !$user->hasVerifiedEmail()) {
+        return response()->json(['status' => 'error', 'message' => 'Only active accounts can be deleted.'], 403);
     }
 
     $user->delete();

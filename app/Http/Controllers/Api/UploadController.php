@@ -3,61 +3,70 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Upload;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UploadRequest;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\Response;
 
 class UploadController extends Controller
 {
-    
     public function uploadFile(UploadRequest $request)
     {
-        $validated = $request->validated();
-
-        $file = $request->file('file');
-        $category = $validated['category'];
-
-        $filename = time() . '.' . $file->getClientOriginalExtension();
-        $filepath = $file->storeAs("public/{$category}", $filename);
-
-        $upload = Upload::create([
-            'user_id' => $request->user()?->id,
-            'category' => $category,
-            'file' => $filename,
-            'file_path' => "{$category}/{$filename}",
-            'mime' => $file->getClientMimeType(),
-        ]);
-
-        return response()->json([
-            'file_id' => $upload->id,
-            'url' => asset('/' . $upload->file_path),
-            'status' => 'uploaded'
-        ]);
+        return $this->handleUpload(
+            $request,
+            $request->file('file')
+        );
     }
 
-   
     public function uploadImage(UploadRequest $request)
     {
-        $validated = $request->validated();
+        return $this->handleUpload(
+            $request,
+            $request->file('image')
+        );
+    }
 
-        $image = $request->file('image');
-        $category = $validated['category'];
+    private function handleUpload(UploadRequest $request, $file)
+    {
+        $category = $request->validated('category');
 
-        $filename = time() . '.' . $image->getClientOriginalExtension();
-        $path = $image->storeAs("public/{$category}", $filename);
+        $path = $file->store($category, 'public');
 
         $upload = Upload::create([
-            'user_id' => $request->user()?->id,
-            'category' => $category,
-            'file' => $filename,
+            'user_id'   => $request->user()?->id,
+            'category'  => $category,
+            'file'      => basename($path),
             'file_path' => $path,
-            'mime' => $image->getClientMimeType(),
+            'mime'      => $file->getClientMimeType(),
         ]);
 
+        // Build download URL using the current request host (supports ngrok/public tunnels)
+        $relative = route('download.file', $upload->id, false);
+        $downloadUrl = $request->getSchemeAndHttpHost() . $relative;
+
         return response()->json([
-            'image_id' => $upload->id,
-            'url' => asset('storage/' . $category . $upload->file_path),
-            'status' => 'uploaded'
+            'id'           => $upload->id,
+            'url'          => Storage::url($upload->file_path),
+            'download_url' => $downloadUrl,
+            'status'       => 'uploaded',
         ]);
     }
+    public function downloadFile($id): Response
+    {
+        $upload = Upload::findOrFail($id);
+
+        // Resolve the actual filesystem path for the stored file on the public disk
+        $path = Storage::disk('public')->path($upload->file_path);
+
+        if (!file_exists($path)) {
+            abort(404);
+        }
+
+        $headers = [
+            'Content-Type' => $upload->mime,
+        ];
+
+        return response()->download($path, $upload->file, $headers);
+    }
+
 }

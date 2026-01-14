@@ -41,7 +41,6 @@ class DatabaseSeeder extends Seeder
             PrescriptionSeeder::class,
             OrderSeeder::class,
             UploadSeeder::class,
-            MedicalRecordSeeder::class,
             DeliveryTaskSeeder::class,
             FaqSeeder::class,
             FirstAidSeeder::class,

@@ -33,7 +33,6 @@ class DoctorFactory extends Factory
             'to'   => $to,
             'certificate_file_id' => null,
             'consultation_fee' => fake()->numberBetween(100, 300),
-            'bank_account' => (string) fake()->bankAccountNumber(),
             'rating_avg' => fake()->randomFloat(1, 3, 5),
         ];
     }

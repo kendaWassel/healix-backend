@@ -13,7 +13,6 @@ class Doctor extends Model
         'from',
         'to', 
         'consultation_fee', 
-        'bank_account', 
         'rating_avg', 
         'certificate_file_id',
         'specialization_id', 
@@ -45,5 +44,14 @@ class Doctor extends Model
         return $this->hasMany(Prescription::class);
     }
 
+    public function certificateFile()
+    {
+        return $this->belongsTo(Upload::class, 'certificate_file_id');
+    }
+
+    public function doctorImage()
+    {
+        return $this->belongsTo(Upload::class, 'doctor_image_id');
+    }
 
 }

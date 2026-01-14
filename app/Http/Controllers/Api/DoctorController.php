@@ -116,7 +116,6 @@ class DoctorController extends Controller
 
         try {
             $prescription = $this->doctorService->createPrescription($validated);
-
             return response()->json([
                 'status'  => 'success',
                 'data'    => [
@@ -185,5 +184,90 @@ class DoctorController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Get doctor profile
+     */
+    public function getProfile(Request $request)
+    {
+        $user = $request->user();
+        $doctor = $user->doctor;
+
+        if (!$doctor) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Doctor profile not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile retrieved successfully',
+            'data' => [
+                'id' => $doctor->id,
+                'full_name' => $user->full_name,
+                'specialization' => $doctor->specialization ? $doctor->specialization->name : null,
+                'phone' => $user->phone,
+                'email' => $user->email,
+                'from' => $doctor->from,
+                'to' => $doctor->to,
+                'consultation_fee' => $doctor->consultation_fee,
+                'bank_account' => $doctor->bank_account,
+                'certificate_file' => $doctor->certificate_file_id ? asset('/storage/' . $doctor->certificateFile->file_path) : null,
+                'rating_avg' => $doctor->rating_avg,
+            ]
+        ]);
+    }
+
+    /**
+     * Update doctor profile
+     */
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'from' => 'sometimes|date_format:H:i',
+            'to' => 'sometimes|date_format:H:i',
+            'consultation_fee' => 'sometimes|numeric|min:0',
+            'bank_account' => 'sometimes|string|max:255',
+        ]);
+
+        $user = $request->user();
+        $doctor = $user->doctor;
+
+        if (!$doctor) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Doctor profile not found'
+            ], 404);
+        }
+
+        if ($request->has('from')) {
+            $doctor->from = $request->from;
+        }
+        if ($request->has('to')) {
+            $doctor->to = $request->to;
+        }
+        if ($request->has('consultation_fee')) {
+            $doctor->consultation_fee = $request->consultation_fee;
+        }
+        if ($request->has('bank_account')) {
+            $doctor->bank_account = $request->bank_account;
+        }
+        $doctor->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile updated successfully',
+            'data' => [
+                'doctor' => [
+                    'id' => $doctor->id,
+                    'from' => $doctor->from,
+                    'to' => $doctor->to,
+                    'consultation_fee' => $doctor->consultation_fee,
+                    'bank_account' => $doctor->bank_account,
+                ]
+            ]
+        ]);
     }
 }

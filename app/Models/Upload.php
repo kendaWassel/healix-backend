@@ -22,9 +22,9 @@ class Upload extends Model
         return $this->hasOne(Prescription::class, 'prescription_image_id');
     }
     
-    public function medicalRecords()
+    public function medicalRecord()
     {
-        return $this->hasMany(MedicalRecord::class, 'attachment_id');
+        return $this->belongsTo(MedicalRecord::class, 'medical_record_id');
     }
     
     public function url(){

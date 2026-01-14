@@ -32,7 +32,6 @@ class DoctorSeeder extends Seeder
                     'to' => '23:59:59',
                     'certificate_file_id' => null,
                     'consultation_fee' => 50.00,
-                    'bank_account' => null,
                 ]
             );
         }
