@@ -14,7 +14,6 @@ class Delivery extends Model
         'delivery_image_id',
         'vehicle_type',
         'plate_number',
-        'bank_account',
         'driving_license_id',
         'gender',
         'rating_avg'

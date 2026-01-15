@@ -3,18 +3,18 @@
 namespace App\Services;
 
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 use App\Models\Doctor;
-use App\Models\Medication;
-use App\Models\Prescription;
-use App\Models\PrescriptionMedication;
 use App\Models\Upload;
 use App\Models\Patient;
+use Carbon\CarbonPeriod;
+use App\Models\Medication;
 use App\Models\Consultation;
+use App\Models\Prescription;
 use App\Models\Specialization;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use App\Models\PrescriptionMedication;
+use Illuminate\Support\Facades\Storage;
 
 class DoctorService
 {
@@ -64,11 +64,12 @@ class DoctorService
     public function formatDoctorData(Doctor $doctor): array
     {
         $rating = $doctor->rating_avg ?? round($doctor->ratings->avg('stars') ?? 0, 1);
-        $doctor_image = null;
-        if ($doctor->doctor_image_id) {
+
+        $doctorImage = null;
+        if ($doctor && !empty($doctor->doctor_image_id)) {
             $upload = Upload::find($doctor->doctor_image_id);
             if ($upload && $upload->file_path) {
-                $doctor_image = asset('storage/' . $upload->file_path);
+                $doctorImage = asset('storage/' . ltrim($upload->file_path, '/'));
             }
         }
 
@@ -81,7 +82,7 @@ class DoctorService
             'consultation_fee' => (float) $doctor->consultation_fee,
             'available_from' => $doctor->from,
             'available_to' => $doctor->to,
-            'doctor_image' => $doctor_image,
+            'doctor_image' => $doctorImage,
             'specialization' => $specializationName,
         ];
     }
@@ -153,10 +154,20 @@ class DoctorService
             throw new \Exception('No time slots generated. Check from/to/interval.', 422);
         }
 
-        // Get booked slots for the date
+        // Get booked slots for the date (normalized to 'H:i')
         $bookedSlots = Consultation::where('doctor_id', $doctor->id)
             ->whereDate('scheduled_at', $date)
-            ->pluck(DB::raw("TIME(scheduled_at) as time"))
+            ->where('status', '!=', 'cancelled')
+            ->pluck('scheduled_at')
+            ->map(function ($dt) {
+                try {
+                    return Carbon::parse($dt)->format('H:i');
+                } catch (\Throwable $e) {
+                    return null;
+                }
+            })
+            ->filter()
+            ->values()
             ->toArray();
 
         $availableSlots = [];
@@ -177,11 +188,9 @@ class DoctorService
 
             // Check if slot is already booked
             if (!in_array($slotTime, $bookedSlots)) {
-                $availableSlots[] = [
-                    'time' => $slotTime,
-                    'is_available' => true,
-                ];
+                $availableSlots[]= $slotTime;
             }
+
         }
 
         return [

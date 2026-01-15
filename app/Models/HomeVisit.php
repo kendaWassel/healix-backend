@@ -16,7 +16,6 @@ class HomeVisit extends Model
         'service_type',
         'reason',
         'scheduled_at',
-        'address',
         'status',
         'started_at',
         'ended_at',

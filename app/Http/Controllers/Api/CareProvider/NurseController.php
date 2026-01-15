@@ -180,7 +180,73 @@ class NurseController extends Controller
         }
     }
 
+    /**
+     * Get nurse profile
+     */
+    public function getProfile(Request $request)
+    {
+        $user = $request->user();
+        $careProvider = $user->careProvider;
 
+        if (!$careProvider || $careProvider->type !== 'nurse') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Care provider profile not found or not a nurse'
+            ], 404);
+        }
 
-    
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile retrieved successfully',
+            'data' => [
+                'id' => $careProvider->id,
+                'type' => $careProvider->type,
+                'full_name' => $user->full_name,
+                'session_fee' => $careProvider->session_fee,
+                'bank_account' => $careProvider->bank_account,
+                'rating_avg' => $careProvider->rating_avg,
+            ]
+        ]);
+    }
+
+    /**
+     * Update nurse profile
+     */
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'session_fee' => 'sometimes|numeric|min:0',
+            'bank_account' => 'sometimes|string|max:255',
+        ]);
+
+        $user = $request->user();
+        $careProvider = $user->careProvider;
+
+        if (!$careProvider || $careProvider->type !== 'nurse') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Care provider profile not found or not a nurse'
+            ], 404);
+        }
+
+        if ($request->has('session_fee')) {
+            $careProvider->session_fee = $request->session_fee;
+        }
+        if ($request->has('bank_account')) {
+            $careProvider->bank_account = $request->bank_account;
+        }
+        $careProvider->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile updated successfully',
+            'data' => [
+                'care_provider' => [
+                    'id' => $careProvider->id,
+                    'session_fee' => $careProvider->session_fee,
+                    'bank_account' => $careProvider->bank_account,
+                ]
+            ]
+        ]);
+    }
 }

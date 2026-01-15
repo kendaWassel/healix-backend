@@ -8,7 +8,7 @@ class UploadRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check();
+        return true;
     }
 
     public function rules(): array
@@ -18,7 +18,7 @@ class UploadRequest extends FormRequest
         ];
 
         if ($this->hasFile('file')) {
-            $rules['file'] = 'required|file|max:10240'; // 10MB for general files
+            $rules['file'] = 'required|file|max:10240|mimes:pdf,doc,docx,txt'; // 10MB for general files
         }
 
         if ($this->hasFile('image')) {

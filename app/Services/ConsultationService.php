@@ -39,10 +39,10 @@ class ConsultationService
         }
 
         if ($validated['call_type'] === 'schedule' && empty($validated['scheduled_at'])) {
-            throw new \Exception('scheduled_at is required for schedule_later', 422);
+            throw new \Exception('scheduled_at is required for schedule', 422);
         }
 
-        // Validate booking time within doctor's available hours for schedule_later
+        // Validate booking time within doctor's available hours for schedule
         if (!empty($validated['scheduled_at'])) {
             $scheduled = Carbon::parse($validated['scheduled_at']);
             $time = $scheduled->format('H:i');
@@ -57,7 +57,7 @@ class ConsultationService
 
         // Validate doctor's availability for call_now based on working hours
         if ($validated['call_type'] === 'call_now') {
-            $now = Carbon::now('Asia/Damascus')->format('H:i');
+            $now = Carbon::now()->format('H:i');
 
             if (!empty($doctor->from) && !empty($doctor->to)) {
                 if (!($now >= $doctor->from && $now <= $doctor->to)) {
@@ -96,7 +96,10 @@ class ConsultationService
                 'type' => $validated['call_type'],
                 'status' => 'pending',
                 'start_time' => $validated['call_type'] === 'call_now' ? Carbon::now() : null,
-                'scheduled_at' => !empty($validated['scheduled_at']) ? Carbon::parse($validated['scheduled_at'], 'Asia/Damascus') : null,
+                // For call_now, set scheduled_at to now; for schedule, use provided datetime
+                'scheduled_at' => $validated['call_type'] === 'call_now'
+                    ? Carbon::now()
+                    : (!empty($validated['scheduled_at']) ? Carbon::parse($validated['scheduled_at']) : null),
             ]);
 
             DB::commit();
@@ -216,8 +219,8 @@ class ConsultationService
                 throw new \Exception('Scheduled time is missing for this consultation.', 422);
             }
 
-            $now = Carbon::now('Asia/Damascus');
-            $scheduled = Carbon::parse($consultation->scheduled_at)->setTimezone('Asia/Damascus');
+            $now = Carbon::now();
+            $scheduled = Carbon::parse($consultation->scheduled_at);
             if ($now->lt($scheduled) || $now->lte($scheduled)) {
                 throw new \Exception('It is not time to start the scheduled consultation yet.', 409);
             }

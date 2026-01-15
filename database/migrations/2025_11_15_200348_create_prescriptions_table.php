@@ -28,10 +28,11 @@ return new class extends Migration
             ])->default('doctor_written');
             
             $table->enum('status', [
-                'created', 
-                'sent_to_pharmacy', 
-                'pending', 
-                'accepted', 
+                'created', //when prescription is created by doctor
+                'sent_to_pharmacy', //when patient sends to pharmacy
+                'pending', //being processed by pharmacy
+                'accepted',
+                'priced', 
                 'rejected'
             ])->default('created');
 

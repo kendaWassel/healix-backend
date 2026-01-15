@@ -6,6 +6,7 @@ use App\Models\Doctor;
 use App\Models\Order;
 use App\Models\Patient;
 use App\Models\Rating;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class RatingFactory extends Factory
@@ -16,10 +17,10 @@ class RatingFactory extends Factory
     {
         return [
             'consultation_id' => null,
-            'doctor_id'       => Doctor::inRandomOrder()->first()->id ?? Doctor::factory(),
-            'patient_id'      => Patient::inRandomOrder()->first()->id ?? Patient::factory(),
             'order_id'        => null,
-            'pharmacist_id'   => null,
+            'home_visit_id'   => null,
+            'delivery_task_id' => null,
+            'target_type'    => $this->faker->randomElement(['doctor', 'pharmacist', 'care_provider', 'delivery']),
             'stars'           => fake()->numberBetween(3, 5),
         ];
     }

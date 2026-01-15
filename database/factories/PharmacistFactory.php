@@ -25,7 +25,6 @@ class PharmacistFactory extends Factory
             'to' => fake()->time('18:00', '22:00'),
             'latitude' => fake()->latitude(),
             'longitude' => fake()->longitude(),
-            'bank_account' => (string) fake()->bankAccountNumber(),
             'rating_avg' => fake()->randomFloat(1, 3, 5),
         ];
     }

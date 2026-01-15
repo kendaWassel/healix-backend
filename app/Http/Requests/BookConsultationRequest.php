@@ -29,7 +29,7 @@ class BookConsultationRequest extends FormRequest
             'doctor_id.exists' => 'Selected doctor does not exist.',
             'call_type.required' => 'Call type is required.',
             'call_type.in' => 'Call type must be either call_now or schedule.',
-            'scheduled_at.date' => 'Scheduled at must be a valid date.',
+            'scheduled_at.date_format' => 'Scheduled at must be in Y-m-d H:i:s format.',
         ];
     }
 }

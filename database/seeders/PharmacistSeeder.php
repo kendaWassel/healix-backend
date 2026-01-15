@@ -25,7 +25,6 @@ class PharmacistSeeder extends Seeder
                     'to' => '18:00:00',
                     'latitude' => null,
                     'longitude' => null,
-                    'bank_account' => null,
                 ]
             );
         }

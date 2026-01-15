@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\RoleMiddleware;
+use App\Http\Middleware\VerifiedEmail;
 
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -25,10 +26,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
     $middleware->alias([
         'auth:sanctum' => \Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,
-    'api' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-
-    'role' => \App\Http\Middleware\RoleMiddleware::class,
-    'active.account' => \App\Http\Middleware\EnsureAccountIsActive::class,
+        'api' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+        'role' => RoleMiddleware::class,
+        'verified' => VerifiedEmail::class,
+        'active.account' => \App\Http\Middleware\EnsureAccountIsActive::class,
     ]);
 })
     ->withExceptions(function (Exceptions $exceptions) {

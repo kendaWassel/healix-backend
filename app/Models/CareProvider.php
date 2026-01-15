@@ -15,7 +15,6 @@ class CareProvider extends Model
         'license_file_id',
         'session_fee',
         'gender',
-        'bank_account',
         'type', 
         'rating_avg'
     ];

@@ -48,7 +48,7 @@ class PatientService
         if ($doctor && !empty($doctor->doctor_image_id)) {
             $upload = Upload::find($doctor->doctor_image_id);
             if ($upload && $upload->file_path) {
-                $doctorImage = asset('storage/public/' . ltrim($upload->file_path, '/'));
+                $doctorImage = asset('storage/' . ltrim($upload->file_path, '/'));
             }
         }
 
@@ -577,6 +577,7 @@ class PatientService
                         });
                   })
                   ->orderBy('created_at', 'desc');
+                  
         }])
             ->whereHas('homeVisits', function ($query) use ($patient) {
                 $query->where('patient_id', $patient->id)
@@ -601,27 +602,41 @@ class PatientService
         
 
     }
-    public function formatPatientScheduledCareProviders($provider)
+    public function formatPatientScheduledCareProviders($providers)
     {
-        $homeVisits = $provider->homeVisits;
-        foreach ($homeVisits as $homeVisit) {   
-        $result = [
-            'id' => $provider->id,
-            'care_provider_name' => $provider->user->full_name,
-            'care_provider_phone' => $provider->user->phone,
-            'care_provider_image' => $provider->care_provider_image ? asset('storage/' . ltrim($provider->user->image, '/')) : null,
-            'gender' => $provider->gender,
-            'type' => $provider->type,//physiotherapist, nurse
-            
-            
-            'session_id' => $homeVisit->id,
-            'session_fee' => $provider->session_fee,
-            'session_reason' => $homeVisit->reason,
-            'session_scheduled_at' => $homeVisit->scheduled_at ? $homeVisit->scheduled_at->toIso8601String() : null,
-            'session_status' => $homeVisit->status,
-            ];
-        }
-        return $result;
+          
+            $results = [];
+
+            foreach ($providers as $provider) {
+                $image = null;
+                // Get care provider image (care_provider_image_id)
+                if ($provider->care_provider_image_id) {
+                    $upload = Upload::find($provider->care_provider_image_id);
+                    if ($upload && $upload->file_path) {
+                        $image = asset('storage/' . ltrim($upload->file_path, '/'));
+                    }
+                }
+
+                foreach ($provider->homeVisits as $homeVisit) {
+                    $results[] = [
+                        'care_provider_id' => $provider->id,
+                        'care_provider_name' => $provider->user->full_name,
+                        'care_provider_phone' => $provider->user->phone,
+                        'care_provider_image' => $image,
+                        'gender' => $provider->gender,
+                        'type' => $provider->type,
+
+                        'session_id' => $homeVisit->id,
+                        'session_fee' => $provider->session_fee,
+                        'session_reason' => $homeVisit->reason,
+                        'session_scheduled_at' => optional($homeVisit->scheduled_at)->toIso8601String(),
+                        'session_status' => $homeVisit->status,
+                    ];
+                }
+            }
+        
+
+        return $results;
     }
     /**
      * Request a new care provider for a canceled home visit
