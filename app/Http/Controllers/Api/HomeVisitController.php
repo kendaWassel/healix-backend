@@ -20,14 +20,8 @@ class HomeVisitController extends Controller
             'scheduled_at' => 'required|date_format:H:i',
         ]);
 
+        $this->authorize('create', HomeVisit::class);
         $doctor = auth()->user()->doctor;
-
-        if (!$doctor) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Not authorized.'
-            ], 403);
-        }
 
         // Ensure consultation belongs to the doctor
         $consultation = Consultation::where('id', $validated['consultation_id'])
@@ -70,14 +64,8 @@ class HomeVisitController extends Controller
             'scheduled_at' => 'required|date_format:Y-m-d H:i:s',
         ]);
 
+        $this->authorize('create', \App\Models\HomeVisit::class);
         $careProvider = auth()->user()->careProvider;
-
-        if (!$careProvider) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Not authorized. Only care providers can create follow-ups.'
-            ], 403);
-        }
         // Find the original home visit and ensure it belongs to the doctor and is completed
         $originalVisit = HomeVisit::where('id', $visitId)
             ->where('care_provider_id', $careProvider->id)

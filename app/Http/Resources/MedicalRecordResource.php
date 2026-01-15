@@ -7,29 +7,21 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class MedicalRecordResource extends JsonResource
 {
-    /**
-     * Create a new resource instance.
-     *
-     * @return void
-     */
+  
     
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
+     
         $images = [];
         $files = [];
 
-        $this->uploads->each(function ($upload) use (&$images, &$files) {
+        $this->uploads?->each(function ($upload) use (&$images, &$files) {
             $uploadData = [
                 'id' => $upload->id,
                 'file_name' => basename($upload->file_path),
                     'file_url' => str_starts_with($upload->mime, 'image/')
                         ? asset('storage/' . ltrim($upload->file_path, '/'))
-                        : ($request->getSchemeAndHttpHost() . route('medical-record.attachment.download', ['id' => $upload->id], false)),
+                        : (request()->getSchemeAndHttpHost() . route('medical-record.attachment.download', ['id' => $upload->id], false)),
             ];
 
             // Check if it's an image based on MIME type

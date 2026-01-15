@@ -31,13 +31,12 @@ class AuthService
             return null;
         }
 
-        $token = $user->createToken('API Token')->plainTextToken;
+        $token = $user->createToken($user->email.'API Token')->plainTextToken;
 
         return [
-            'user' => $user,
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'role' => $user->role
+            'token' => $token,
+            'role' => $user->role,
+            'email_verified' => $user->hasVerifiedEmail(),
         ];
     }
 

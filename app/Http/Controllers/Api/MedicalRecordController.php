@@ -20,17 +20,6 @@ class MedicalRecordController extends Controller
      */
     public function viewDetails($patientId)
     {
-        $user = Auth::user();
-        $doctor = $user->doctor;
-        $care_provider = $user->careProvider;
-        $isAuthorized = $doctor || ($care_provider && in_array($care_provider->type, ['nurse', 'physiotherapist']));
-        if (!$user || !$isAuthorized) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized - only doctors, nurses, and physiotherapists can view patient medical records.'
-            ], 403);
-        }
-
         $patient = Patient::with(['user', 'medicalRecords.doctor.user'])->find($patientId);
         if (!$patient) {
             return response()->json([
@@ -38,49 +27,13 @@ class MedicalRecordController extends Controller
                 'message' => 'Patient not found.'
             ], 404);
         }
+        $this->authorize('view', $patient);
 
         // Get the latest medical record for the patient (if any)
         $record = $patient->medicalRecords()->with(['doctor.user', 'uploads'])->latest()->first();
-        
         $medicalRecordData = null;
         if ($record) {
-            $images = [];
-            $files = [];
-
-            $record->uploads->each(function ($upload) use (&$images, &$files) {
-                $uploadData = [
-                    'id' => $upload->id,
-                    'file_name' => basename($upload->file_path),
-                    'file_url' => str_starts_with($upload->mime, 'image/')
-                        ? asset('storage/' . ltrim($upload->file_path, '/'))
-                        : route('medical-record.attachment.download', ['id' => $upload->id])
-                        
-                ];
-
-                // Check if it's an image based on MIME type
-                if (str_starts_with($upload->mime, 'image/')) {
-                    $images[] = $uploadData;
-                } else {
-                    $files[] = $uploadData;
-                }
-            });
-            
-            $medicalRecordData = [
-                'id' => $record->id,
-                'doctor_id' => $record->doctor_id,
-                'care_provider_id' => $care_provider ? $care_provider->id : null,
-                'doctor_name' => $record->doctor?->user ? 'Dr. ' . $record->doctor->user->full_name : null,
-                'diagnosis' => $record->diagnosis,
-                'treatment_plan' => $record->treatment_plan,
-                'chronic_diseases' => $record->chronic_diseases,
-                'previous_surgeries' => $record->previous_surgeries,
-                'allergies' => $record->allergies,
-                'current_medications' => $record->current_medications,
-                'images' => $images,
-                'files' => $files,
-                'created_at' => $record->created_at?->toDateTimeString(),
-                'updated_at' => $record->updated_at?->toDateTimeString(),
-            ];
+            $medicalRecordData = new MedicalRecordResource($record);
         }
 
         return response()->json([
@@ -90,7 +43,7 @@ class MedicalRecordController extends Controller
                 'patient_name' => $patient->user->full_name,
                 'gender' => $patient->gender,
                 'birth_date' => $patient->birth_date,
-                'medical_record' => $medicalRecordData,
+                'medical_record' => $medicalRecordData
             ]
         ], 200);
     }
@@ -101,6 +54,7 @@ class MedicalRecordController extends Controller
     public function downloadAttachment($id)
     {
         $upload = Upload::findOrFail($id);
+        $this->authorize('view', $upload);
 
         $path = Storage::disk('public')->path($upload->file_path);
         if (!file_exists($path)) {
@@ -130,12 +84,13 @@ class MedicalRecordController extends Controller
                 'message' => 'Patient not found.'
             ], 404);
         }
+        $this->authorize('view', $patient);
 
         $user = Auth::user();
         $doctor = $user->doctor;
-        $care_provider = $user->careProvider;
-        
-        // Use updateOrCreate to handle both create and update
+
+        $this->authorize('create', MedicalRecord::class);
+
         $medicalRecord = MedicalRecord::updateOrCreate(
             [
                 'patient_id' => $patientId,
@@ -154,10 +109,10 @@ class MedicalRecordController extends Controller
         // Update attachments if provided (set medical_record_id on uploads)
         if (isset($validated['attachments_id'])) {
             // First, remove medical_record_id from any uploads that were previously attached to this record
-            \App\Models\Upload::where('medical_record_id', $medicalRecord->id)->update(['medical_record_id' => null]);
+            Upload::where('medical_record_id', $medicalRecord->id)->update(['medical_record_id' => null]);
             
             // Then, attach the new uploads to this medical record
-            \App\Models\Upload::whereIn('id', $validated['attachments_id'])->update(['medical_record_id' => $medicalRecord->id]);
+            Upload::whereIn('id', $validated['attachments_id'])->update(['medical_record_id' => $medicalRecord->id]);
         }
 
         return response()->json([
@@ -190,6 +145,7 @@ class MedicalRecordController extends Controller
                 'message' => 'Patient not found for this user.'
             ], 404);
         }
+        $this->authorize('view', $patient);
 
         $record = $patient->medicalRecords()->with(['doctor.user', 'uploads'])->latest()->first();
 
