@@ -26,7 +26,7 @@ class DoctorFactory extends Factory
 
         return [
             'user_id' => User::factory()->state(fn () => ['role' => 'doctor']),
-            'specialization_id' => Specialization::inRandomOrder()->first()->id,
+            'specialization_id' => Specialization::factory()->create()->id,
             'gender' => fake()->randomElement(['male', 'female']),
             'doctor_image_id' => null,
             'from' => $from,

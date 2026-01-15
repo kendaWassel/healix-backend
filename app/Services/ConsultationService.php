@@ -27,6 +27,7 @@ class ConsultationService
         if (!$doctor) {
             throw new \Exception('Doctor not found', 404);
         }
+        
 
         $user = Auth::user();
         if (!$user) {

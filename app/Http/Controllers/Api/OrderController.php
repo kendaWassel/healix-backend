@@ -16,24 +16,15 @@ class OrderController extends Controller
     public function markReadyForDelivery($orderId)
     {
         try {
-            $user = Auth::user();
-            if (!$user || !$user->pharmacist) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Unauthorized'
-                ], 401);
-            }
-
-            $order = Order::where('id', $orderId)
-                ->where('pharmacist_id', $user->pharmacist->id)
-                ->first();
+            $order = Order::find($orderId);
 
             if (!$order) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Order not found or not authorized'
+                    'message' => 'Order not found'
                 ], 404);
             }
+            $this->authorize('update', $order);
 
             if ($order->status !== 'accepted') {
                 return response()->json([
