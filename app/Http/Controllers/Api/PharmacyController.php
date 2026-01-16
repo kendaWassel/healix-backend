@@ -31,8 +31,10 @@ class PharmacyController extends Controller
         $now = Carbon::now('Asia/Damascus');
 
         $data = $pharmacies->getCollection()->map(function (Pharmacist $pharmacy) use ($now, $validated) {
+            //parse from and to times
             $from = Carbon::createFromFormat('H:i:s', $pharmacy->from, 'Asia/Damascus');
             $to   = Carbon::createFromFormat('H:i:s', $pharmacy->to, 'Asia/Damascus');
+
 
             $openNow = false;
             if ($from && $to) {
@@ -47,8 +49,8 @@ class PharmacyController extends Controller
                 'latitude'  => $pharmacy->latitude ? (float) $pharmacy->latitude : null,
                 'longitude' => $pharmacy->longitude ? (float) $pharmacy->longitude : null,
                 'open_now'  => $openNow,
-                'from'      => $from,
-                'to'        => $to,
+                'from'      => Carbon::parse($pharmacy->from)->format('H:i'),
+                'to'        => Carbon::parse($pharmacy->to)->format('H:i'),
                 'rating'    => $pharmacy->rating_avg ? (float) $pharmacy->rating_avg : 0.0,
             ];
         })->values();

@@ -20,7 +20,6 @@ class HomeVisitController extends Controller
             'scheduled_at' => 'required|date_format:H:i',
         ]);
 
-        $this->authorize('create', HomeVisit::class);
         $doctor = auth()->user()->doctor;
 
         // Ensure consultation belongs to the doctor
@@ -64,7 +63,6 @@ class HomeVisitController extends Controller
             'scheduled_at' => 'required|date_format:Y-m-d H:i:s',
         ]);
 
-        $this->authorize('create', \App\Models\HomeVisit::class);
         $careProvider = auth()->user()->careProvider;
         // Find the original home visit and ensure it belongs to the doctor and is completed
         $originalVisit = HomeVisit::where('id', $visitId)

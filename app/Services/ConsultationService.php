@@ -233,6 +233,7 @@ class ConsultationService
         ]);
 
         return [
+            'is_joining' => false,
             'consultation' => $consultation,
             'role' => $doctor ? 'doctor' : 'patient',
         ];

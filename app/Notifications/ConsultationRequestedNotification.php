@@ -2,14 +2,9 @@
 
 namespace App\Notifications;
 
-use App\Mail\ConsultationBookedMail;
 use Illuminate\Bus\Queueable;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Notifications\Notification;
-use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Messages\BroadcastMessage;
 
 
 class ConsultationRequestedNotification extends Notification
@@ -70,14 +65,6 @@ class ConsultationRequestedNotification extends Notification
             'to' => $this->doctor->phone,
             'message' => $message,
         ];
-    }
-    public function toWhatsApp(object $notifiable): string{
-        $message = "New Consultation Requested by " . ($this->patient->full_name ?? $this->patient->name) . ".";
-        if ($this->consultation->scheduled_at) {
-            $message .= " Scheduled at: " . $this->consultation->scheduled_at->format('Y-m-d H:i');
-        }
-        $message .= " Type: " . ucfirst($this->consultation->type) . ".";
-        return $message;
     }
     
 

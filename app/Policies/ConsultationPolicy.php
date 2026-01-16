@@ -12,7 +12,13 @@ class ConsultationPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->role === 'admin';
+        if  ($user->role === 'admin') {
+            return true;
+        }
+        if ($user->role === 'doctor' || $user->role === 'patient') {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -40,7 +46,7 @@ class ConsultationPolicy
      */
     public function create(User $user): bool
     {
-        return $user->role === 'patient' || $user->role === 'admin';
+        return $user->role === 'doctor';
     }
 
     /**

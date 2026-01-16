@@ -21,6 +21,7 @@ class UserSeeder extends Seeder
             'is_active' => true,
             'approved_at' => now(),
             'admin_note' => 'Initial admin',
+            'email_verified_at' => now(),
         ]);
 
         // Patient
@@ -33,6 +34,7 @@ class UserSeeder extends Seeder
             'status' => 'approved',
             'is_active' => true,
             'approved_at' => now(),
+            'email_verified_at' => now(),
         ]);
 
         // Doctor
@@ -45,6 +47,7 @@ class UserSeeder extends Seeder
             'status' => 'approved',
             'is_active' => true,
             'approved_at' => now(),
+            'email_verified_at' => now(),
         ]);
 
         // Pharmacist
@@ -57,6 +60,7 @@ class UserSeeder extends Seeder
             'status' => 'approved',
             'is_active' => true,
             'approved_at' => now(),
+            'email_verified_at' => now(),
         ]);
 
         // Nurse
@@ -69,6 +73,7 @@ class UserSeeder extends Seeder
             'status' => 'approved',
             'is_active' => true,
             'approved_at' => now(),
+            'email_verified_at' => now(),
         ]);
 
         // Physiotherapist
@@ -81,6 +86,7 @@ class UserSeeder extends Seeder
             'status' => 'approved',
             'is_active' => true,
             'approved_at' => now(),
+            'email_verified_at' => now(),
         ]);
 
         // Delivery
@@ -93,6 +99,7 @@ class UserSeeder extends Seeder
             'status' => 'approved',
             'is_active' => true,
             'approved_at' => now(),
+            'email_verified_at' => now(),
         ]);
     }
 }
