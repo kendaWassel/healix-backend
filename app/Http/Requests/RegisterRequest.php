@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class RegisterRequest extends FormRequest
 {
@@ -62,7 +64,7 @@ class RegisterRequest extends FormRequest
                     'delivery_image_id' => 'required|exists:uploads,id',
                     'vehicle_type' => 'required|string|max:50',
                     'plate_number' => 'required|string|max:50',
-                    'driving_license_file_id' => 'required|exists:uploads,id',
+                    'driving_license_id' => 'required|exists:uploads,id',
                 ],
                 default => [],
             };
@@ -84,6 +86,16 @@ class RegisterRequest extends FormRequest
             'type.in' => 'Care provider type must be either nurse or physiotherapist',
         ];
     }
+    protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
+    {
+        $errors = $validator->errors()->all();
+        $response = response()->json([
+            'status' => 'error',
+            'message' => 'Validation failed',
+            'errors' => $errors
+        ], 422);
 
+        throw new HttpResponseException($response);
+    }
 
 }

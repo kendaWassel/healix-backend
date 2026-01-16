@@ -12,7 +12,13 @@ class PrescriptionPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->role === 'admin';
+        if ($user->role === 'admin') {
+            return true;
+        }
+        if (in_array($user->role, ['doctor', 'patient', 'pharmacist'])) {
+            return true;
+        }
+        return false;
     }
 
     /**

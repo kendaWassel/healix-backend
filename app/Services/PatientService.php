@@ -61,7 +61,7 @@ class PatientService
             'type' => $consultation->type,
             'scheduled_at' => $consultation->scheduled_at ? $consultation->scheduled_at->toIso8601String() : null,
             'specialization' => $doctor && $doctor->specialization ? $doctor->specialization->name : null,
-            'fee' => $doctor ? $doctor->consultation_fee : null,
+            'consultation_fee' => $doctor ? $doctor->consultation_fee : null,
             'status' => $consultation->status,
         ];
     }

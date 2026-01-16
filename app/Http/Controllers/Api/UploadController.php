@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class UploadController extends Controller
 {
+    
     public function uploadFile(UploadRequest $request)
     {
         return $this->handleUpload(
@@ -44,14 +45,22 @@ class UploadController extends Controller
         $relative = route('download.file', $upload->id, false);
         $downloadUrl = $request->getSchemeAndHttpHost() . $relative;
 
-        return response()->json([
-            'id'           => $upload->id,
-            'url'          => Storage::url($upload->file_path),
-            'download_url' => $downloadUrl,
-            'status'       => 'uploaded',
-        ]);
+        if ($request->hasFile('file')) {
+            return response()->json([
+                'file_id' => $upload->id,
+                'url'     => $downloadUrl,
+                'status'  => 'uploaded'
+            ]);
+        } else {
+            return response()->json([
+                'image_id' => $upload->id,
+                'url'      => $downloadUrl,
+                'status'   => 'uploaded'
+            ]);
+        }
+
     }
-    public function downloadFile($id): Response
+       public function downloadFile($id): Response
     {
         $upload = Upload::findOrFail($id);
 
@@ -68,5 +77,6 @@ class UploadController extends Controller
 
         return response()->download($path, $upload->file, $headers);
     }
+    
 
 }

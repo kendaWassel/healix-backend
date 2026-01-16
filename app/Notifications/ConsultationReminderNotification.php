@@ -92,39 +92,4 @@ class ConsultationReminderNotification extends Notification
             'message' => $message,
         ];
     }
-
-    /**
-     * Get the SMS representation of the notification.
-     */
-    public function toSms(object $notifiable): string
-    {
-        $scheduledTime = $this->consultation->scheduled_at
-            ? $this->consultation->scheduled_at->format('Y-m-d H:i')
-            : 'now';
-
-        $otherName = $this->otherParty->full_name ?? $this->otherParty->name;
-
-        if ($this->recipientType === 'patient') {
-            return "Reminder: You have a consultation with Dr. {$otherName} at {$scheduledTime}. Please be ready.";
-        } else {
-            return "Reminder: You have a consultation with {$otherName} at {$scheduledTime}. Please be ready.";
-        }
-    }
-    /**
-     * Get the WhatsApp representation of the notification.
-     */
-    public function toWhatsApp(object $notifiable): string
-    {
-        $scheduledTime = $this->consultation->scheduled_at
-            ? $this->consultation->scheduled_at->format('Y-m-d H:i')
-            : 'now';
-
-        $otherName = $this->otherParty->full_name ?? $this->otherParty->name;
-
-        if ($this->recipientType === 'patient') {
-            return "Reminder: You have a consultation with Dr. {$otherName} at {$scheduledTime}. Please be ready.";
-        } else {
-            return "Reminder: You have a consultation with {$otherName} at {$scheduledTime}. Please be ready.";
-        }
-    }
 }
