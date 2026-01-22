@@ -15,20 +15,19 @@ class AuthService
     {
         $user = User::where('email', $email)->first();
 
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (!$user || !Hash::check($password, $user->password) || !$user->isApproved() || !$user->isActive()) {
             return null;
         }
-        //return the type of care provider (nurse, therapist) along with role
 
-        if($user->role ==='care_provider'){
-            $careProvider = CareProvider::where('user_id', $user->id)->first();
+        //return the type of care provider (nurse, therapist) along with role
+        if ($user->role === 'care_provider') {
+            $careProvider = $user->careProvider;
             if ($careProvider) {
                 $user->role = $careProvider->type;
             }
         }
-
+            
         $token = $user->createToken($user->email.'api-token')->plainTextToken;
-
 
         return [
             'token' => $token,

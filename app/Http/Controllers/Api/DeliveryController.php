@@ -285,7 +285,6 @@ class DeliveryController extends Controller
                 'phone' => $user->phone,
                 'vehicle_type' => $delivery->vehicle_type,
                 'plate_number' => $delivery->plate_number,
-                'bank_account' => $delivery->bank_account,
                 'rating_avg' => $delivery->rating_avg,
             ]
         ]);
@@ -297,6 +296,8 @@ class DeliveryController extends Controller
     public function updateProfile(Request $request)
     {
         $request->validate([
+            'full_name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|max:255',
             'vehicle_type' => 'sometimes|string|max:255',
             'plate_number' => 'sometimes|string|max:255',
             'bank_account' => 'sometimes|string|max:255',
@@ -311,7 +312,14 @@ class DeliveryController extends Controller
                 'message' => 'Delivery profile not found'
             ], 404);
         }
-
+        if ($request->has('full_name')) {
+            $user->full_name = $request->full_name;
+            $user->save();
+        }
+        if ($request->has('email')) {
+            $user->email = $request->email;
+            $user->save();
+        }
         if ($request->has('vehicle_type')) {
             $delivery->vehicle_type = $request->vehicle_type;
         }
@@ -331,7 +339,6 @@ class DeliveryController extends Controller
                     'id' => $delivery->id,
                     'vehicle_type' => $delivery->vehicle_type,
                     'plate_number' => $delivery->plate_number,
-                    'bank_account' => $delivery->bank_account,
                 ]
             ]
         ]);

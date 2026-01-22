@@ -9,7 +9,7 @@ class HomeVisitPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->role === 'admin';
+        return in_array($user->role, ['admin', 'care_provider']);
     }
 
     public function view(User $user, HomeVisit $homeVisit): bool
@@ -31,8 +31,13 @@ class HomeVisitPolicy
 
     public function create(User $user): bool
     {
-        return in_array($user->role, ['patient', 'doctor', 'care_provider', 'admin']);
+        return in_array($user->role, ['patient', 'doctor', 'care_provider']);
     }
+    public function createFollowUp(User $user): bool
+    {
+        return $user->role === 'care_provider';
+    }
+    
 
     public function update(User $user, HomeVisit $homeVisit): bool
     {

@@ -12,12 +12,12 @@ class PharmacistPolicy
         return $user->role === 'admin';
     }
 
-    public function view(User $user, Pharmacist $pharmacist): bool
+    public function view(User $user): bool
     {
         if ($user->role === 'admin') {
             return true;
         }
-        if ($user->role === 'pharmacist' && ($user->pharmacist->id ?? null) === $pharmacist->id) {
+        if ($user->role === 'pharmacist') {
             return true;
         }
         return false;
@@ -28,20 +28,31 @@ class PharmacistPolicy
         return $user->role === 'admin';
     }
 
-    public function update(User $user, Pharmacist $pharmacist): bool
+    public function update(User $user): bool
     {
         if ($user->role === 'admin') {
             return true;
         }
-        if ($user->role === 'pharmacist' && ($user->pharmacist->id ?? null) === $pharmacist->id) {
+        if ($user->role === 'pharmacist') {
             return true;
         }
         return false;
     }
 
-    public function delete(User $user, Pharmacist $pharmacist): bool
+    public function delete(User $user): bool
     {
-        return $user->role === 'admin';
+        if ($user->role === 'admin') {    
+            return true;
+        }
+        if ($user->role === 'pharmacist') {
+            if ($user->pharmacist->id === $user->id) {
+                return false;   
+            }
+            return true;
+        }
+        return false;
     }
+
+  
 }
 

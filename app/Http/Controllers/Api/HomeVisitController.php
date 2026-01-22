@@ -7,11 +7,19 @@ use App\Models\HomeVisit;
 use App\Models\Consultation;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Auth;
 
 class HomeVisitController extends Controller
 {
+    use AuthorizesRequests;
+    /**
+     * POST /api/home-visits/request
+     * Description: Allows a doctor to request a home visit for a patient.
+     */
     public function requestHomeVisit(Request $request)
     {
+        $this->authorize('create', HomeVisit::class);
         $validated = $request->validate([
             'consultation_id' => 'required|exists:consultations,id',
             'patient_id' => 'required|exists:patients,id',
@@ -20,7 +28,7 @@ class HomeVisitController extends Controller
             'scheduled_at' => 'required|date_format:H:i',
         ]);
 
-        $doctor = auth()->user()->doctor;
+        $doctor = Auth::user()->doctor;
 
         // Ensure consultation belongs to the doctor
         $consultation = Consultation::where('id', $validated['consultation_id'])
@@ -59,11 +67,12 @@ class HomeVisitController extends Controller
      */
     public function createFollowUpHomeVisit(Request $request, $visitId)
     {
+        $this->authorize('createFollowUp', HomeVisit::class);
         $validated = $request->validate([
             'scheduled_at' => 'required|date_format:Y-m-d H:i:s',
         ]);
 
-        $careProvider = auth()->user()->careProvider;
+        $careProvider = Auth::user()->careProvider;
         // Find the original home visit and ensure it belongs to the doctor and is completed
         $originalVisit = HomeVisit::where('id', $visitId)
             ->where('care_provider_id', $careProvider->id)

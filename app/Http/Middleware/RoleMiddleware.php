@@ -28,7 +28,7 @@ class RoleMiddleware
         if (!in_array(Auth::user()->role, $allowedRoles)) {
             return response()->json([
                 'message' => 'Forbidden: Access denied',
-                'required_role' => count($allowedRoles) > 1 ? $allowedRoles : $allowedRoles[0],
+                'required_role' => count(value: $allowedRoles) > 1 ? $allowedRoles : $allowedRoles[0],
             ], 403);
         }
 

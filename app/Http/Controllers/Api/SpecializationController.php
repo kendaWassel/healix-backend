@@ -56,7 +56,7 @@ class SpecializationController extends Controller
             return [
                 'id' => $specialization->id,
                 'name' => $specialization->name,
-                'doctors_count' => $specialization->doctors_count,
+                'doctors_count' => $specialization->doctors()->count(),
             ];
         })->values();
 

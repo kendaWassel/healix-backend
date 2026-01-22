@@ -36,7 +36,7 @@ Route::post('/uploads/image', [UploadController::class, 'uploadImage']);
 
 // ========== PROTECTED APIs (Auth + Verified Email) ==========
 
-Route::get('/medical-records/attachments/{id}/download', [\App\Http\Controllers\Api\MedicalRecordController::class, 'downloadAttachment'])->name('medical-record.attachment.download');
+Route::get('/medical-records/attachments/{id}/download', [MedicalRecordController::class, 'downloadAttachment'])->name('medical-record.attachment.download');
 Route::get('/uploads/download/{id}', [UploadController::class, 'downloadFile'])->name('download.file');
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Download medical record attachments (authorized access only)
@@ -63,10 +63,11 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     });
 
     // ========== ADMIN ROUTES ==========
-    Route::prefix('admin')->group(function () {
+    Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard']);
         Route::get('/services', [AdminController::class, 'services']);
         Route::get('/users', [AdminController::class, 'users']);
+        Route::post('/users', [AdminController::class, 'addUser']);
         Route::get('/users/{id}/attachments', [AdminController::class, 'attachments']);
         Route::patch('/users/{id}/approve', [AdminController::class, 'approveUser']);
         Route::patch('/users/{id}/reject', [AdminController::class, 'rejectUser']);
@@ -118,21 +119,23 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     });
 
     // ========== DOCTOR ROUTES ==========
-    Route::prefix('doctor')->group(function () {
+    Route::middleware(['role:doctor'])->prefix('doctor')->group(function () {
         Route::get('/profile', [DoctorController::class, 'getProfile']);
         Route::put('/profile', [DoctorController::class, 'updateProfile']);
         Route::get('/my-schedules', [DoctorController::class, 'getDoctorSchedules']);
         Route::post('/home-visit/request', [HomeVisitController::class, 'requestHomeVisit']);
         Route::post('/prescriptions', [DoctorController::class, 'createPrescription']);
     });
+        // Pharmacy Information
+    Route::middleware(['role:patient'])->prefix('pharmacist')->group(function () {
+        Route::get('/pharmacies', [PharmacyController::class, 'getPharmacies']);
+        Route::get('/pharmacies/{id}', [PharmacyController::class, 'getPharmacyDetails']);
+    });
 
     // ========== PHARMACIST ROUTES ==========
-    Route::prefix('pharmacist')->group(function () {
+    Route::middleware(['role:pharmacist'])->prefix('pharmacist')->group(function () {
         Route::get('/profile', [PharmacistController::class, 'getProfile']);
         Route::put('/profile', [PharmacistController::class, 'updateProfile']);
-        // Pharmacy Information
-        Route::middleware(['role:patient'])->get('/pharmacies', [PharmacyController::class, 'getPharmacies']);
-        Route::middleware(['role:patient'])->get('/pharmacies/{id}', [PharmacyController::class, 'getPharmacyDetails']);
 
         // Prescription Management
         Route::prefix('prescriptions')->group(function () {

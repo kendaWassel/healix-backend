@@ -50,7 +50,7 @@ class PrescriptionPolicy
      */
     public function create(User $user): bool
     {
-        return $user->role === 'doctor' || $user->role === 'admin';
+        return $user->role === 'doctor';
     }
 
     /**
@@ -71,6 +71,10 @@ class PrescriptionPolicy
         }
 
         return false;
+    }
+    public function addPrice(User $user): bool
+    {
+        return $user->role === 'pharmacist';
     }
 
     /**
