@@ -22,6 +22,9 @@ You can view and run the API directly in Postman using the public documentation:
 👉 Postman API Documentation
 https://documenter.getpostman.com/view/44027819/2sBXVfjrwZ
 
+### 🔹 Download Postman Collection (JSON)
+- [Healix Backend Postman Collection](postman/Healix-Backend.postman_collection.json)
+
 ## ✨ Features
 
 - 🚀 Laravel REST API
