@@ -12,7 +12,13 @@ class PrescriptionPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->role === 'admin';
+        if ($user->role === 'admin') {
+            return true;
+        }
+        if (in_array($user->role, ['doctor', 'patient', 'pharmacist'])) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -44,7 +50,7 @@ class PrescriptionPolicy
      */
     public function create(User $user): bool
     {
-        return $user->role === 'doctor' || $user->role === 'admin';
+        return $user->role === 'doctor';
     }
 
     /**
@@ -65,6 +71,10 @@ class PrescriptionPolicy
         }
 
         return false;
+    }
+    public function addPrice(User $user): bool
+    {
+        return $user->role === 'pharmacist';
     }
 
     /**

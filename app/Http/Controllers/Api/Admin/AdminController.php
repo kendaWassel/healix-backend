@@ -14,6 +14,7 @@ use App\Models\CareProvider;
 use App\Models\Consultation;
 use App\Models\DeliveryTask;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -25,119 +26,65 @@ class AdminController extends Controller
 {
     /**
      * GET /api/admin/services
-     * Query params: service_type (consultation, home_visit, delivery), page, per_page
-     * Returns completed services with low ratings (<= 2 stars)
+     * Query params: page, per_page
      */
     public function services(Request $request)
     {
         $request->validate([
-            'service_type' => 'required|in:consultation,home_visit,delivery',
             'page' => 'sometimes|integer|min:1',
             'per_page' => 'sometimes|integer|min:1|max:100',
         ]);
 
-        $serviceType = $request->query('service_type');
         $perPage = (int) $request->query('per_page', 10);
+        $page = (int) $request->query('page', 1);
 
-        if ($serviceType === 'consultation') {
-            $query = Rating::query()
-                ->where('target_type', 'doctor')
-                ->whereNotNull('consultation_id')
-                ->join('consultations', 'consultations.id', '=', 'ratings.consultation_id')
-                ->join('doctors', 'doctors.id', '=', 'ratings.target_id')
-                ->join('users as doctor_users', 'doctor_users.id', '=', 'doctors.user_id')
-                ->join('patients', 'patients.id', '=', 'consultations.patient_id')
-                ->join('users as patient_users', 'patient_users.id', '=', 'patients.user_id')
-                ->where('consultations.status', 'completed')
-                ->select([
-                    'ratings.id as rating_id',
-                    'ratings.stars',
-                    'consultations.id as service_id',
-                    'consultations.updated_at as completed_at',
-                    'patient_users.full_name as patient_name',
-                    'patient_users.phone as patient_phone',
-                    'doctor_users.full_name as provider_name',
-                ])
-                ->orderByDesc('ratings.created_at');
-
-            $paginated = $query->paginate($perPage, ['*'], 'page', (int) $request->query('page', 1));
-
-            $data = collect($paginated->items())->map(function ($r) {
-                return [
-                    'id' => $r->service_id,
-                    'patient_name' => $r->patient_name,
-                    'patient_phone' => $r->patient_phone,
-                    'service_name' => 'Consultation',
-                    'service_provider' => $r->provider_name,
-                    'provider_type' => 'doctor',
-                    'rating' => (int) $r->stars,
-                    'date' => optional($r->completed_at)->toDateString(),
-                ];
-            })->values();
-
-            return response()->json([
-                'status' => 'success',
-                'data' => $data,
-                'meta' => [
-                    'current_page' => $paginated->currentPage(),
-                    'per_page' => $paginated->perPage(),
-                    'last_page' => $paginated->lastPage(),
-                    'total' => $paginated->total(),
-                ],
+        // Query for consultation ratings
+        $consultationQuery = Rating::query()
+            ->where('target_type', 'doctor')
+            ->whereNotNull('consultation_id')
+            ->join('consultations', 'consultations.id', '=', 'ratings.consultation_id')
+            ->join('doctors', 'doctors.id', '=', 'ratings.target_id')
+            ->join('users as doctor_users', 'doctor_users.id', '=', 'doctors.user_id')
+            ->join('patients', 'patients.id', '=', 'consultations.patient_id')
+            ->join('users as patient_users', 'patient_users.id', '=', 'patients.user_id')
+            ->where('consultations.status', 'completed')
+            ->select([
+                'ratings.id as rating_id',
+                'ratings.stars',
+                'ratings.created_at',
+                'consultations.id as service_id',
+                'consultations.created_at as completed_at',
+                'patient_users.full_name as patient_name',
+                'patient_users.phone as patient_phone',
+                'doctor_users.full_name as provider_name',
+                DB::raw("'consultation' as service_type"),
             ]);
-        }
 
-        if ($serviceType === 'home_visit') {
-            $query = Rating::query()
-                ->where('target_type', 'care_provider')
-                ->whereNotNull('home_visit_id')
-                ->join('home_visits', 'home_visits.id', '=', 'ratings.home_visit_id')
-                ->join('care_providers', 'care_providers.id', '=', 'ratings.target_id')
-                ->join('users as provider_users', 'provider_users.id', '=', 'care_providers.user_id')
-                ->join('patients', 'patients.id', '=', 'home_visits.patient_id')
-                ->join('users as patient_users', 'patient_users.id', '=', 'patients.user_id')
-                ->where('home_visits.status', 'completed')
-                ->select([
-                    'ratings.id as rating_id',
-                    'ratings.stars',
-                    'home_visits.id as service_id',
-                    'home_visits.ended_at as ended_at',
-                    'patient_users.full_name as patient_name',
-                    'patient_users.phone as patient_phone',
-                    'provider_users.full_name as provider_name',
-                    'care_providers.type as provider_type',
-                ])
-                ->orderByDesc('ratings.created_at');
-
-            $paginated = $query->paginate($perPage, ['*'], 'page', (int) $request->query('page', 1));
-
-            $data = collect($paginated->items())->map(function ($r) {
-                return [
-                    'id' => $r->service_id,
-                    'patient_name' => $r->patient_name,
-                    'patient_phone' => $r->patient_phone,
-                    'service_name' => 'Home Visit - ' . ($r->provider_type === 'nurse' ? 'Nurse' : 'Physiotherapist'),
-                    'service_provider' => $r->provider_name,
-                    'provider_type' => 'care_provider',
-                    'rating' => (int) $r->stars,
-                    'date' => optional($r->completed_at)->toDateString(),
-                ];
-            })->values();
-
-            return response()->json([
-                'status' => 'success',
-                'data' => $data,
-                'meta' => [
-                    'current_page' => $paginated->currentPage(),
-                    'per_page' => $paginated->perPage(),
-                    'last_page' => $paginated->lastPage(),
-                    'total' => $paginated->total(),
-                ],
+        // Query for home visit ratings
+        $homeVisitQuery = Rating::query()
+            ->where('target_type', 'care_provider')
+            ->whereNotNull('home_visit_id')
+            ->join('home_visits', 'home_visits.id', '=', 'ratings.home_visit_id')
+            ->join('care_providers', 'care_providers.id', '=', 'ratings.target_id')
+            ->join('users as provider_users', 'provider_users.id', '=', 'care_providers.user_id')
+            ->join('patients', 'patients.id', '=', 'home_visits.patient_id')
+            ->join('users as patient_users', 'patient_users.id', '=', 'patients.user_id')
+            ->where('home_visits.status', 'completed')
+            ->select([
+                'ratings.id as rating_id',
+                'ratings.stars',
+                'ratings.created_at',
+                'home_visits.id as service_id',
+                'home_visits.ended_at as completed_at',
+                'patient_users.full_name as patient_name',
+                'patient_users.phone as patient_phone',
+                'provider_users.full_name as provider_name',
+                'care_providers.type as provider_type',
+                DB::raw("'home_visit' as service_type"),
             ]);
-        }
 
-        // delivery
-        $query = Rating::query()
+        // Query for delivery ratings
+        $deliveryQuery = Rating::query()
             ->where('target_type', 'delivery')
             ->whereNotNull('delivery_task_id')
             ->join('delivery_tasks', 'delivery_tasks.id', '=', 'ratings.delivery_task_id')
@@ -150,37 +97,60 @@ class AdminController extends Controller
             ->select([
                 'ratings.id as rating_id',
                 'ratings.stars',
+                'ratings.created_at',
                 'orders.id as service_id',
                 'delivery_tasks.delivered_at as completed_at',
                 'patient_users.full_name as patient_name',
                 'patient_users.phone as patient_phone',
                 'delivery_users.full_name as provider_name',
-            ])
-            ->orderByDesc('ratings.created_at');
+                DB::raw("'delivery' as service_type"),
+            ]);
 
-        $paginated = $query->paginate($perPage, ['*'], 'page', (int) $request->query('page', 1));
+        // Get all results
+        $consultationResults = $consultationQuery->get();
+        $homeVisitResults = $homeVisitQuery->get();
+        $deliveryResults = $deliveryQuery->get();
 
-        $data = collect($paginated->items())->map(function ($r) {
+        // Merge and sort by created_at desc
+        $allResults = $consultationResults->merge($homeVisitResults)->merge($deliveryResults)
+            ->sortByDesc('created_at');
+
+        // Paginate the collection
+        $paginated = $allResults->forPage($page, $perPage);
+
+        // Map to response format
+        $data = $paginated->map(function ($r) {
+            $serviceName = 'Consultation';
+            if ($r->service_type === 'home_visit') {
+                $serviceName = 'Home Visit - ' . (isset($r->provider_type) && $r->provider_type === 'nurse' ? 'Nurse' : 'Physiotherapist');
+            } elseif ($r->service_type === 'delivery') {
+                $serviceName = 'Medication Delivery';
+            }
+
             return [
                 'id' => $r->service_id,
                 'patient_name' => $r->patient_name,
                 'patient_phone' => $r->patient_phone,
-                'service_name' => 'Medication Delivery',
+                'service_name' => $serviceName,
                 'service_provider' => $r->provider_name,
-                'provider_type' => 'delivery',
+                'provider_type' => $r->service_type === 'home_visit' ? 'care_provider' : $r->service_type,
                 'rating' => (int) $r->stars,
                 'date' => optional($r->completed_at)->toDateString(),
             ];
         })->values();
 
+        // Calculate pagination meta
+        $total = $allResults->count();
+        $lastPage = ceil($total / $perPage);
+
         return response()->json([
             'status' => 'success',
             'data' => $data,
             'meta' => [
-                'current_page' => $paginated->currentPage(),
-                'per_page' => $paginated->perPage(),
-                'last_page' => $paginated->lastPage(),
-                'total' => $paginated->total(),
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'last_page' => $lastPage,
+                'total' => $total,
             ],
         ]);
     }
@@ -190,6 +160,7 @@ class AdminController extends Controller
 	 */
 	public function dashboard(Request $request)
 	{
+
 		// Users
 		$patients = Patient::count();
 		$doctors = Doctor::count();
@@ -266,12 +237,14 @@ class AdminController extends Controller
 	 */
 	public function users(Request $request)
 	{
+
 		$roleFilter = $request->query('role');
 		$statusFilter = $request->query('status');
 		$perPage = (int) $request->query('per_page', 10);
 
 		$query = User::query()->with(['doctor', 'pharmacist', 'careProvider', 'delivery']);
-
+        
+        
 		// Role filter
 		if ($roleFilter) {
 			if (in_array($roleFilter, ['doctor', 'pharmacist', 'delivery', 'patient', 'admin'])) {
@@ -290,7 +263,7 @@ class AdminController extends Controller
 			if (Schema::hasColumn('users', 'status')) {
 				$query->where('status', $statusFilter);
 			} else {
-				if ($statusFilter === 'activated') {
+				if ($statusFilter === 'approved') {
 					$query->whereNotNull('email_verified_at');
 				} elseif ($statusFilter === 'pending') {
 					$query->whereNull('email_verified_at');
@@ -537,7 +510,7 @@ public function deleteUser($id)
         'status' => 'success',
         'message' => 'Account deleted successfully',
     ]);
-}
 
+}
 	
 }

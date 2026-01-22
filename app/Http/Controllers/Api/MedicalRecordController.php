@@ -11,6 +11,7 @@ use App\Http\Requests\UpdateMedicalRecordRequest;
 use App\Http\Resources\MedicalRecordResource;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Upload;
+use App\Policies\MedicalRecordPolicy;
 
 class MedicalRecordController extends Controller
 {
@@ -27,7 +28,6 @@ class MedicalRecordController extends Controller
                 'message' => 'Patient not found.'
             ], 404);
         }
-        $this->authorize('view', $patient);
 
         // Get the latest medical record for the patient (if any)
         $record = $patient->medicalRecords()->with(['doctor.user', 'uploads'])->latest()->first();
@@ -54,7 +54,6 @@ class MedicalRecordController extends Controller
     public function downloadAttachment($id)
     {
         $upload = Upload::findOrFail($id);
-        $this->authorize('view', $upload);
 
         $path = Storage::disk('public')->path($upload->file_path);
         if (!file_exists($path)) {
@@ -84,12 +83,12 @@ class MedicalRecordController extends Controller
                 'message' => 'Patient not found.'
             ], 404);
         }
-        $this->authorize('view', $patient);
 
         $user = Auth::user();
         $doctor = $user->doctor;
 
-        $this->authorize('create', MedicalRecord::class);
+        
+        
 
         $medicalRecord = MedicalRecord::updateOrCreate(
             [

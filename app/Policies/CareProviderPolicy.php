@@ -9,7 +9,7 @@ class CareProviderPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->role === 'admin';
+        return $user->role === 'admin' ;
     }
 
     public function view(User $user, CareProvider $careProvider): bool
@@ -23,9 +23,10 @@ class CareProviderPolicy
         return false;
     }
 
+    // Create a new care provider
     public function create(User $user): bool
     {
-        return $user->role === 'admin';
+        return $user->role === 'admin' || $user->careProvider ==='care_provider';
     }
 
     public function update(User $user, CareProvider $careProvider): bool

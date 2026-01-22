@@ -2,51 +2,41 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\Doctor;
-use App\Models\Patient;
-use App\Models\Pharmacist;
-use App\Models\CareProvider;
-use App\Models\Delivery;
-use App\Models\Specialization;
-use App\Models\Upload;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use App\Http\Controllers\Api\Auth\VerifyEmailController;
+use App\Models\{User,Doctor,Patient,Delivery,Pharmacist,CareProvider,Upload,MedicalRecord,Specialization};
 use Illuminate\Http\Request;
+use App\Mail\VerificationEmail;
+use Illuminate\Support\Facades\{DB,Log,Hash,Mail,URL};
 
 class AuthService
 {
-    /**
-     * Authenticate user with email and password
-     *
-     * @param string $email
-     * @param string $password
-     * @return array|null
-     */
-    public function authenticate(string $email, string $password): ?array
+
+    public function authenticate(string $email, string $password)
     {
         $user = User::where('email', $email)->first();
 
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (!$user || !Hash::check($password, $user->password) || !$user->isApproved() || !$user->isActive()) {
             return null;
         }
 
-        $token = $user->createToken($user->email.'API Token')->plainTextToken;
+        //return the type of care provider (nurse, therapist) along with role
+        if ($user->role === 'care_provider') {
+            $careProvider = $user->careProvider;
+            if ($careProvider) {
+                $user->role = $careProvider->type;
+            }
+        }
+            
+        $token = $user->createToken($user->email.'api-token')->plainTextToken;
 
         return [
             'token' => $token,
             'role' => $user->role,
-            'email_verified' => $user->hasVerifiedEmail(),
+            'email_verified' => $user->hasVerifiedEmail()
         ];
     }
 
-    /**
-     * Logout user by revoking current access token
-     *
-     * @param Request $request
-     * @return bool
-     */
-    public function logout(Request $request): bool
+    public function logout(Request $request)
     {
         $token = $request->user()->currentAccessToken;
         
@@ -58,43 +48,6 @@ class AuthService
         return false;
     }
 
-    /**
-     * Generate token for user
-     *
-     * @param User $user
-     * @param string $tokenName
-     * @return string
-     */
-    public function generateToken(User $user, string $tokenName = 'API Token'): string
-    {
-        return $user->createToken($tokenName)->plainTextToken;
-    }
-
-    /**
-     * Verify user credentials
-     *
-     * @param string $email
-     * @param string $password
-     * @return User|null
-     */
-    public function verifyCredentials(string $email, string $password): ?User
-    {
-        $user = User::where('email', $email)->first();
-
-        if ($user && Hash::check($password, $user->password)) {
-            return $user;
-        }
-
-        return null;
-    }
-
-    /**
-     * Register a new user with role-specific data
-     *
-     * @param array $data
-     * @return array
-     * @throws \Exception
-     */
     public function register(array $data): array
     {
         DB::beginTransaction();
@@ -108,26 +61,28 @@ class AuthService
             // Handle file uploads
             $this->handleFileUploads($user, $data);
 
+            // Send verification email
+            VerifyEmailController::sendVerificationEmail($user);
+
             DB::commit();
 
             return [
                 'status' => 'success',
-                'message' => 'User registered successfully',
-                'user_id' => $user->id
+                'message' => 'User registered successfully. Please check your email for verification.',
+                'user_id' => $user->id,
             ];
 
         } catch (\Exception $e) {
             DB::rollBack();
-            throw $e;
+            Log::error('Registration failed in AuthService', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e; 
         }
     }
 
-    /**
-     * Create base user record
-     *
-     * @param array $data
-     * @return User
-     */
+
     private function createUser(array $data): User
     {
         return User::create([
@@ -139,14 +94,6 @@ class AuthService
         ]);
     }
 
-    /**
-     * Create role-specific profile based on user role
-     *
-     * @param User $user
-     * @param array $data
-     * @return void
-     * @throws \Exception
-     */
     private function createRoleProfile(User $user, array $data): void
     {
         switch ($data['role']) {
@@ -170,59 +117,74 @@ class AuthService
         }
     }
 
-    /**
-     * Create patient profile
-     *
-     * @param User $user
-     * @param array $data
-     * @return void
-     */
     private function createPatient(User $user, array $data): void
     {
-        Patient::create([
+        $patient = Patient::create([
             'user_id' => $user->id,
             'birth_date' => $data['birth_date'],
             'gender' => $data['gender'],
             'address' => $data['address'],
-            'latitude' => $data['latitude'],
-            'longitude' => $data['longitude'],
+            'latitude' => $data['latitude'] ?? null,
+            'longitude' => $data['longitude'] ?? null,
         ]);
+
+        // Always create a medical record for new patients
+        $medical = $data['medical_record'] ?? [];
+        
+        $medicalRecord = MedicalRecord::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => null, // No doctor assigned during registration
+            'treatment_plan' => $medical['treatment_plan'] ?? null,
+            'diagnosis' => $medical['diagnosis'] ?? null,
+            'chronic_diseases' => $medical['chronic_diseases'] ?? null,
+            'previous_surgeries' => $medical['previous_surgeries'] ?? null,
+            'allergies' => $medical['allergies'] ?? null,
+            'current_medications' => $medical['current_medications'] ?? null,
+        ]);
+
+        // Attach uploads if provided (using pivot table relationship)
+        if (isset($medical['attachments']) && is_array($medical['attachments']) && !empty($medical['attachments'])) {
+            // Validate that all upload IDs exist
+            $file = Upload::whereIn('id', $medical['attachments'])
+                ->where('category', 'medical_record')
+                //split to file and image
+                ->pluck('id')
+                ->toArray();
+            
+            if (!empty($validUploadIds)) {
+                // Update uploads to link to the user
+                Upload::whereIn('id', $validUploadIds)->update(['user_id' => $user->id]);
+                
+                // Attach uploads to medical record using pivot table
+                $medicalRecord->attachments()->attach($validUploadIds);
+            }
+        }
     }
 
-    /**
-     * Create doctor profile
-     *
-     * @param User $user
-     * @param array $data
-     * @return void
-     * @throws \Exception
-     */
+
+
     private function createDoctor(User $user, array $data): void
     {
+        // Handle specialization
         $specialization = Specialization::where('name', $data['specialization'])->first();
+        
         if (!$specialization) {
-            throw new \Exception('Specialization not found');
+            throw new \Exception('Specialization not found: ' . $data['specialization']);
         }
-
+        
         Doctor::create([
             'user_id' => $user->id,
             'specialization_id' => $specialization->id,
             'gender' => $data['gender'],
-            'doctor_image_id' => $data['doctor_image_id'],
-            'certificate_file_id' => $data['certificate_file_id'],
+            'doctor_image_id' => $data['doctor_image_id'] ?? null,
+            'certificate_file_id' => $data['certificate_file_id'] ?? null,
             'from' => $data['from'],
             'to' => $data['to'],
             'consultation_fee' => $data['consultation_fee'],
         ]);
     }
 
-    /**
-     * Create pharmacist profile
-     *
-     * @param User $user
-     * @param array $data
-     * @return void
-     */
+
     private function createPharmacist(User $user, array $data): void
     {
         Pharmacist::create([
@@ -238,31 +200,19 @@ class AuthService
         ]);
     }
 
-    /**
-     * Create care provider profile
-     *
-     * @param User $user
-     * @param array $data
-     * @return void
-     */
+
     private function createCareProvider(User $user, array $data): void
     {
         CareProvider::create([
             'user_id' => $user->id,
-            'care_provider_image_id' => $data['care_provider_image_id'],
-            'license_file_id' => $data['license_file_id'],
+            'care_provider_image_id' => $data['care_provider_image_id'] ?? null,
+            'license_file_id' => $data['license_file_id'] ?? null,
             'session_fee' => $data['session_fee'],
             'type' => $data['type'],
         ]);
     }
 
-    /**
-     * Create delivery profile
-     *
-     * @param User $user
-     * @param array $data
-     * @return void
-     */
+
     private function createDelivery(User $user, array $data): void
     {
         Delivery::create([
@@ -270,17 +220,10 @@ class AuthService
             'delivery_image_id' => $data['delivery_image_id'],
             'vehicle_type' => $data['vehicle_type'],
             'plate_number' => $data['plate_number'],
-            'driving_license_id' => $data['driving_license_file_id'],
+            'driving_license_id' => $data['driving_license_id'],
         ]);
     }
 
-    /**
-     * Handle file uploads by linking them to the user
-     *
-     * @param User $user
-     * @param array $data
-     * @return void
-     */
     private function handleFileUploads(User $user, array $data): void
     {
         $fileIds = $this->getFileIds($data);
@@ -290,21 +233,33 @@ class AuthService
         }
     }
 
-    /**
-     * Extract file IDs from data
-     *
-     * @param array $data
-     * @return \Illuminate\Support\Collection
-     */
     private function getFileIds(array $data): \Illuminate\Support\Collection
     {
-        return collect($data)->only([
+        $fileIds = collect();
+        
+        // Handle nested medical_record.attachments
+        if (isset($data['medical_record']['attachments']) && is_array($data['medical_record']['attachments'])) {
+            $fileIds = $fileIds->merge($data['medical_record']['attachments']);
+        }
+        
+        // Handle flat file ID fields
+        $flatFields = [
             'certificate_file_id',
             'doctor_image_id',
             'license_file_id',
             'care_provider_image_id',
             'delivery_image_id',
             'driving_license_id',
-        ])->filter()->values();
+        ];
+        
+        foreach ($flatFields as $field) {
+            if (isset($data[$field]) && $data[$field]) {
+                $fileIds->push($data[$field]);
+            }
+        }
+        
+        return $fileIds->filter()->values();
     }
+
+
 }

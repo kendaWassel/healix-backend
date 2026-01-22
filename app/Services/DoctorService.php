@@ -271,7 +271,7 @@ class DoctorService
             'patient_name' => $user?->full_name,
             'patient_phone' => $user?->phone,
             'status' => $consultation->status,
-            'type' => $consultation->type,
+            'call_type' => $consultation->type,
             'scheduled_at' => optional($consultation->scheduled_at)->format('Y-m-d H:i'),
         ];
     }

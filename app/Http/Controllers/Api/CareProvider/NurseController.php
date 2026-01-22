@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\CareProvider;
 
+use App\Models\HomeVisit;
 use App\Services\NurseService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -18,7 +19,7 @@ class NurseController extends Controller
 
     public function schedules(Request $request)
     {
-        $request->validate([
+       $request->validate([
             'page' => 'sometimes|integer|min:1',
             'per_page' => 'sometimes|integer|min:1|max:100',
             'status' => 'sometimes|in:accepted,in_progress,completed,cancelled',

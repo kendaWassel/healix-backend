@@ -4,12 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\BookConsultationRequest;
 use App\Models\Doctor;
+use App\Models\Consultation;
 use App\Http\Controllers\Controller;
 use App\Services\ConsultationService;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ConsultationController extends Controller
 {
+    use AuthorizesRequests;
+
     protected $consultationService;
 
     public function __construct(ConsultationService $consultationService)
@@ -46,7 +50,7 @@ class ConsultationController extends Controller
 
             return response()->json($responseData, 201);
         } catch (\Exception $e) {
-            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;//500 means internal server error 600 means unknown error
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
@@ -55,6 +59,7 @@ class ConsultationController extends Controller
     }
     public function startConsultation($id)
     {
+        $this->authorize('start consultation');
         try {
             $result = $this->consultationService->startConsultation($id);
             $consultation = $result['consultation'];
@@ -91,6 +96,7 @@ class ConsultationController extends Controller
 
     public function endConsultation($id)
     {
+        $this->authorize('end consultation');
         try {
             $result = $this->consultationService->endConsultation($id);
             $consultation = $result['consultation'];

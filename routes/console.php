@@ -20,8 +20,3 @@ Schedule::command('consultations:send-reminders --minutes=15 --window=1')
     ->withoutOverlapping()
     ->runInBackground();
 
-// Schedule consultation arrival notifications to run every 5 minutes
-Schedule::command('consultations:send-arrival-notifications --window=5')
-    ->everyFiveMinutes()
-    ->withoutOverlapping()
-    ->runInBackground();

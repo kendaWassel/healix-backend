@@ -24,7 +24,6 @@ class OrderController extends Controller
                     'message' => 'Order not found'
                 ], 404);
             }
-            $this->authorize('update', $order);
 
             if ($order->status !== 'accepted') {
                 return response()->json([

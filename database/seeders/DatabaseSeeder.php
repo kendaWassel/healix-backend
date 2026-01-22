@@ -1,15 +1,6 @@
 <?php
 
 namespace Database\Seeders;
-
-use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use App\Models\Doctor;
-use App\Models\Patient;
-use App\Models\Delivery;
-use App\Models\HomeVisit;
-use App\Models\Pharmacist;
-use App\Models\CareProvider;
 use Illuminate\Database\Seeder;
 use Database\Seeders\UserSeeder;
 use Database\Seeders\DoctorSeeder;
@@ -44,6 +35,7 @@ class DatabaseSeeder extends Seeder
             DeliveryTaskSeeder::class,
             FaqSeeder::class,
             FirstAidSeeder::class,
+            RolePermissionSeeder::class,
         ]);
 
     }

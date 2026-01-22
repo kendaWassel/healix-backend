@@ -4,20 +4,25 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Order;
 use App\Models\Medication;
+use App\Models\Pharmacist;
+use App\Models\Prescription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
-use App\Models\Prescription;
-use App\Models\PrescriptionMedication;
 use Illuminate\Support\Facades\Auth;
+use App\Models\PrescriptionMedication;
+use App\Models\User;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class PharmacistController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * GET api/pharmacist/prescriptions
      */
     public function listPrescriptions(Request $request)
     {
+        $this->authorize('viewAny', Prescription::class);
         $pharmacist = Auth::user()->pharmacist;
         if (!$pharmacist) {
             return response()->json([
@@ -271,6 +276,7 @@ class PharmacistController extends Controller
      */
     public function addPrice(Request $request, $orderId)
     {
+        $this->authorize('addPrice', Prescription::class);
         $validated = $request->validate([
             'items' => 'required|array|min:1',
             'items.*.medicine_name' => 'required|string|max:255',
@@ -875,6 +881,7 @@ class PharmacistController extends Controller
      */
     public function getProfile(Request $request)
     {
+        $this->authorize('view', Pharmacist::class);
         $user = $request->user();
         $pharmacist = $user->pharmacist;
 
@@ -897,7 +904,6 @@ class PharmacistController extends Controller
                     'from' => $pharmacist->from,
                     'to' => $pharmacist->to,
                 ],
-                'bank_account' => $pharmacist->bank_account,
                 'rating_avg' => $pharmacist->rating_avg,
             ]
         ]);
@@ -908,13 +914,13 @@ class PharmacistController extends Controller
      */
     public function updateProfile(Request $request)
     {
+        $this->authorize('update', Pharmacist::class);
         $request->validate([
             'from' => 'sometimes|date_format:H:i',
             'to' => 'sometimes|date_format:H:i',
             'address' => 'sometimes|string|max:500',
             'latitude' => 'sometimes|numeric',
             'longitude' => 'sometimes|numeric',
-            'bank_account' => 'sometimes|string|max:255',
         ]);
 
         $user = $request->user();
@@ -942,9 +948,6 @@ class PharmacistController extends Controller
         if ($request->has('longitude')) {
             $pharmacist->longitude = $request->longitude;
         }
-        if ($request->has('bank_account')) {
-            $pharmacist->bank_account = $request->bank_account;
-        }
         $pharmacist->save();
 
         return response()->json([
@@ -958,7 +961,6 @@ class PharmacistController extends Controller
                         'from' => $pharmacist->from,
                         'to' => $pharmacist->to,
                     ],
-                    'bank_account' => $pharmacist->bank_account,
                 ]
             ]
         ]);

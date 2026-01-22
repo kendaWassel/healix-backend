@@ -36,7 +36,7 @@ Route::post('/uploads/image', [UploadController::class, 'uploadImage']);
 
 // ========== PROTECTED APIs (Auth + Verified Email) ==========
 
-Route::get('/medical-records/attachments/{id}/download', [\App\Http\Controllers\Api\MedicalRecordController::class, 'downloadAttachment'])->name('medical-record.attachment.download');
+Route::get('/medical-records/attachments/{id}/download', [MedicalRecordController::class, 'downloadAttachment'])->name('medical-record.attachment.download');
 Route::get('/uploads/download/{id}', [UploadController::class, 'downloadFile'])->name('download.file');
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Download medical record attachments (authorized access only)
@@ -67,6 +67,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard']);
         Route::get('/services', [AdminController::class, 'services']);
         Route::get('/users', [AdminController::class, 'users']);
+        Route::post('/users', [AdminController::class, 'addUser']);
         Route::get('/users/{id}/attachments', [AdminController::class, 'attachments']);
         Route::patch('/users/{id}/approve', [AdminController::class, 'approveUser']);
         Route::patch('/users/{id}/reject', [AdminController::class, 'rejectUser']);
@@ -98,18 +99,18 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::get('/medical-record', [MedicalRecordController::class, 'getPatientMedicalRecord']);
 
         // Ratings
-        Route::post('/consultations/{consultation_id}/rate/{doctor_id}', [RatingController::class, 'rateDoctor']);
-        Route::post('/orders/{order_id}/rate/{pharmacist_id}', [RatingController::class, 'ratePharmacy']);
-        Route::post('/tasks/{task_id}/rate/{delivery_id}', [RatingController::class, 'rateDelivery']);
-        Route::post('/sessions/{session_id}/rate/{care_provider_id}', [RatingController::class, 'rateCareProvider']);
+        Route::post('/consultation/{consultation_id}/rate/{doctor_id}', [RatingController::class, 'rateDoctor']);
+        Route::post('/order/{order_id}/rate/{pharmacist_id}', [RatingController::class, 'ratePharmacy']);
+        Route::post('/task/{task_id}/rate/{delivery_id}', [RatingController::class, 'rateDelivery']);
+        Route::post('/session/{session_id}/rate/{care_provider_id}', [RatingController::class, 'rateCareProvider']);
 
+        Route::get('/view-prescriptions-with-pricing', [PatientController::class, 'getPrescriptionsWithPricing']);
         // Prescriptions
         Route::prefix('prescriptions')->group(function () {
             Route::get('/', [PatientController::class, 'getPatientPrescriptions']);
             Route::get('/{prescription_id}', [PatientController::class, 'getPrescriptionDetails']);
             Route::post('/upload', [PatientController::class, 'uploadPaperPrescription']);
             Route::post('/{prescription_id}/send', [PatientController::class, 'sendPrescriptionToPharmacy']);
-            Route::get('/with-pricing', [PatientController::class, 'getPrescriptionsWithPricing']);
         });
 
         // Orders & Delivery
@@ -118,21 +119,23 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     });
 
     // ========== DOCTOR ROUTES ==========
-    Route::prefix('doctor')->group(function () {
+    Route::middleware(['role:doctor'])->prefix('doctor')->group(function () {
         Route::get('/profile', [DoctorController::class, 'getProfile']);
         Route::put('/profile', [DoctorController::class, 'updateProfile']);
         Route::get('/my-schedules', [DoctorController::class, 'getDoctorSchedules']);
         Route::post('/home-visit/request', [HomeVisitController::class, 'requestHomeVisit']);
         Route::post('/prescriptions', [DoctorController::class, 'createPrescription']);
     });
+        // Pharmacy Information
+    Route::middleware(['role:patient'])->prefix('pharmacist')->group(function () {
+        Route::get('/pharmacies', [PharmacyController::class, 'getPharmacies']);
+        Route::get('/pharmacies/{id}', [PharmacyController::class, 'getPharmacyDetails']);
+    });
 
     // ========== PHARMACIST ROUTES ==========
     Route::middleware(['role:pharmacist'])->prefix('pharmacist')->group(function () {
         Route::get('/profile', [PharmacistController::class, 'getProfile']);
         Route::put('/profile', [PharmacistController::class, 'updateProfile']);
-        // Pharmacy Information
-        Route::get('/pharmacies', [PharmacyController::class, 'getPharmacies']);
-        Route::get('/pharmacies/{id}', [PharmacyController::class, 'getPharmacyDetails']);
 
         // Prescription Management
         Route::prefix('prescriptions')->group(function () {
@@ -144,12 +147,12 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         });
 
         // Order Management
-        Route::prefix('orders')->group(function () {
+        Route::middleware(['role:pharmacist'])->group(function () {
             Route::get('/my-orders', [PharmacistController::class, 'myOrders']);
             Route::get('/track', [PharmacistController::class, 'trackOrders']);
             Route::get('/{orderId}/track', [PharmacistController::class, 'trackOrder']);
             Route::get('/history', [PharmacistController::class, 'ordersHistory']);
-            Route::post('/{id}/ready', [OrderController::class, 'markReadyForDelivery']);
+            Route::post('/orders/{id}/ready', [OrderController::class, 'markReadyForDelivery']);
         });
     });
 
