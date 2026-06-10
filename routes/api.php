@@ -1,17 +1,19 @@
 
 <?php
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Auth\{RegisterController,VerifyEmailController,LoginController};
-use App\Http\Controllers\Api\CareProvider\{PhysiotherapistController, NurseController};
+use App\Http\Controllers\{FaqController, FirstAidController};
 use App\Http\Controllers\Api\{OrderController,HomeVisitController,RatingController,UploadController};
 use App\Http\Controllers\Api\{PatientController,DoctorController,DeliveryController,PharmacistController,UserController};
-use App\Http\Controllers\Api\PharmacyController;
+use App\Http\Controllers\Api\Admin\AdminController;
+use App\Http\Controllers\Api\Auth\{RegisterController,VerifyEmailController,LoginController};
+use App\Http\Controllers\Api\CareProvider\{PhysiotherapistController, NurseController};
 use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\MedicalRecordController;
-use App\Http\Controllers\Api\SpecializationController;
-use App\Http\Controllers\Api\Admin\AdminController;
-use App\Http\Controllers\{FaqController, FirstAidController};
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\PharmacyController;
+use App\Http\Controllers\Api\SpecializationController;
+use App\Http\Controllers\payment\StripeController;
+use Illuminate\Support\Facades\Route;
+use Psy\Util\Str;
 
 // ========== PUBLIC APIs (No Auth Required) ==========
 
@@ -207,4 +209,10 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::post('/tasks/{task_id}/set-delivery-fee', [DeliveryController::class, 'setDeliveryFee']);
         Route::put('/tasks/{task_id}/update-status', [DeliveryController::class, 'updateTaskStatus']);
     });
+
+    // ========== STRIPE PAYMENT ROUTES ==========
+    Route::prefix('payments')->group(function () {
+        Route::post('/create-payment-intent', [StripeController::class, 'createPaymentIntent']);
+        Route::post('/complete-payment', [StripeController::class, 'completePayment']);
+    }); 
 });

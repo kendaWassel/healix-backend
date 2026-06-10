@@ -39,5 +39,9 @@ return [
         'api_key' => env('TRACCER_SMS_API_KEY'),
 
     ],
+    'stripe' => [
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+    ],
     
 ];
