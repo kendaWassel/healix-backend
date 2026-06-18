@@ -18,6 +18,12 @@ return new class extends Migration
             $table->enum('type', ['call_now', 'schedule'])->default('schedule');
             $table->enum('status', ['pending', 'in_progress', 'completed', 'cancelled'])->default('pending');
             $table->timestamp('scheduled_at')->nullable();
+
+            //
+            $table->string('google_meet_link')->nullable();
+            $table->string('google_calendar_event_id')->nullable();
+            $table->timestamp('meeting_started_at')->nullable();
+
             $table->timestamps();
         });
     }

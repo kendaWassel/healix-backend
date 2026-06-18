@@ -2,25 +2,25 @@
 
 namespace App\Services;
 
-use Carbon\Carbon;
-use App\Models\Doctor;
 use App\Models\Consultation;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+use App\Models\Doctor;
 use App\Notifications\ConsultationRequestedNotification;
-use App\Services\UltraMsgService;
+use App\Services\GoogleMeetService;
 use App\Services\TraccarSmsService;
+use App\Services\UltraMsgService;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ConsultationService
 {
-    /**
-     * Book a consultation
-     *
-     * @param array $validated
-     * @return Consultation
-     * @throws \Exception
-     */
+    protected GoogleMeetService $googleMeetService;
+
+    public function __construct(GoogleMeetService $googleMeetService)
+    {
+        $this->googleMeetService = $googleMeetService;
+    }
     public function bookConsultation(array $validated): Consultation
     {
         $doctor = Doctor::find($validated['doctor_id']);
@@ -91,6 +91,10 @@ class ConsultationService
         try {
             DB::beginTransaction();
 
+            $startTime = $validated['call_type'] === 'call_now'
+                ? Carbon::now()
+                : Carbon::parse($validated['scheduled_at']);
+
             $consultation = Consultation::create([
                 'patient_id' => $patient->id,
                 'doctor_id' => $doctor->id,
@@ -102,6 +106,23 @@ class ConsultationService
                     ? Carbon::now()
                     : (!empty($validated['scheduled_at']) ? Carbon::parse($validated['scheduled_at']) : null),
             ]);
+            // Generate Google Meet link for the consultation
+            $doctor->loadMissing('user');
+            if ($doctor->user && !empty($doctor->user->email)) {
+                $meetDetails = $this->googleMeetService->createMeetEvent(
+                    $doctor->user->email,
+                    $startTime,
+                    30, // default consultation duration in minutes
+                    $consultation->id
+                );
+
+                if ($meetDetails) {
+                    $consultation->update([
+                        'google_meet_link' => $meetDetails['meet_link'],
+                        'google_calendar_event_id' => $meetDetails['event_id'],
+                    ]);
+                }
+            }
 
             DB::commit();
 
@@ -120,9 +141,12 @@ class ConsultationService
                 new ConsultationRequestedNotification($consultation, $patientUser, $doctor->user)
             );
 
+            $meetLinkText = $consultation->google_meet_link ? "\nGoogle Meet Link: {$consultation->google_meet_link}" : '';
+
             // Send WhatsApp message to doctor
             $ultraMsgService = new UltraMsgService();
-            $result = $ultraMsgService->sendWhatsAppMessage($doctor->user->phone, "Hello {$doctor->user->full_name}, You have a new consultation booked.");
+            $whatsAppMessage = "Hello {$doctor->user->full_name}, You have a new consultation booked.{$meetLinkText}";
+            $result = $ultraMsgService->sendWhatsAppMessage($doctor->user->phone, $whatsAppMessage);
             if (!$result) {
                 Log::warning('Failed to send WhatsApp notification', [
                     'doctor_id' => $doctor->id,
@@ -139,7 +163,7 @@ class ConsultationService
                         ? $consultation->scheduled_at->format('Y-m-d H:i') 
                         : 'Immediately';    
 
-                    $smsMessage = "Hello {$doctor->user->full_name}\nYou have a new consultation booked.\nPatient Name: {$patientName}\nType: {$consultationType}\nTime: {$scheduledTime}";
+                    $smsMessage = "Hello {$doctor->user->full_name}\nYou have a new consultation booked.\nPatient Name: {$patientName}\nType: {$consultationType}\nTime: {$scheduledTime}{$meetLinkText}";
 
                     $traccarSmsService = new TraccarSmsService();
                     $result = $traccarSmsService->sendSms($doctor->user->phone, $smsMessage);
@@ -166,14 +190,6 @@ class ConsultationService
         }
     }
 
-    /**
-     * Start a consultation
-     *
-     * @param int $id
-     * @param string|null $role
-     * @return array
-     * @throws \Exception
-     */
     public function startConsultation(int $id, ?string $role = null): array
     {
         $user = Auth::user();
@@ -239,13 +255,6 @@ class ConsultationService
         ];
     }
 
-    /**
-     * End a consultation
-     *
-     * @param int $id
-     * @return array
-     * @throws \Exception
-     */
     public function endConsultation(int $id): array
     {
         $user = Auth::user();

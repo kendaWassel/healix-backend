@@ -10,16 +10,21 @@ class Consultation extends Model
 {
     use HasFactory;
 
-    protected $fillable = [    
+    protected $fillable = [
         'patient_id',
         'doctor_id',
         'type',
         'status',
+        'payment_status',
         'scheduled_at',
+        'google_meet_link',
+        'google_calendar_event_id',
+        'meeting_started_at',
     ];
 
     protected $casts = [
         'scheduled_at' => 'datetime',
+        'meeting_started_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -44,5 +49,8 @@ class Consultation extends Model
         return $this->hasMany(Rating::class);
     }
 
-
+    public function payments()
+    {
+        return $this->morphMany(Payment::class, 'payable');
+    }
 }
