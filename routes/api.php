@@ -7,13 +7,13 @@ use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Auth\{RegisterController,VerifyEmailController,LoginController};
 use App\Http\Controllers\Api\CareProvider\{PhysiotherapistController, NurseController};
 use App\Http\Controllers\Api\ConsultationController;
+
 use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PharmacyController;
 use App\Http\Controllers\Api\SpecializationController;
-use App\Http\Controllers\payment\StripeController;
+use App\Http\Controllers\Payment\StripeController;
 use Illuminate\Support\Facades\Route;
-use Psy\Util\Str;
 
 // ========== PUBLIC APIs (No Auth Required) ==========
 
@@ -40,6 +40,8 @@ Route::post('/uploads/image', [UploadController::class, 'uploadImage']);
 
 Route::get('/medical-records/attachments/{id}/download', [MedicalRecordController::class, 'downloadAttachment'])->name('medical-record.attachment.download');
 Route::get('/uploads/download/{id}', [UploadController::class, 'downloadFile'])->name('download.file');
+
+Route::post('/stripe/webhook', [StripeController::class, 'webhook']);
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Download medical record attachments (authorized access only)
     
@@ -47,6 +49,12 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
     // ========== AUTHENTICATION ==========
     Route::post('/auth/logout', [LoginController::class, 'logout']);
+
+    // ========== PAYMENTS ==========
+    Route::prefix('payments')->group(function () {
+        Route::post('/intent', [StripeController::class, 'createIntent']);
+        Route::get('/status/{payment_intent_id}', [StripeController::class, 'status']);
+    });
 
     // ========== NOTIFICATIONS ==========
     Route::prefix('notifications')->group(function () {
@@ -191,7 +199,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     });
 
     // Home Visit Follow-up (Care Providers)
-    Route::middleware(['role:care_provider',])->post('/home-visits/{visit_id}/follow-up', [HomeVisitController::class, 'createFollowUpHomeVisit']);
+    Route::middleware(['role:care_provider'])->post('/home-visits/{visit_id}/follow-up', [HomeVisitController::class, 'createFollowUpHomeVisit']);
 
     // Consultation (Doctor or Patient)
     Route::prefix('consultations')->group(function () {
@@ -208,11 +216,11 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::get('/tasks', [DeliveryController::class, 'tasks']);
         Route::post('/tasks/{task_id}/set-delivery-fee', [DeliveryController::class, 'setDeliveryFee']);
         Route::put('/tasks/{task_id}/update-status', [DeliveryController::class, 'updateTaskStatus']);
+
     });
 
-    // ========== STRIPE PAYMENT ROUTES ==========
-    Route::prefix('payments')->group(function () {
-        Route::post('/create-payment-intent', [StripeController::class, 'createPaymentIntent']);
-        Route::post('/complete-payment', [StripeController::class, 'completePayment']);
-    }); 
+    // Include New Features Routes
 });
+
+ 
+

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\BookConsultationRequest;
 use App\Models\Doctor;
-use App\Models\Consultation;
 use App\Http\Controllers\Controller;
 use App\Services\ConsultationService;
 use Illuminate\Http\Request;
@@ -41,25 +40,27 @@ class ConsultationController extends Controller
                     'call_type' => $consultation->type,
                     'scheduled_at' => $consultation->scheduled_at ? $consultation->scheduled_at->toIso8601String() : null,
                     'status' => $consultation->status,
+                    'google_meet_link' => $consultation->google_meet_link, // إرجاع رابط جوجل ميت المولد تلقائياً
                 ],
             ];
-            // Provide doctor's phone number for call_now consultations
+
+            // Provide doctor's phone number for consultations
             if ($consultation->type === 'call_now' || $consultation->type === 'schedule') {
                 $responseData['data']['doctor_phone'] = $doctor->user->phone;
             }
 
             return response()->json($responseData, 201);
         } catch (\Exception $e) {
-            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;//500 means internal server error 600 means unknown error
+            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
-            ], 500);
+            ], $statusCode);
         }
     }
+
     public function startConsultation($id)
     {
-        $this->authorize('start consultation');
         try {
             $result = $this->consultationService->startConsultation($id);
             $consultation = $result['consultation'];
@@ -72,6 +73,7 @@ class ConsultationController extends Controller
                         'consultation_id' => $consultation->id,
                         'role' => $result['role'],
                         'status' => $consultation->status,
+                        'google_meet_link' => $consultation->google_meet_link, // تزويد الفرونت بالرابط للانضمام
                     ]
                 ]);
             }
@@ -83,6 +85,7 @@ class ConsultationController extends Controller
                     'consultation_id' => $consultation->id,
                     'role' => $result['role'],
                     'status' => 'in_progress',
+                    'google_meet_link' => $consultation->google_meet_link, // تزويد الفرونت بالرابط للبدء
                 ]
             ]);
         } catch (\Exception $e) {
@@ -94,12 +97,23 @@ class ConsultationController extends Controller
         }
     }
 
-    public function endConsultation($id)
+    public function endConsultation(Request $request, $id)
     {
-        $this->authorize('end consultation');
+        // $this->authorize('end consultation');
+        
+        // التحقق من إرسال التقرير الطبي عند إنهاء الجلسة
+        $request->validate([
+            'doctor_notes' => 'required|string'
+        ]);
+
         try {
             $result = $this->consultationService->endConsultation($id);
             $consultation = $result['consultation'];
+
+            // حفظ ملاحظات الطبيب في قاعدة البيانات فور إنهاء المكالمة
+            $consultation->update([
+                'doctor_notes' => $request->doctor_notes
+            ]);
 
             return response()->json([
                 'status' => 'success',
@@ -108,6 +122,7 @@ class ConsultationController extends Controller
                     'consultation_id' => $consultation->id,
                     'ended_by' => $result['ended_by'],
                     'status' => $consultation->status,
+                    'doctor_notes' => $consultation->doctor_notes
                 ]
             ]);
         } catch (\Exception $e) {
