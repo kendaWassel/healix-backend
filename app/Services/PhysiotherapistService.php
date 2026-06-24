@@ -8,31 +8,97 @@ use Illuminate\Support\Facades\Auth;
 
 class PhysiotherapistService
 {
+    protected NearbyRequestService $nearbyRequestService;
+
+    public function __construct(NearbyRequestService $nearbyRequestService)
+    {
+        $this->nearbyRequestService = $nearbyRequestService;
+    }
+
+    /**
+     * ترجع طلبات الزيارات المنزلية القريبة للمعالج الفيزيائي
+     */
+    public function getNearbyRequests(int $perPage = 10): LengthAwarePaginator
+    {
+        $user = Auth::user();
+        $careProvider = $user?->careProvider;
+
+        if (!$careProvider || $careProvider->type !== 'physiotherapist') {
+            throw new \Exception('Unauthorized or not a physiotherapist.', 403);
+        }
+
+        if (is_null($careProvider->latitude) || is_null($careProvider->longitude)) {
+            throw new \Exception('Care provider location is not set.', 422);
+        }
+
+        return $this->nearbyRequestService->getNearbyPendingRequests(
+            providerType: 'physiotherapist',
+            latitude: (float) $careProvider->latitude,
+            longitude: (float) $careProvider->longitude,
+            perPage: $perPage
+        );
+    }
+
+    /**
+     * orders = nearby requests
+     */
+    public function getOrders(int $perPage = 10): LengthAwarePaginator
+    {
+        return $this->getNearbyRequests($perPage);
+    }
+
+    public function formatNearbyRequestData(HomeVisit $visit): array
+    {
+        $patient = $visit->patient;
+
+        return [
+            'session_id'    => $visit->id,
+            'patient_id'    => $visit->patient_id,
+            'patient_name'  => $patient?->user?->full_name,
+            'service'       => $visit->reason,
+            'service_type'  => $visit->service_type,
+            'address'       => $patient?->address,
+            'scheduled_at'  => optional($visit->scheduled_at)?->toIso8601String(),
+            'status'        => $visit->status,
+            'distance_km'   => isset($visit->distance_km) ? round((float) $visit->distance_km, 2) : null,
+        ];
+    }
+
+    public function formatOrderData(HomeVisit $visit): array
+    {
+        return $this->formatNearbyRequestData($visit);
+    }
 
     public function getSchedules(array $filters = [], int $perPage = 10): LengthAwarePaginator
     {
         $user = Auth::user();
-        $careProvider = $user->careProvider;
+        $careProvider = $user?->careProvider;
+
+        if (!$careProvider || $careProvider->type !== 'physiotherapist') {
+            throw new \Exception('Unauthorized or not a physiotherapist.', 403);
+        }
 
         $query = HomeVisit::with(['patient.user', 'careProvider.user'])
             ->where('service_type', 'physiotherapist')
             ->where('care_provider_id', $careProvider->id);
 
-        // Apply status filter if provided
         if (isset($filters['status'])) {
             $query->where('status', $filters['status']);
         } else {
-            // Default to accepted and in_progress if no status filter
             $query->whereIn('status', ['accepted', 'in_progress', 'completed', 'cancelled']);
         }
 
-        $visits = $query->orderBy('scheduled_at', 'asc')
-            ->paginate($perPage);
+        $visits = $query->orderBy('scheduled_at', 'asc')->paginate($perPage);
 
-        // When Time of Session Arrived And Physiotherapist Not Started Yet, Change Status to Cancelled
+        // إذا الموعد مرّ ولسا ما بلشت الجلسة -> cancelled
         $now = now();
         $visits->getCollection()->each(function ($visit) use ($now) {
-            if ($visit->status === 'accepted' && $now->gt($visit->scheduled_at) && is_null($visit->started_at)) {
+            if (
+                $visit->status === 'accepted' &&
+                $visit->scheduled_at &&
+                $now->gt($visit->scheduled_at) &&
+                is_null($visit->started_at)
+            ) {
                 $visit->status = 'cancelled';
                 $visit->save();
             }
@@ -40,67 +106,42 @@ class PhysiotherapistService
 
         return $visits;
     }
+
     public function formatScheduleData(HomeVisit $visit): array
     {
         $patient = $visit->patient;
-        $careProvider = $visit->careProvider;
+
         return [
-            'session_id' => $visit->id,
-            'patient_id' => $visit->patient_id,
-            'patient_name' => $patient?->user?->full_name,
-            'address' => $patient?->address,
-            'scheduled_at' => $visit->scheduled_at->toIso8601String(),
-            'status' => $visit->status,
-            'service' => $visit->reason,
+            'session_id'    => $visit->id,
+            'patient_id'    => $visit->patient_id,
+            'patient_name'  => $patient?->user?->full_name,
+            'address'       => $patient?->address,
+            'scheduled_at'  => optional($visit->scheduled_at)?->toIso8601String(),
+            'status'        => $visit->status,
+            'service'       => $visit->reason,
         ];
     }
 
-    public function getOrders(int $perPage = 10): LengthAwarePaginator
-    {
-        $orders = HomeVisit::with('patient.user')
-            ->whereIn('status', ['pending'])
-            ->where('service_type', 'physiotherapist')
-            ->orderBy('scheduled_at', 'asc')
-            ->paginate($perPage);
-
-        return $orders;
-    }
-
-
-    public function formatOrderData(HomeVisit $visit): array
-    {
-        $patient = $visit->patient;
-        return [
-            'session_id' => $visit->id,
-            'patient_id' => $visit->patient_id,
-            'patient_name' => $patient?->user?->full_name,
-            'service' => $visit->reason,
-            'service_type' => $visit->service_type,
-            'address' => $patient->address,
-            'scheduled_at' => $visit->scheduled_at->toIso8601String(),
-            'status' => $visit->status,
-        ];
-    }
-    // Accept a home visit order
     public function acceptOrder(int $id): HomeVisit
     {
         $user = Auth::user();
-        $careProvider = $user->careProvider;
+        $careProvider = $user?->careProvider;
+
+        if (!$careProvider || $careProvider->type !== 'physiotherapist') {
+            throw new \Exception('Unauthorized or not a physiotherapist.', 403);
+        }
 
         $visit = HomeVisit::where('id', $id)
             ->where('status', 'pending')
+            ->whereNull('care_provider_id')
             ->first();
 
         if (!$visit) {
-            throw new \Exception('Visit not found or not pending', 404);
+            throw new \Exception('Visit not found or already accepted.', 404);
         }
 
         if ($visit->service_type !== 'physiotherapist') {
-            throw new \Exception('You can only accept physiotherapist visits', 403);
-        }
-
-        if ($visit->status == 'accepted') {
-            throw new \Exception('This session is already accepted from another physiotherapist', 400);
+            throw new \Exception('You can only accept physiotherapist visits.', 403);
         }
 
         $visit->care_provider_id = $careProvider->id;
@@ -113,7 +154,11 @@ class PhysiotherapistService
     public function startSession(int $id): HomeVisit
     {
         $user = Auth::user();
-        $careProvider = $user->careProvider;
+        $careProvider = $user?->careProvider;
+
+        if (!$careProvider || $careProvider->type !== 'physiotherapist') {
+            throw new \Exception('Unauthorized or not a physiotherapist.', 403);
+        }
 
         $visit = HomeVisit::where('id', $id)
             ->where('care_provider_id', $careProvider->id)
@@ -123,6 +168,10 @@ class PhysiotherapistService
 
         if (!$visit) {
             throw new \Exception('Visit not found or not in accepted status.', 404);
+        }
+
+        if ($visit->scheduled_at && now()->lt($visit->scheduled_at)) {
+            throw new \Exception('Cannot start session before the scheduled time.', 400);
         }
 
         $visit->status = 'in_progress';
@@ -135,7 +184,11 @@ class PhysiotherapistService
     public function endSession(int $id): HomeVisit
     {
         $user = Auth::user();
-        $careProvider = $user->careProvider;
+        $careProvider = $user?->careProvider;
+
+        if (!$careProvider || $careProvider->type !== 'physiotherapist') {
+            throw new \Exception('Unauthorized or not a physiotherapist.', 403);
+        }
 
         $visit = HomeVisit::where('id', $id)
             ->where('care_provider_id', $careProvider->id)
@@ -155,4 +208,3 @@ class PhysiotherapistService
         return $visit;
     }
 }
-

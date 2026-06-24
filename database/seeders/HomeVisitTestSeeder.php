@@ -8,109 +8,149 @@ use App\Models\HomeVisit;
 use App\Models\CareProvider;
 use App\Models\Consultation;
 use Illuminate\Database\Seeder;
-use ParagonIE\Sodium\Core\Curve25519\H;
 
 class HomeVisitTestSeeder extends Seeder
 {
     public function run(): void
     {
-        //create home visit
-        HomeVisit::create([
-            'patient_id' => 1,
-            'doctor_id' => 1,
-            'care_provider_id' => 1,
-            'consultation_id' => 1,
-            'scheduled_at' => now()->addDays(2)->setHour(10)->setMinute(0),
-            'service_type' => 'nurse',
-            'reason' => 'Insulin injection + Blood pressure',
-            'status' => 'pending',
-        ]);
-
-        // Get existing doctors and care providers
         $doctors = Doctor::all();
         $nurses = CareProvider::where('type', 'nurse')->get();
         $physiotherapists = CareProvider::where('type', 'physiotherapist')->get();
-        $patients = Patient::all();
+        $patients = Patient::whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->get();
 
         if ($doctors->isEmpty() || $nurses->isEmpty() || $physiotherapists->isEmpty() || $patients->isEmpty()) {
             $this->command->warn('Please run PatientSeeder, DoctorSeeder, and CareProviderSeeder first.');
             return;
         }
 
+        /**
+         * ============================================
+         * NURSE REQUESTS
+         * ============================================
+         */
 
-        // Create home visits for nurses - mix of pending and accepted 
-        foreach ($nurses as $nurse) {
-            // Create 3 pending orders
-            HomeVisit::factory()->count(3)->state([
+        // Pending nurse requests -> nearby orders (NO care_provider_id)
+        HomeVisit::factory()->count(10)->state([
+            'patient_id' => fn() => $patients->random()->id,
+            'doctor_id' => fn() => $doctors->random()->id,
+            'consultation_id' => fn() => Consultation::factory()->create()->id,
+            'care_provider_id' => null,
+            'service_type' => 'nurse',
+            'reason' => fake()->randomElement([
+                'Insulin injection + Blood pressure',
+                'Wound dressing + Medication administration',
+                'Blood glucose monitoring',
+                'IV therapy setup',
+                'Nursing Care',
+            ]),
+            'status' => 'pending',
+            'started_at' => null,
+            'ended_at' => null,
+            'scheduled_at' => now()->addDays(rand(1, 7))->setHour(rand(8, 18))->setMinute(0),
+        ])->create();
+
+        // Accepted nurse schedules
+        foreach ($nurses->take(3) as $nurse) {
+            HomeVisit::factory()->count(2)->state([
                 'patient_id' => fn() => $patients->random()->id,
                 'doctor_id' => fn() => $doctors->random()->id,
-                'care_provider_id' => $nurse->id,
                 'consultation_id' => fn() => Consultation::factory()->create()->id,
+                'care_provider_id' => $nurse->id,
                 'service_type' => 'nurse',
                 'reason' => fake()->randomElement([
                     'Insulin injection + Blood pressure',
                     'Wound dressing + Medication administration',
                     'Blood glucose monitoring',
                     'IV therapy setup',
-                    'Nursing Care'
+                    'Nursing Care',
                 ]),
-                'status' => 'pending',
+                'status' => 'accepted',
+                'started_at' => null,
+                'ended_at' => null,
+                'scheduled_at' => now()->addDays(rand(1, 5))->setHour(rand(8, 18))->setMinute(0),
             ])->create();
+        }
 
-            // Create 2 accepted schedules 
-            HomeVisit::factory()->count(2)->state([
+        // In progress nurse sessions
+        foreach ($nurses->take(2) as $nurse) {
+            HomeVisit::factory()->count(1)->state([
                 'patient_id' => fn() => $patients->random()->id,
                 'doctor_id' => fn() => $doctors->random()->id,
+                'consultation_id' => fn() => Consultation::factory()->create()->id,
                 'care_provider_id' => $nurse->id,
-                'consultation_id' => fn() => Consultation::factory()->create()->id,
                 'service_type' => 'nurse',
-                'reason' => fake()->randomElement([
-                    'Insulin injection + Blood pressure',
-                    'Wound dressing + Medication administration',
-                    'Blood glucose monitoring',
-                    'IV therapy setup',
-                    'Nursing Care'
-                ]),
-                'status' => 'accepted',
+                'reason' => 'Nursing Care',
+                'status' => 'in_progress',
+                'started_at' => now()->subMinutes(30),
+                'ended_at' => null,
+                'scheduled_at' => now()->subHour(),
             ])->create();
         }
 
-        // Create home visits for physiotherapists - mix of pending and accepted for testing
-        foreach ($physiotherapists as $physio) {
-            // Create 3 pending orders 
-            HomeVisit::factory()->count(3)->state([
-                'patient_id' => fn() => $patients->random()->id,
-                'doctor_id' => fn() => $doctors->random()->id,
-                'care_provider_id' => $physio->id,
-                'consultation_id' => fn() => Consultation::factory()->create()->id,
-                'service_type' => 'physiotherapist',
-                'reason' => fake()->randomElement([
-                    'Physiotherapy Session',
-                    'Rehabilitation therapy + Mobility exercises',
-                    'Pain management + Stretching exercises',
-                    'Post-surgery physical therapy',
-                    'Sports injury rehabilitation'
-                ]),
-                'status' => 'pending',
-            ])->create();
+        /**
+         * ============================================
+         * PHYSIOTHERAPIST REQUESTS
+         * ============================================
+         */
 
-            // Create 2 accepted schedules 
+        // Pending physiotherapist requests -> nearby orders (NO care_provider_id)
+        HomeVisit::factory()->count(10)->state([
+            'patient_id' => fn() => $patients->random()->id,
+            'doctor_id' => fn() => $doctors->random()->id,
+            'consultation_id' => fn() => Consultation::factory()->create()->id,
+            'care_provider_id' => null,
+            'service_type' => 'physiotherapist',
+            'reason' => fake()->randomElement([
+                'Physiotherapy Session',
+                'Rehabilitation therapy + Mobility exercises',
+                'Pain management + Stretching exercises',
+                'Post-surgery physical therapy',
+                'Sports injury rehabilitation',
+            ]),
+            'status' => 'pending',
+            'started_at' => null,
+            'ended_at' => null,
+            'scheduled_at' => now()->addDays(rand(1, 7))->setHour(rand(8, 18))->setMinute(0),
+        ])->create();
+
+        // Accepted physiotherapist schedules
+        foreach ($physiotherapists->take(3) as $physio) {
             HomeVisit::factory()->count(2)->state([
                 'patient_id' => fn() => $patients->random()->id,
                 'doctor_id' => fn() => $doctors->random()->id,
-                'care_provider_id' => $physio->id,
                 'consultation_id' => fn() => Consultation::factory()->create()->id,
+                'care_provider_id' => $physio->id,
                 'service_type' => 'physiotherapist',
                 'reason' => fake()->randomElement([
                     'Physiotherapy Session',
                     'Rehabilitation therapy + Mobility exercises',
                     'Pain management + Stretching exercises',
                     'Post-surgery physical therapy',
-                    'Sports injury rehabilitation'
+                    'Sports injury rehabilitation',
                 ]),
                 'status' => 'accepted',
+                'started_at' => null,
+                'ended_at' => null,
+                'scheduled_at' => now()->addDays(rand(1, 5))->setHour(rand(8, 18))->setMinute(0),
             ])->create();
         }
-        HomeVisit::factory()->count(10)->create();
+
+        // In progress physiotherapist sessions
+        foreach ($physiotherapists->take(2) as $physio) {
+            HomeVisit::factory()->count(1)->state([
+                'patient_id' => fn() => $patients->random()->id,
+                'doctor_id' => fn() => $doctors->random()->id,
+                'consultation_id' => fn() => Consultation::factory()->create()->id,
+                'care_provider_id' => $physio->id,
+                'service_type' => 'physiotherapist',
+                'reason' => 'Physiotherapy Session',
+                'status' => 'in_progress',
+                'started_at' => now()->subMinutes(20),
+                'ended_at' => null,
+                'scheduled_at' => now()->subHour(),
+            ])->create();
+        }
     }
 }

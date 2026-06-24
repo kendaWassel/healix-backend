@@ -1,14 +1,8 @@
 <?php
 
 namespace Database\Seeders;
+
 use Illuminate\Database\Seeder;
-use Database\Seeders\UserSeeder;
-use Database\Seeders\DoctorSeeder;
-use Database\Seeders\PatientSeeder;
-use Database\Seeders\DeliverySeeder;
-use Database\Seeders\PharmacistSeeder;
-use Database\Seeders\CareProviderSeeder;
-use Database\Seeders\HomeVisitTestSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -17,7 +11,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-
         $this->call([
             SpecializationsTableSeeder::class,
             UserSeeder::class,
@@ -37,6 +30,5 @@ class DatabaseSeeder extends Seeder
             FirstAidSeeder::class,
             RolePermissionSeeder::class,
         ]);
-
     }
 }
