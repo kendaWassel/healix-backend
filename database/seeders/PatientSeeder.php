@@ -10,31 +10,29 @@ class PatientSeeder extends Seeder
 {
     public function run(): void
     {
-        $user = User::where('role', 'patient')->first();
-        if (!$user) {
+        $patientUsers = User::where('role', 'patient')->get();
+
+        if ($patientUsers->isEmpty()) {
             return;
         }
 
-        Patient::firstOrCreate([
-            'user_id' => $user->id,
-        ],[
-            'birth_date' => now()->subYears(30)->toDateString(),
-            'gender' => 'male',
-            'address' => '123 Main St',
-            'latitude' => null,
-            'longitude' => null,
-        ]);
-        Patient::create([
-            'user_id' => User::where('role', 'patient')->first()->id,
-            'birth_date' => now()->subYears(30)->toDateString(),
-            'gender' => 'female',
-            'address' => '123 Main St',
-            'latitude' => null,
-            'longitude' => null,
-        ]);
+        // اعمل patient profiles لليوزرات الموجودين
+        foreach ($patientUsers as $index => $user) {
+            Patient::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'birth_date' => now()->subYears(rand(20, 50))->toDateString(),
+                    'gender' => $index % 2 === 0 ? 'male' : 'female',
+                    'address' => 'Patient Address ' . ($index + 1),
+
+                    // مهم للـ nearby
+                    'latitude' => fake()->latitude(33, 34),
+                    'longitude' => fake()->longitude(35, 37),
+                ]
+            );
+        }
+
+        // مرضى إضافيين تجريب
         Patient::factory()->count(5)->create();
-
-
-
     }
 }

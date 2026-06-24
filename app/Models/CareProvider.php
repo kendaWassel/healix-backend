@@ -8,21 +8,35 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class CareProvider extends Model
 {
     use HasFactory;
+
     protected $table = "care_providers";
+
     protected $fillable = [
-        'user_id',
-        'care_provider_image_id',
-        'license_file_id',
-        'session_fee',
-        'gender',
-        'type', 
-        'rating_avg'
-    ];
+    'user_id',
+    'care_provider_image_id',
+    'license_file_id',
+    'session_fee',
+    'gender',
+    'type',
+    'rating_avg',
+    'latitude',
+    'longitude',
+    'available',
+    'last_location_updated_at',
+];
+
+protected $casts = [
+    'latitude' => 'float',
+    'longitude' => 'float',
+    'available' => 'boolean',
+    'last_location_updated_at' => 'datetime',
+];
 
     public function user()
     {
         return $this->belongsTo(User::class);
     }
+
     public function medicalRecord()
     {
         return $this->hasMany(MedicalRecord::class);

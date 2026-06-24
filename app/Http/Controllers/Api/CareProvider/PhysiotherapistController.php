@@ -4,16 +4,76 @@ namespace App\Http\Controllers\Api\CareProvider;
 
 use App\Http\Controllers\Controller;
 use App\Services\PhysiotherapistService;
+use App\Services\NearbyRequestService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class PhysiotherapistController extends Controller
 {
     protected $physiotherapistService;
+    protected $nearbyRequestService;
 
-    public function __construct(PhysiotherapistService $physiotherapistService)
-    {
+    public function __construct(
+        PhysiotherapistService $physiotherapistService,
+        NearbyRequestService $nearbyRequestService
+    ) {
         $this->physiotherapistService = $physiotherapistService;
+        $this->nearbyRequestService = $nearbyRequestService;
+    }
+
+    /**
+     * Get nearby pending physiotherapist requests
+     * Frontend must send latitude + longitude
+     */
+    public function nearbyRequests(Request $request)
+    {
+        $request->validate([
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'page' => 'sometimes|integer|min:1',
+            'per_page' => 'sometimes|integer|min:1|max:100',
+        ]);
+
+        $user = Auth::user();
+        $careProvider = $user->careProvider;
+
+        if (!$careProvider || $careProvider->type !== 'physiotherapist') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized or not a physiotherapist.'
+            ], 403);
+        }
+
+        try {
+            $requests = $this->nearbyRequestService->getNearbyPendingRequests(
+                providerType: 'physiotherapist',
+                latitude: (float) $request->latitude,
+                longitude: (float) $request->longitude,
+                perPage: (int) $request->get('per_page', 10)
+            );
+
+            $data = $requests->getCollection()->map(function ($visit) {
+                return $this->physiotherapistService->formatNearbyRequestData($visit);
+            })->values();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $data,
+                'meta' => [
+                    'current_page' => $requests->currentPage(),
+                    'last_page' => $requests->lastPage(),
+                    'per_page' => $requests->perPage(),
+                    'total' => $requests->total(),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $statusCode = ($e->getCode() >= 400 && $e->getCode() < 600) ? $e->getCode() : 500;
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], $statusCode);
+        }
     }
 
     public function schedules(Request $request)
@@ -44,13 +104,14 @@ class PhysiotherapistController extends Controller
         $data = $visits->getCollection()->map(function ($visit) {
             return $this->physiotherapistService->formatScheduleData($visit);
         })->values();
-        
+
         $meta = [
             'current_page' => $visits->currentPage(),
             'last_page' => $visits->lastPage(),
             'per_page' => $visits->perPage(),
             'total' => $visits->total(),
         ];
+
         return response()->json([
             'status' => 'success',
             'data' => $data,
@@ -58,43 +119,13 @@ class PhysiotherapistController extends Controller
         ]);
     }
 
+    /**
+     * Legacy alias
+     * بدل orders القديمة صار يرجع nearby requests
+     */
     public function orders(Request $request)
     {
-        $request->validate([
-            'page' => 'sometimes|integer|min:1',
-            'per_page' => 'sometimes|integer|min:1|max:100',
-        ]);
-
-        $user = Auth::user();
-        $careProvider = $user->careProvider;
-        
-
-        if (!$careProvider || $careProvider->type !== 'physiotherapist') {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized or not a physiotherapist.'
-            ], 403);
-        }
-
-        $perPage = $request->get('per_page', 10);
-        $orders = $this->physiotherapistService->getOrders($perPage);
-
-        $data = $orders->getCollection()->map(function ($visit) {
-            return $this->physiotherapistService->formatOrderData($visit);
-        })->values();
-
-        $meta = [
-            'current_page' => $orders->currentPage(),
-            'last_page' => $orders->lastPage(),
-            'per_page' => $orders->perPage(),
-            'total' => $orders->total(),
-        ];
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $data,
-            'meta' => $meta,
-        ]);
+        return $this->nearbyRequests($request);
     }
 
     public function accept($id)
@@ -113,6 +144,7 @@ class PhysiotherapistController extends Controller
             ]);
         } catch (\Exception $e) {
             $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
@@ -146,6 +178,7 @@ class PhysiotherapistController extends Controller
             ]);
         } catch (\Exception $e) {
             $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
@@ -179,6 +212,7 @@ class PhysiotherapistController extends Controller
             ]);
         } catch (\Exception $e) {
             $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
@@ -221,8 +255,10 @@ class PhysiotherapistController extends Controller
     public function updateProfile(Request $request)
     {
         $request->validate([
-            'session_fee' => 'sometimes|numeric|min:0',
-            'bank_account' => 'sometimes|string|max:255',
+        'session_fee' => 'sometimes|numeric|min:0',
+        'bank_account' => 'sometimes|string|max:255',
+        'latitude' => 'sometimes|numeric',
+        'longitude' => 'sometimes|numeric',
         ]);
 
         $user = $request->user();
@@ -238,8 +274,16 @@ class PhysiotherapistController extends Controller
         if ($request->has('session_fee')) {
             $careProvider->session_fee = $request->session_fee;
         }
+
         if ($request->has('bank_account')) {
             $careProvider->bank_account = $request->bank_account;
+        }
+        if ($request->has('latitude')) {
+        $careProvider->latitude = $request->latitude;
+        }
+
+        if ($request->has('longitude')) {
+        $careProvider->longitude = $request->longitude;
         }
         $careProvider->save();
 

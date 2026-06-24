@@ -16,15 +16,20 @@ class CareProviderFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory()->state(fn () => [ 'role' => 'care_provider' ]),
+            'user_id' => User::factory()->state(fn () => [
+                'role' => 'care_provider'
+            ]),
             'care_provider_image_id' => null,
             'license_file_id' => null,
             'session_fee' => fake()->numberBetween(50, 200),
             'gender' => fake()->randomElement(['male', 'female']),
             'type' => fake()->randomElement(['nurse', 'physiotherapist']),
             'rating_avg' => fake()->randomFloat(1, 3, 5),
+
+            // مهمين للـ nearby
+            'latitude' => fake()->latitude(33, 34),   
+            'longitude' => fake()->longitude(35, 37),
+            'available' => true,
         ];
     }
 }
-
-

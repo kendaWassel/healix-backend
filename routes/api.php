@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PharmacyController;
 use App\Http\Controllers\Api\SpecializationController;
 use App\Http\Controllers\Payment\StripeController;
+use App\Http\Controllers\Api\CareProvider\CareProviderLocationController;
+
 use Illuminate\Support\Facades\Route;
 
 // ========== PUBLIC APIs (No Auth Required) ==========
@@ -42,6 +44,7 @@ Route::get('/medical-records/attachments/{id}/download', [MedicalRecordControlle
 Route::get('/uploads/download/{id}', [UploadController::class, 'downloadFile'])->name('download.file');
 
 Route::post('/stripe/webhook', [StripeController::class, 'webhook']);
+
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Download medical record attachments (authorized access only)
     
@@ -170,25 +173,36 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     
     // Nurse
     Route::middleware(['role:care_provider'])->prefix('provider/nurse')->group(function () {
-        Route::get('/profile', [NurseController::class, 'getProfile']);
-        Route::put('/profile', [NurseController::class, 'updateProfile']);
-        Route::get('/orders', [NurseController::class, 'orders']);
-        Route::post('/orders/{id}/accept', [NurseController::class, 'accept']);
-        Route::get('/schedules', [NurseController::class, 'schedules']);
-        Route::post('/schedules/{id}/start-session', [NurseController::class, 'startSession']);
-        Route::post('/schedules/{id}/end-session', [NurseController::class, 'endSession']);
-    });
+    Route::get('/profile', [NurseController::class, 'getProfile']);
+    Route::put('/profile', [NurseController::class, 'updateProfile']);
+
+    Route::post('/location', [CareProviderLocationController::class, 'update']);
+
+    Route::get('/nearby-requests', [NurseController::class, 'nearbyRequests']);
+    Route::get('/orders', [NurseController::class, 'orders']); // legacy alias
+
+    Route::post('/orders/{id}/accept', [NurseController::class, 'accept']);
+    Route::get('/schedules', [NurseController::class, 'schedules']);
+    Route::post('/schedules/{id}/start-session', [NurseController::class, 'startSession']);
+    Route::post('/schedules/{id}/end-session', [NurseController::class, 'endSession']);
+});
 
     // Physiotherapist
     Route::middleware(['role:care_provider'])->prefix('provider/physiotherapist')->group(function () {
-        Route::get('/profile', [PhysiotherapistController::class, 'getProfile']);
-        Route::put('/profile', [PhysiotherapistController::class, 'updateProfile']);
-        Route::get('/orders', [PhysiotherapistController::class, 'orders']);
-        Route::post('/orders/{id}/accept', [PhysiotherapistController::class, 'accept']);
-        Route::get('/schedules', [PhysiotherapistController::class, 'schedules']);
-        Route::post('/schedules/{id}/start-session', [PhysiotherapistController::class, 'startSession']);
-        Route::post('/schedules/{id}/end-session', [PhysiotherapistController::class, 'endSession']);
+    Route::get('/profile', [PhysiotherapistController::class, 'getProfile']);
+    Route::put('/profile', [PhysiotherapistController::class, 'updateProfile']);
+
+    Route::post('/location', [CareProviderLocationController::class, 'update']);
+
+    Route::get('/nearby-requests', [PhysiotherapistController::class, 'nearbyRequests']);
+    Route::get('/orders', [PhysiotherapistController::class, 'orders']); // legacy alias
+
+    Route::post('/orders/{id}/accept', [PhysiotherapistController::class, 'accept']);
+    Route::get('/schedules', [PhysiotherapistController::class, 'schedules']);
+    Route::post('/schedules/{id}/start-session', [PhysiotherapistController::class, 'startSession']);
+    Route::post('/schedules/{id}/end-session', [PhysiotherapistController::class, 'endSession']);
     });
+   
 
     // ========== SHARED ROUTES ==========
     
@@ -205,6 +219,10 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::prefix('consultations')->group(function () {
         Route::post('/{id}/call', [ConsultationController::class, 'startConsultation']);
         Route::post('/{id}/end', [ConsultationController::class, 'endConsultation']);
+    });
+    // Nurse and Physiotherapist
+    Route::middleware(['role:care_provider'])->prefix('provider')->group(function () {
+        Route::post('/location', [CareProviderLocationController::class, 'update']);
     });
 
     // ========== DELIVERY ROUTES ==========
