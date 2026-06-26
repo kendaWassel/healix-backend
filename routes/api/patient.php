@@ -1,0 +1,58 @@
+<?php
+
+use App\Http\Controllers\Api\ConsultationController;
+use App\Http\Controllers\Api\DeliveryLocationController;
+use App\Http\Controllers\Api\DoctorController;
+use App\Http\Controllers\Api\HomeVisitController;
+use App\Http\Controllers\Api\MedicalRecordController;
+use App\Http\Controllers\Api\PatientController;
+use App\Http\Controllers\Api\RatingController;
+use App\Http\Controllers\Api\SpecializationController;
+use App\Http\Controllers\Api\UserController;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware(['auth:sanctum', 'verified', 'role:patient'])
+    ->prefix('patient')
+    ->group(function () {
+
+        Route::get('/specializations', [SpecializationController::class, 'listForConsultation']);
+
+        Route::get('/my-schedules', [PatientController::class, 'getPatientScheduledConsultations']);
+        Route::get('/care-provider-schedules', [PatientController::class, 'getPatientScheduledCareProviders']);
+
+        Route::get('/doctors/by-specialization', [DoctorController::class, 'getDoctorsBySpecialization']);
+        Route::get('/doctors/{id}/available-slots', [DoctorController::class, 'getAvailableSlots']);
+
+        Route::post('/consultations/book', [ConsultationController::class, 'bookConsultation']);
+
+        Route::post('/home-visits/{visit_id}/re-request', [HomeVisitController::class, 'reRequestHomeVisit']);
+        Route::post('/home-visits/{visit_id}/request-new-care-provider', [PatientController::class, 'requestNewCareProvider']);
+
+        Route::get('/medical-record', [MedicalRecordController::class, 'getPatientMedicalRecord']);
+
+        Route::post('/consultation/{consultation_id}/rate/{doctor_id}', [RatingController::class, 'rateDoctor']);
+        Route::post('/order/{order_id}/rate/{pharmacist_id}', [RatingController::class, 'ratePharmacy']);
+        Route::post('/task/{task_id}/rate/{delivery_id}', [RatingController::class, 'rateDelivery']);
+        Route::post('/session/{session_id}/rate/{care_provider_id}', [RatingController::class, 'rateCareProvider']);
+
+        Route::get('/view-prescriptions-with-pricing', [PatientController::class, 'getPrescriptionsWithPricing']);
+
+        Route::prefix('prescriptions')->group(function () {
+            Route::get('/', [PatientController::class, 'getPatientPrescriptions']);
+            Route::get('/{prescription_id}', [PatientController::class, 'getPrescriptionDetails']);
+            Route::post('/upload', [PatientController::class, 'uploadPaperPrescription']);
+            Route::post('/{prescription_id}/send', [PatientController::class, 'sendPrescriptionToPharmacy']);
+        });
+
+        Route::get('/orders/delivery-info', [PatientController::class, 'getDeliveryInfo']);
+        Route::get('/orders/{order_id}/delivery-info', [PatientController::class, 'getOrderDeliveryInfo']);
+        //tracking 
+        Route::get('/delivery/location/{task_id}', [DeliveryLocationController::class, 'getLocation']);
+
+        // ========== USER PROFILE MANAGEMENT ==========
+        Route::prefix('users')->group(function () {
+            Route::get('/me', [UserController::class, 'getProfile']);
+            Route::put('/me', [UserController::class, 'updateProfile']);
+        });
+    });
+
