@@ -20,7 +20,7 @@ class GoogleMeetService
     public function __construct()
     {
         $this->client = new Client();
-        $credentialsPath = base_path(env('GOOGLE_APPLICATION_CREDENTIALS', 'storage/app/google/credentials.json'));
+        $credentialsPath = base_path(env('GOOGLE_APPLICATION_CREDENTIALS', 'storage/app/google/google-service-account.json'));
 
         $this->client->setAuthConfig($credentialsPath);
         $this->client->addScope(Calendar::CALENDAR);
