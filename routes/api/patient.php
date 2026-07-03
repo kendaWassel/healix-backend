@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ConsultationController;
+use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\DeliveryLocationController;
 use App\Http\Controllers\Api\DoctorController;
 use App\Http\Controllers\Api\HomeVisitController;
@@ -54,5 +55,14 @@ Route::middleware(['auth:sanctum', 'verified', 'role:patient'])
             Route::get('/me', [UserController::class, 'getProfile']);
             Route::put('/me', [UserController::class, 'updateProfile']);
         });
-    });
 
+        Route::apiResource('conversations', ConversationController::class)->only([
+            'index',
+            'store',
+            'show',
+            'destroy',
+        ]);
+
+        Route::get('conversations/{conversation}/messages', [ConversationController::class, 'messages']);
+        Route::post('conversations/{conversation}/messages', [ConversationController::class, 'storeMessage']);
+    });

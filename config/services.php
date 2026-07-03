@@ -51,4 +51,10 @@ return [
         'redirect_uri' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'ai' => [
+        'url' => env('AI_SERVICE_URL', 'http://127.0.0.1:8001'),
+        'timeout' => env('AI_SERVICE_TIMEOUT', 60),
+        'retries' => env('AI_SERVICE_RETRIES', 3),
+    ],
+
 ];

@@ -102,18 +102,18 @@ class ConsultationController extends Controller
         // $this->authorize('end consultation');
         
         // التحقق من إرسال التقرير الطبي عند إنهاء الجلسة
-        $request->validate([
-            'doctor_notes' => 'required|string'
-        ]);
+        // $request->validate([
+        //     'doctor_notes' => 'required|string'
+        // ]);
 
         try {
             $result = $this->consultationService->endConsultation($id);
             $consultation = $result['consultation'];
 
             // حفظ ملاحظات الطبيب في قاعدة البيانات فور إنهاء المكالمة
-            $consultation->update([
-                'doctor_notes' => $request->doctor_notes
-            ]);
+            // $consultation->update([
+            //     'doctor_notes' => $request->doctor_notes
+            // ]);
 
             return response()->json([
                 'status' => 'success',
@@ -122,7 +122,7 @@ class ConsultationController extends Controller
                     'consultation_id' => $consultation->id,
                     'ended_by' => $result['ended_by'],
                     'status' => $consultation->status,
-                    'doctor_notes' => $consultation->doctor_notes
+                    // 'doctor_notes' => $consultation->doctor_notes
                 ]
             ]);
         } catch (\Exception $e) {
