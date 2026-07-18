@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\PharmacistController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PharmacyController;
+use App\Http\Controllers\Api\Pharmacist\PrescriptionSafetyController;
 
 Route::middleware(['auth:sanctum', 'verified', 'role:pharmacist'])
     ->prefix('pharmacist')
@@ -17,6 +18,8 @@ Route::middleware(['auth:sanctum', 'verified', 'role:pharmacist'])
             Route::get('/{order_id}', [PharmacistController::class, 'viewPrescription']);
             Route::post('/{prescription_id}/accept', [PharmacistController::class, 'accept']);
             Route::post('/{prescription_id}/reject', [PharmacistController::class, 'reject']);
+            // Safety verification is a separate step that must run BEFORE pricing.
+            Route::post('/{prescription_id}/verify', [PrescriptionSafetyController::class, 'verify']);
             Route::post('/{id}/add-price', [PharmacistController::class, 'addPrice']);
         });
 

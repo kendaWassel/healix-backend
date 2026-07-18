@@ -19,8 +19,10 @@ class MedicalRecord extends Model
         'previous_surgeries',
         'allergies',
         'current_medications',
-    ]; 
-    protected $casts = [        
+        'is_pregnant',
+    ];
+    protected $casts = [
+        'is_pregnant' => 'boolean',
     ];
     
 

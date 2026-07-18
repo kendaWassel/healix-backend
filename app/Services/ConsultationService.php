@@ -109,17 +109,26 @@ class ConsultationService
             // Generate Google Meet link for the consultation
             $doctor->loadMissing('user');
             if ($doctor->user && !empty($doctor->user->email)) {
-                $meetDetails = $this->googleMeetService->createMeetEvent(
-                    $doctor->user->email,
-                    $startTime,
-                    30, // default consultation duration in minutes
-                    $consultation->id
-                );
+                try {
+                    $meetDetails = $this->googleMeetService->createMeetEvent(
+                        $doctor->user->email,
+                        $startTime,
+                        30, // default consultation duration in minutes
+                        $consultation->id
+                    );
 
-                if ($meetDetails) {
-                    $consultation->update([
-                        'google_meet_link' => $meetDetails['meet_link'],
-                        'google_calendar_event_id' => $meetDetails['event_id'],
+                    if ($meetDetails) {
+                        $consultation->update([
+                            'google_meet_link' => $meetDetails['meet_link'],
+                            'google_calendar_event_id' => $meetDetails['event_id'],
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    // Don't fail consultation creation if Google Meet generation fails
+                    Log::error('Exception while creating Google Meet event', [
+                        'doctor_id' => $doctor->id,
+                        'consultation_id' => $consultation->id,
+                        'error' => $e->getMessage()
                     ]);
                 }
             }

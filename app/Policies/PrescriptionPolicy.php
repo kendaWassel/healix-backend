@@ -78,6 +78,16 @@ class PrescriptionPolicy
     }
 
     /**
+     * Determine whether the pharmacist can run a safety verification on the
+     * prescription (must be the pharmacist it is assigned to).
+     */
+    public function verify(User $user, Prescription $prescription): bool
+    {
+        return $user->role === 'pharmacist'
+            && $prescription->pharmacist_id === $user->pharmacist?->id;
+    }
+
+    /**
      * Determine whether the user can delete the model.
      */
     public function delete(User $user, Prescription $prescription): bool

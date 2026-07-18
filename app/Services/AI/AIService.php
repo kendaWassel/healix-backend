@@ -4,12 +4,20 @@ namespace App\Services\AI;
 
 use App\Exceptions\AI\AIServiceException;
 use App\Exceptions\AI\AIServiceInvalidResponseException;
+use App\Services\MedicalAssistant\MedicalAssistantClient;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Thin wrapper over the Medical Assistant service for Whisper speech-to-text.
+ *
+ * Talks to the single unified Medical Assistant microservice via
+ * MedicalAssistantClient. (Symptom extraction and the interview turn are owned
+ * by the Interview pipeline, not here.)
+ */
 class AIService
 {
     public function __construct(
-        protected FastApiClient $client
+        protected MedicalAssistantClient $client
     ) {}
 
     /**
@@ -36,7 +44,7 @@ class AIService
         $text = $response['text'] ?? null;
 
         if (! is_string($text) || trim($text) === '') {
-            throw new AIServiceInvalidResponseException('AI service did not return transcribed text.');
+            throw new AIServiceInvalidResponseException('Medical Assistant service did not return transcribed text.');
         }
 
         Log::info('Speech-to-text finished', [
@@ -45,65 +53,5 @@ class AIService
         ]);
 
         return $text;
-    }
-
-    /**
-     * @return array<int, string>
-     *
-     * @throws AIServiceException
-     */
-    public function extractSymptoms(string $text): array
-    {
-        Log::info('Symptom extraction started', [
-            'text_length' => strlen($text),
-        ]);
-
-        $response = $this->client->post('/api/symptoms/extract', [
-            'text' => $text,
-        ]);
-
-        if (! ($response['success'] ?? false)) {
-            throw new AIServiceException('Symptom extraction failed.');
-        }
-
-        $symptoms = $response['detected_symptoms'] ?? null;
-
-        if (! is_array($symptoms)) {
-            throw new AIServiceInvalidResponseException('AI service did not return detected symptoms.');
-        }
-
-        $symptoms = array_values(array_filter($symptoms, fn ($symptom) => is_string($symptom) && $symptom !== ''));
-
-        Log::info('Symptom extraction finished', [
-            'symptom_count' => count($symptoms),
-        ]);
-
-        return $symptoms;
-    }
-
-    /**
-     * Integration point for the FastAPI Medical Assistant.
-     *
-     * When the endpoint is wired up, this method should send the patient message
-     * to the AI service and return the assistant reply. Returns null when no
-     * response is available yet so callers can skip persisting an assistant message.
-     */
-    public function getMedicalAssistantResponse(string $text, int $conversationId): ?string
-    {
-        Log::info('Medical assistant integration point reached', [
-            'conversation_id' => $conversationId,
-            'text_length' => strlen($text),
-        ]);
-
-        // TODO: POST to the FastAPI medical assistant endpoint when available.
-        // Example:
-        // $response = $this->client->post('/api/medical-assistant/chat', [
-        //     'conversation_id' => $conversationId,
-        //     'text' => $text,
-        // ]);
-        //
-        // return $response['reply'] ?? null;
-
-        return null;
     }
 }

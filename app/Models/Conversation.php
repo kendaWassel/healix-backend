@@ -11,6 +11,8 @@ class Conversation extends Model
 {
     protected $fillable = [
         'patient_id',
+        'session_id',
+        'status',
         'title',
         'started_at',
         'ended_at',
@@ -24,6 +26,11 @@ class Conversation extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class);
+    }
+
+    public function symptoms(): HasMany
+    {
+        return $this->hasMany(ConversationSymptom::class);
     }
 
     public function latestMessage(): HasOne

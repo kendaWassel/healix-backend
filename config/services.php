@@ -51,10 +51,23 @@ return [
         'redirect_uri' => env('GOOGLE_REDIRECT_URI'),
     ],
 
-    'ai' => [
-        'url' => env('AI_SERVICE_URL', 'http://127.0.0.1:8001'),
-        'timeout' => env('AI_SERVICE_TIMEOUT', 60),
-        'retries' => env('AI_SERVICE_RETRIES', 3),
+    // Single unified Medical Assistant AI service (Whisper + MARBERT + Interview + LLM).
+    'medical_assistant' => [
+        'url' => env('MEDICAL_ASSISTANT_SERVICE_URL', 'http://127.0.0.1:8000'),
+        'timeout' => env('MEDICAL_ASSISTANT_SERVICE_TIMEOUT', 60),
+        'retries' => env('MEDICAL_ASSISTANT_SERVICE_RETRIES', 3),
+    ],
+
+    'ddi' => [
+        'url' => env('DDI_SERVICE_URL', 'http://127.0.0.1:8002'),
+        'timeout' => env('DDI_SERVICE_TIMEOUT', 60),
+        'retries' => env('DDI_SERVICE_RETRIES', 3),
+    ],
+
+    'lab' => [
+        'url' => env('LAB_SERVICE_URL', 'http://127.0.0.1:8000'),
+        'timeout' => env('LAB_SERVICE_TIMEOUT', 120),
+        'retries' => env('LAB_SERVICE_RETRIES', 2),
     ],
 
 ];

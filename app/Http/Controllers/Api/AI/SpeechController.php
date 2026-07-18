@@ -9,6 +9,7 @@ use App\Http\Requests\TranscribeSpeechRequest;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Services\AI\AIService;
+use App\Services\MedicalAssistant\MedicalAssistantService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -18,7 +19,8 @@ use Illuminate\Validation\ValidationException;
 class SpeechController extends Controller
 {
     public function __construct(
-        protected AIService $aiService
+        protected AIService $aiService,
+        protected MedicalAssistantService $assistant
     ) {}
 
 
@@ -68,20 +70,33 @@ class SpeechController extends Controller
             $absoluteAudioPath = Storage::disk('public')->path($audioPath);
 
             $transcribedText = $this->aiService->speechToText($absoluteAudioPath);
-            $detectedSymptoms = $this->aiService->extractSymptoms($transcribedText);
 
             $message->update([
                 'transcribed_text' => $transcribedText,
-                'detected_symptoms' => $detectedSymptoms,
                 'status' => Message::STATUS_TRANSCRIBED,
             ]);
+
+            // Continue the interview through the SAME pipeline as text messages:
+            // the transcribed text drives the interview engine (MARBERT + next
+            // question), reusing this voice message as the patient turn.
+            $turn = $this->assistant->handleVoiceMessage(
+                $conversation,
+                $message,
+                $transcribedText,
+                $user->id
+            );
+
+            $assistantMessage = $turn['assistant_message'];
 
             return response()->json([
                 'success' => true,
                 'message' => 'Speech converted successfully.',
                 'message_id' => $message->id,
                 'text' => $transcribedText,
-                'detected_symptoms' => $detectedSymptoms,
+                'detected_symptoms' => $message->detected_symptoms,
+                'finished' => $turn['result']['finished'],
+                'question' => $assistantMessage?->message,
+                'assistant_message_id' => $assistantMessage?->id,
             ]);
         } catch (ValidationException $e) {
             throw $e;

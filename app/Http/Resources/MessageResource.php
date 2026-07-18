@@ -16,6 +16,7 @@ class MessageResource extends JsonResource
             'sender_id' => $this->sender_id,
             'message_type' => $this->message_type,
             'message' => $this->message,
+            'turn_number' => $this->turn_number,
             'audio_path' => $this->audio_path,
             'transcribed_text' => $this->transcribed_text,
             'detected_symptoms' => $this->detected_symptoms,

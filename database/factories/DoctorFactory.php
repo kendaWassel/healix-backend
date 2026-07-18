@@ -17,12 +17,15 @@ class DoctorFactory extends Factory
 
     public function definition(): array
     {
-        $startHour = fake()->numberBetween(1, int2: 11);
-        $endHour   = fake()->numberBetween($startHour + 1, 12);
+        // $endHour is capped at 23 (11 PM) so it can never wrap to hour 24,
+        // which Carbon normalizes to 00:00:00 — an end time "before" any
+        // start time on the same day, which the slot generator rejects.
+        $startHour = fake()->numberBetween(1, 10);
+        $endHour   = fake()->numberBetween($startHour + 12, 23);
 
         // store as 24-hour DB-friendly TIME; accessors will format to 12-hour when read
         $from = Carbon::createFromTime($startHour, 0, 0)->format('H:i:s');
-        $to   = Carbon::createFromTime($endHour + 12, 0, 0)->format('H:i:s');
+        $to   = Carbon::createFromTime($endHour, 0, 0)->format('H:i:s');
 
         return [
             'user_id' => User::factory()->state(fn () => ['role' => 'doctor']),

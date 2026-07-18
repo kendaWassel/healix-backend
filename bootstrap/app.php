@@ -20,6 +20,13 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withMiddleware(function (Middleware $middleware) {
 
+    // The app runs behind an ngrok tunnel in dev: the actual TCP connection to
+    // Laravel is plain HTTP on localhost, and ngrok describes the real public
+    // HTTPS request via X-Forwarded-* headers. Without trusting those headers,
+    // Laravel validates signed URLs (e.g. the email-verification link) against
+    // the wrong scheme/host and rejects them as "Invalid signature."
+    $middleware->trustProxies(at: '*');
+
     $middleware->api(prepend: [
         \Illuminate\Http\Middleware\HandleCors::class,
     ]);
