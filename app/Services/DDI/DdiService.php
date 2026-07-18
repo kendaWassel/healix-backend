@@ -20,6 +20,36 @@ class DdiService
     ) {}
 
     /**
+     * Resolve a drug name (brand or generic) to its RxCUI identifier.
+     *
+     * The DDI service answers in one of three ways, and this method preserves
+     * that contract so the caller/frontend can react appropriately:
+     *   - resolved:   ['rxcui' => ..., 'source' => ..., 'resolved' => true]
+     *   - suggestion: ['resolved' => false, 'suggestion' => ..., 'message' => ...]
+     *                 (HTTP 200 — a "did you mean?" hint, NOT an error)
+     *   - unknown:    the service returns HTTP 404, which surfaces here as an
+     *                 AIServiceException the caller can translate to "not found".
+     *
+     * @throws AIServiceException
+     */
+    public function resolveDrug(string $name): array
+    {
+        Log::info('DDI name resolution started', [
+            'name' => $name,
+        ]);
+
+        $result = $this->client->get('/resolve', [
+            'name' => $name,
+        ]);
+
+        if (! array_key_exists('resolved', $result)) {
+            throw new AIServiceInvalidResponseException('DDI service did not return a resolution result.');
+        }
+
+        return $result;
+    }
+
+    /**
      * Check one drug pair for an interaction (with severity and alternatives).
      *
      * @throws AIServiceException

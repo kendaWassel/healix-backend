@@ -8,6 +8,7 @@ use App\Models\MedicalRecord;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\UpdateMedicalRecordRequest;
+use App\Http\Requests\UpdatePregnancyInfoRequest;
 use App\Http\Resources\MedicalRecordResource;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Upload;
@@ -129,8 +130,42 @@ class MedicalRecordController extends Controller
     }
     
     /**
+     * Patient: Update their own pregnancy information.
+     *
+     * Pregnancy is patient-reported, so it is kept separate from the clinical
+     * fields that only providers may edit. It is written to the patient's most
+     * recent medical record (a patient-owned one is created if none exists).
+     *
+     * Endpoint: PUT /api/patient/medical-record/pregnancy
+     */
+    public function updatePregnancyInfo(UpdatePregnancyInfoRequest $request)
+    {
+        $validated = $request->validated();
+        $patient = $request->user()->patient;
+
+        $isPregnant = (bool) $validated['is_pregnant'];
+
+        // latest('id') is deterministic (created_at has only second granularity),
+        // so the record written here is the same one verification reads back.
+        $record = $patient->medicalRecords()->latest('id')->first()
+            ?? new MedicalRecord(['patient_id' => $patient->id]);
+
+        $record->is_pregnant = $isPregnant;
+        $record->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Pregnancy information updated successfully.',
+            'data' => [
+                'medical_record_id' => $record->id,
+                'is_pregnant' => $record->is_pregnant,
+            ],
+        ], 200);
+    }
+
+    /**
      * Patient: View their own medical record.
-     * 
+     *
      * Endpoint: GET /api/patient/medical-record
      */
     public function getPatientMedicalRecord()

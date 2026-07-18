@@ -61,15 +61,20 @@ class AuthService
             // Handle file uploads
             $this->handleFileUploads($user, $data);
 
-            // Send verification email
-            VerifyEmailController::sendVerificationEmail($user);
+            // Send verification email. A failure here must not roll back an
+            // otherwise-successful registration — it's reported honestly below
+            // instead (and logged inside sendVerificationEmail()).
+            $emailSent = VerifyEmailController::sendVerificationEmail($user);
 
             DB::commit();
 
             return [
                 'status' => 'success',
-                'message' => 'User registered successfully. Please check your email for verification.',
+                'message' => $emailSent
+                    ? 'User registered successfully. Please check your email for verification.'
+                    : 'User registered successfully, but we could not send the verification email. Please request a new one.',
                 'user_id' => $user->id,
+                'email_sent' => $emailSent,
             ];
 
         } catch (\Exception $e) {
@@ -130,7 +135,10 @@ class AuthService
 
         // Always create a medical record for new patients
         $medical = $data['medical_record'] ?? [];
-        
+
+        // Registration collects pregnancy as yes/no; the column is boolean.
+        $isPregnant = ($medical['is_pregnant'] ?? null) === 'yes';
+
         $medicalRecord = MedicalRecord::create([
             'patient_id' => $patient->id,
             'doctor_id' => null, // No doctor assigned during registration
@@ -140,6 +148,7 @@ class AuthService
             'previous_surgeries' => $medical['previous_surgeries'] ?? null,
             'allergies' => $medical['allergies'] ?? null,
             'current_medications' => $medical['current_medications'] ?? null,
+            'is_pregnant' => $isPregnant,
         ]);
 
         // Attach uploads if provided (using pivot table relationship)

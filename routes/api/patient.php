@@ -30,6 +30,7 @@ Route::middleware(['auth:sanctum', 'verified', 'role:patient'])
         Route::post('/home-visits/{visit_id}/request-new-care-provider', [PatientController::class, 'requestNewCareProvider']);
 
         Route::get('/medical-record', [MedicalRecordController::class, 'getPatientMedicalRecord']);
+        Route::put('/medical-record/pregnancy', [MedicalRecordController::class, 'updatePregnancyInfo']);
 
         Route::post('/consultation/{consultation_id}/rate/{doctor_id}', [RatingController::class, 'rateDoctor']);
         Route::post('/order/{order_id}/rate/{pharmacist_id}', [RatingController::class, 'ratePharmacy']);

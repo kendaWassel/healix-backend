@@ -1,5 +1,6 @@
 <?php
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\InterviewChatController;
 
 
 
@@ -22,5 +23,15 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+/*
+| History-taking interview — simple Blade test page.
+| Web middleware provides the session + CSRF protection used by the chat page.
+*/
+Route::controller(InterviewChatController::class)->prefix('interview')->group(function () {
+    Route::get('/', 'show')->name('interview.show');
+    Route::post('/message', 'message')->name('interview.message');
+    Route::post('/reset', 'reset')->name('interview.reset');
 });
 

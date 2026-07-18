@@ -43,6 +43,7 @@ class MedicalRecordResource extends JsonResource
                 'previous_surgeries' => $this->previous_surgeries,
                 'allergies' => $this->allergies,
                 'current_medications' => $this->current_medications,
+                'is_pregnant' => (bool) $this->is_pregnant,
                 'images' => $images,
                 'files' => $files,
                 'created_at' => $this->created_at?->toDateTimeString(),

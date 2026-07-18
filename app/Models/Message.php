@@ -23,6 +23,7 @@ class Message extends Model
         'sender',
         'message_type',
         'message',
+        'turn_number',
         'audio_path',
         'transcribed_text',
         'detected_symptoms',

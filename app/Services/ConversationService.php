@@ -3,16 +3,14 @@
 namespace App\Services;
 
 use App\Models\Conversation;
-use App\Models\Message;
 use App\Models\User;
-use App\Services\AI\AIService;
+use App\Services\MedicalAssistant\MedicalAssistantService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\DB;
 
 class ConversationService
 {
     public function __construct(
-        protected AIService $aiService
+        protected MedicalAssistantService $assistant
     ) {}
 
     public function listForPatient(User $user, int $perPage = 15): LengthAwarePaginator
@@ -51,40 +49,23 @@ class ConversationService
     }
 
     /**
-     * @return array{patient_message: Message, assistant_message: Message|null}
+     * Persist a patient message and obtain the AI interview's next question.
+     *
+     * Delegates to the MedicalAssistantService orchestrator, which stores the
+     * patient message, the AI question, extracted symptoms, the session id and
+     * interview status. The return shape is unchanged, so ConversationController
+     * and the API contract are untouched.
+     *
+     * @return array{patient_message: \App\Models\Message, assistant_message: \App\Models\Message|null}
      */
     public function sendMessage(User $user, Conversation $conversation, string $messageText): array
     {
-        return DB::transaction(function () use ($user, $conversation, $messageText) {
-            $patientMessage = Message::create([
-                'conversation_id' => $conversation->id,
-                'sender_id' => $user->id,
-                'sender' => Message::SENDER_PATIENT,
-                'message_type' => Message::TYPE_TEXT,
-                'message' => $messageText,
-            ]);
+        $turn = $this->assistant->handleTextMessage($conversation, $messageText, $user->id);
 
-            $assistantReply = $this->aiService->getMedicalAssistantResponse(
-                $messageText,
-                $conversation->id
-            );
-
-            $assistantMessage = null;
-
-            if ($assistantReply !== null && trim($assistantReply) !== '') {
-                $assistantMessage = Message::create([
-                    'conversation_id' => $conversation->id,
-                    'sender' => Message::SENDER_ASSISTANT,
-                    'message_type' => Message::TYPE_TEXT,
-                    'message' => $assistantReply,
-                ]);
-            }
-
-            return [
-                'patient_message' => $patientMessage,
-                'assistant_message' => $assistantMessage,
-            ];
-        });
+        return [
+            'patient_message' => $turn['patient_message'],
+            'assistant_message' => $turn['assistant_message'],
+        ];
     }
 
     protected function resolvePatient(User $user)

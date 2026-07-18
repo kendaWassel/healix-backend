@@ -6,23 +6,29 @@ use App\Http\Controllers\Controller;
     use App\Models\User;
 use App\Mail\VerificationEmail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Auth\Events\Verified;
 
 class VerifyEmailController extends Controller
 {
-    //send email verification to user
-    public static function sendVerificationEmail(User $user)
+    /**
+     * Send the verification email to the user.
+     *
+     * Only ever called from AuthService::register() (not a route handler), so
+     * this reports success/failure as a boolean instead of an HTTP response
+     * that nothing actually reads.
+     *
+     * @return bool True if the email was sent, false if it was skipped
+     *              (already verified) or failed.
+     */
+    public static function sendVerificationEmail(User $user): bool
     {
-       
-        // Check if the user has already verified their email
-
         if ($user->hasVerifiedEmail()) {
-            return response()->json([
-                'message' => 'Email already verified'
-            ], 400);
+            return false;
         }
+
         // Generate a signed verification URL valid for 60 minutes
         $verificationUrl = URL::temporarySignedRoute(
             'verification.verify',
@@ -30,19 +36,20 @@ class VerifyEmailController extends Controller
             ['id' => $user->id, 'hash' => sha1($user->email)]
         );
 
-        // Send the verification email
         try {
             Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
 
-            return response()->json([
-                'message' => 'Verification email sent successfully'
-                
-            ], 200);
+            return true;
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to send verification email',
-                'error' => $e->getMessage()
-            ], 500);
+            // This used to be swallowed silently (returned in an HTTP response
+            // nothing read), so mail failures never showed up anywhere.
+            Log::error('Failed to send verification email', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
         }
     }
 
@@ -73,6 +80,18 @@ class VerifyEmailController extends Controller
 
         if ($user->markEmailAsVerified()) {
             event(new Verified($user));
+
+            // Patients don't need admin vetting (unlike doctors/pharmacists/
+            // care providers/delivery, who require manual license/ID review),
+            // so their email verification is sufficient to activate the account.
+            if ($user->role === 'patient' && $user->status !== 'approved') {
+                $user->status = 'approved';
+                $user->is_active = true;
+                $user->approved_at = now();
+                $user->admin_note = 'Auto-approved: patient email verification';
+                $user->save();
+            }
+
             $token = $user->createToken('Email Verification Token')->plainTextToken;
 
             if ($request->wantsJson()) {

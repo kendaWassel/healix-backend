@@ -34,6 +34,8 @@ class RegisterRequest extends FormRequest
                     'address' => 'required|string',
                     'latitude' => 'required|numeric',
                     'longitude' => 'required|numeric',
+                    // Pregnancy info, collected as part of the medical_record block.
+                    'medical_record.is_pregnant' => 'nullable|in:yes,no',
                 ],
                 'doctor' => [
                     'specialization' => 'required|string',
@@ -84,8 +86,32 @@ class RegisterRequest extends FormRequest
             'role.in' => 'Invalid role selected',
             'gender.in' => 'Gender must be either male or female',
             'type.in' => 'Care provider type must be either nurse or physiotherapist',
+            'medical_record.is_pregnant.in' => 'Pregnancy answer must be yes or no.',
         ];
     }
+
+    /**
+     * Pregnancy only applies to female patients — reject "yes" for anyone else.
+     */
+    public function withValidator(\Illuminate\Contracts\Validation\Validator $validator): void
+    {
+        $validator->after(function (\Illuminate\Contracts\Validation\Validator $validator) {
+            if ($this->input('role') !== 'patient') {
+                return;
+            }
+
+            $isPregnant = $this->input('medical_record.is_pregnant');
+            $gender = $this->input('gender');
+
+            if ($isPregnant === 'yes' && $gender !== 'female') {
+                $validator->errors()->add(
+                    'medical_record.is_pregnant',
+                    'Pregnancy information can only be recorded for female patients.'
+                );
+            }
+        });
+    }
+
     protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
     {
         $errors = $validator->errors()->all();

@@ -14,10 +14,10 @@ use Illuminate\Support\Facades\Log;
 class FastApiClient
 {
     /** Key under config('services.*') holding url/timeout/retries. */
-    protected string $configKey = 'ai';
+    protected string $configKey = 'medical_assistant';
 
     /** Human-readable name used in logs and exception messages. */
-    protected string $serviceLabel = 'AI service';
+    protected string $serviceLabel = 'Medical Assistant service';
 
     protected string $baseUrl;
 
@@ -46,6 +46,119 @@ class FastApiClient
     public function get(string $endpoint, array $query = []): array
     {
         return $this->send('get', $endpoint, $query);
+    }
+
+    /**
+     * Send a multipart/form-data POST (file upload + optional form fields).
+     *
+     * @param  array<string, string|int>  $fields  Plain form fields sent alongside the file.
+     *
+     * @throws AIServiceException
+     */
+    public function postMultipart(string $endpoint, string $fileField, string $fileContents, string $fileName, array $fields = []): array
+    {
+        $url = $this->baseUrl . '/' . ltrim($endpoint, '/');
+
+        Log::info("{$this->serviceLabel} multipart request", [
+            'url' => $url,
+            'file_name' => $fileName,
+            'file_size' => strlen($fileContents),
+            'fields' => $fields,
+        ]);
+
+        $attempt = 0;
+        $lastException = null;
+
+        while ($attempt < $this->retries) {
+            $attempt++;
+
+            try {
+                // The attachment is consumed per request, so rebuild it on every attempt.
+                $response = Http::timeout($this->timeout)
+                    ->acceptJson()
+                    ->attach($fileField, $fileContents, $fileName)
+                    ->post($url, $fields);
+
+                Log::info("{$this->serviceLabel} multipart response", [
+                    'url' => $url,
+                    'status' => $response->status(),
+                ]);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+
+                    if (! is_array($data)) {
+                        throw new AIServiceInvalidResponseException("{$this->serviceLabel} response is not valid JSON.");
+                    }
+
+                    return $data;
+                }
+
+                if ($response->status() >= 500 && $attempt < $this->retries) {
+                    Log::warning("{$this->serviceLabel} server error, retrying", [
+                        'url' => $url,
+                        'attempt' => $attempt,
+                        'status' => $response->status(),
+                    ]);
+                    continue;
+                }
+
+                $detail = $response->json('detail');
+
+                throw new AIServiceException(
+                    is_string($detail) && $detail !== ''
+                        ? $detail
+                        : "{$this->serviceLabel} request failed with status " . $response->status() . '.',
+                    $response->status() >= 400 && $response->status() < 600 ? $response->status() : 502
+                );
+            } catch (ConnectionException $e) {
+                $lastException = $e;
+                Log::warning("{$this->serviceLabel} connection error, retrying", [
+                    'url' => $url,
+                    'attempt' => $attempt,
+                    'error' => $e->getMessage(),
+                ]);
+
+                if ($attempt >= $this->retries) {
+                    throw new AIServiceUnavailableException("Unable to connect to {$this->serviceLabel}.");
+                }
+            }
+        }
+
+        throw new AIServiceUnavailableException(
+            $lastException?->getMessage() ?? "{$this->serviceLabel} is unavailable after multiple attempts."
+        );
+    }
+
+    /**
+     * Fetch a binary file (e.g. a generated PDF) and return the raw bytes.
+     *
+     * @throws AIServiceException
+     */
+    public function downloadBinary(string $endpoint): string
+    {
+        $url = $this->baseUrl . '/' . ltrim($endpoint, '/');
+
+        Log::info("{$this->serviceLabel} binary download", ['url' => $url]);
+
+        try {
+            $response = Http::timeout($this->timeout)->get($url);
+        } catch (ConnectionException $e) {
+            throw new AIServiceUnavailableException("Unable to connect to {$this->serviceLabel}.");
+        }
+
+        if (! $response->successful()) {
+            $detail = $response->json('detail');
+
+            throw new AIServiceException(
+                is_string($detail) && $detail !== ''
+                    ? $detail
+                    : "{$this->serviceLabel} file download failed with status " . $response->status() . '.',
+                $response->status() >= 400 && $response->status() < 600 ? $response->status() : 502
+            );
+        }
+
+        return $response->body();
     }
 
     /**

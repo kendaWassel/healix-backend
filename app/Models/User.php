@@ -123,4 +123,10 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return (bool) $this->is_active;
     }
+
+    //google account relationship
+    public function googleAccount()
+    {
+        return $this->hasOne(GoogleAccount::class);
+    }
 }
