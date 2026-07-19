@@ -92,6 +92,11 @@ class DrugInteractionController extends Controller
 
     /**
      * Find drugs that may cross-react with a known allergy.
+     *
+     * The response is trimmed for display (see simplifyAllergyResult): the
+     * cross-reactive drugs are reduced to plain names and the safety note is
+     * kept last. The internal verify flow uses DdiService directly and still
+     * gets the full detail — this shaping is for this endpoint only.
      */
     public function checkAllergy(AllergyCheckRequest $request): JsonResponse
     {
@@ -100,11 +105,40 @@ class DrugInteractionController extends Controller
             'Allergy cross-reactivity check completed.',
             DrugInteractionCheck::TYPE_ALLERGY,
             $request->validated(),
-            fn () => $this->ddiService->checkAllergyCrossReactivity(
-                $request->validated('drug'),
-                (int) $request->validated('max_results', 10),
+            fn () => $this->simplifyAllergyResult(
+                $this->ddiService->checkAllergyCrossReactivity(
+                    $request->validated('drug'),
+                    (int) $request->validated('max_results', 10),
+                )
             ),
         );
+    }
+
+    /**
+     * Trim the allergy cross-reactivity result for display: reduce each
+     * cross-reactive drug to just its name (drop tanimoto / detected_by / risk)
+     * and keep the safety `note` as the last key.
+     *
+     * @param  array<string, mixed>  $result
+     * @return array<string, mixed>
+     */
+    protected function simplifyAllergyResult(array $result): array
+    {
+        if (isset($result['cross_reactive_drugs']) && is_array($result['cross_reactive_drugs'])) {
+            $result['cross_reactive_drugs'] = array_values(array_filter(array_map(
+                fn ($drug) => is_array($drug) ? ($drug['name'] ?? null) : (is_string($drug) ? $drug : null),
+                $result['cross_reactive_drugs']
+            )));
+        }
+
+        // Keep the safety note as the last field in the response.
+        if (array_key_exists('note', $result)) {
+            $note = $result['note'];
+            unset($result['note']);
+            $result['note'] = $note;
+        }
+
+        return $result;
     }
 
     /**

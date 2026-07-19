@@ -34,7 +34,15 @@ class RegisterRequest extends FormRequest
                     'address' => 'required|string',
                     'latitude' => 'required|numeric',
                     'longitude' => 'required|numeric',
-                    // Pregnancy info, collected as part of the medical_record block.
+                    // Medical record fields must be validated so they survive
+                    // $request->validated() and reach AuthService — Laravel drops
+                    // any nested key that has no rule.
+                    'medical_record.diagnosis' => 'nullable|string',
+                    'medical_record.treatment_plan' => 'nullable|string',
+                    'medical_record.chronic_diseases' => 'nullable|string',
+                    'medical_record.previous_surgeries' => 'nullable|string',
+                    'medical_record.allergies' => 'nullable|string',
+                    'medical_record.current_medications' => 'nullable|string',
                     'medical_record.is_pregnant' => 'nullable|in:yes,no',
                 ],
                 'doctor' => [

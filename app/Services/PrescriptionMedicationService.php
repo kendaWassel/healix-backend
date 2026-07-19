@@ -16,11 +16,13 @@ use Illuminate\Support\Facades\DB;
 class PrescriptionMedicationService
 {
     /**
-     * Save the manually-entered medication names against the prescription.
+     * Replace the prescription's medication list with the pharmacist-entered
+     * names — the single source of truth for both prescription sources
+     * (uploaded image or electronic). Any previously-saved medication not in
+     * this list is removed, including a doctor's original electronic list.
      *
-     * Idempotent: each (prescription, medication) link is created at most once,
-     * so re-verifying with the same list never duplicates rows. Prices/boxes are
-     * left untouched — they are the responsibility of the pricing step.
+     * Idempotent: re-verifying with the same list never duplicates rows.
+     * Prices/boxes are left untouched on kept rows — pricing is a separate step.
      *
      * @param  array<int, string>  $names
      * @return array<int, string> The distinct, saved medication names.
@@ -30,6 +32,8 @@ class PrescriptionMedicationService
         $saved = [];
 
         DB::transaction(function () use ($prescription, $names, &$saved) {
+            $keepMedicationIds = [];
+
             foreach ($names as $name) {
                 $name = trim($name);
                 if ($name === '') {
@@ -48,8 +52,15 @@ class PrescriptionMedicationService
                     'medication_id' => $medication->id,
                 ]);
 
+                $keepMedicationIds[] = $medication->id;
                 $saved[mb_strtolower($name)] = $name;
             }
+
+            // Drop anything on the prescription that isn't in the confirmed
+            // list — stale manual entries or the doctor's original meds.
+            PrescriptionMedication::where('prescription_id', $prescription->id)
+                ->whereNotIn('medication_id', $keepMedicationIds)
+                ->delete();
         });
 
         return array_values($saved);

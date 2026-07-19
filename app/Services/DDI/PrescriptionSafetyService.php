@@ -25,7 +25,10 @@ class PrescriptionSafetyService
     ) {}
 
     /**
-     * Build the full safety report for a prescription.
+     * Build the full safety report for a saved prescription (pharmacist flow).
+     *
+     * Thin adapter over verifyDraft(): pulls the patient and medication names
+     * off the persisted prescription, then runs the shared verification.
      *
      * @return array<string, mixed>
      *
@@ -36,8 +39,29 @@ class PrescriptionSafetyService
     {
         $prescription->loadMissing(['medications.medication', 'patient']);
 
-        $medications = $this->medicationNames($prescription);
-        $patient = $prescription->patient;
+        return $this->verifyDraft(
+            $prescription->patient,
+            $this->medicationNames($prescription)
+        );
+    }
+
+    /**
+     * Build the full safety report for a DRAFT prescription — a patient plus a
+     * plain medication-name list — without needing a saved Prescription model.
+     *
+     * This is the single reusable verification entry point, shared by the
+     * pharmacist (via verify()) and the doctor's pre-save decision-support
+     * check. It performs NO persistence.
+     *
+     * @param  array<int, string>  $medications
+     * @return array<string, mixed>
+     *
+     * @throws AIServiceException When the DDI service is unreachable for the
+     *                            interaction screen (a hard failure).
+     */
+    public function verifyDraft(?Patient $patient, array $medications): array
+    {
+        $medications = $this->normalizeNames($medications);
 
         $drugInteractions = $this->drugInteractions($medications);
         $allergyWarnings = $this->allergyWarnings($medications, $patient);
@@ -65,8 +89,20 @@ class PrescriptionSafetyService
      */
     protected function medicationNames(Prescription $prescription): array
     {
-        return $prescription->medications
-            ->map(fn ($item) => $item->medication?->name)
+        return $this->normalizeNames(
+            $prescription->medications->map(fn ($item) => $item->medication?->name)
+        );
+    }
+
+    /**
+     * Trim, drop empties, and de-duplicate (case-insensitive) a list of names.
+     *
+     * @param  iterable<mixed>  $names
+     * @return array<int, string>
+     */
+    protected function normalizeNames(iterable $names): array
+    {
+        return collect($names)
             ->filter(fn ($name) => is_string($name) && trim($name) !== '')
             ->map(fn ($name) => trim($name))
             ->unique(fn ($name) => mb_strtolower($name))
@@ -75,7 +111,12 @@ class PrescriptionSafetyService
     }
 
     /**
-     * Screen every prescribed pair for interactions (reuses /screen).
+     * Screen every prescribed pair for interactions (reuses /screen), then
+     * enrich each interacting pair with safer-drug alternatives.
+     *
+     * /screen returns the interacting pairs but not their alternatives, so each
+     * finding is topped up via /interaction (which does). A per-pair lookup
+     * failure just omits alternatives for that pair — it never fails the screen.
      *
      * @param  array<int, string>  $medications
      * @return array<int, array<string, mixed>>
@@ -89,9 +130,44 @@ class PrescriptionSafetyService
             return [];
         }
 
-        $result = $this->ddi->screenMedications($medications);
+        $findings = $this->ddi->screenMedications($medications)['findings'] ?? [];
 
-        return $result['findings'] ?? [];
+        foreach ($findings as &$finding) {
+            $finding['alternatives'] = $this->interactionAlternatives(
+                (string) ($finding['drug_a'] ?? ''),
+                (string) ($finding['drug_b'] ?? '')
+            );
+        }
+        unset($finding);
+
+        return $findings;
+    }
+
+    /**
+     * Safer-drug alternatives for one interacting pair (reuses /interaction).
+     *
+     * @return array<string, mixed> The DDI `alternatives` block
+     *                              ({atc_class, candidates, note}), or [] on failure.
+     */
+    protected function interactionAlternatives(string $drugA, string $drugB): array
+    {
+        if ($drugA === '' || $drugB === '') {
+            return [];
+        }
+
+        try {
+            $result = $this->ddi->checkInteraction($drugA, $drugB);
+        } catch (AIServiceException $e) {
+            Log::info('Interaction alternatives lookup skipped', [
+                'drug_a' => $drugA,
+                'drug_b' => $drugB,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+
+        return $result['alternatives'] ?? [];
     }
 
     /**
@@ -114,6 +190,15 @@ class PrescriptionSafetyService
         foreach ($allergens as $allergen) {
             $allergenLower = mb_strtolower($allergen);
 
+            // Fetch the allergen's cross-reactive drugs once, and reduce them to
+            // plain names — attached to every warning below so the prescriber
+            // sees the other drugs to avoid (parallels interaction alternatives).
+            $crossReactive = $this->allergenCrossReactives($allergen);
+            $crossReactiveNames = array_values(array_filter(array_map(
+                fn ($candidate) => $candidate['name'] ?? null,
+                $crossReactive
+            )));
+
             // 1) Direct allergy — a prescribed drug IS the allergen.
             foreach ($medications as $med) {
                 if (mb_strtolower($med) === $allergenLower) {
@@ -123,25 +208,12 @@ class PrescriptionSafetyService
                         'detected_by' => 'direct_match',
                         'risk' => 'HIGH',
                         'note' => 'Patient is directly allergic to this medication.',
+                        'cross_reactive_drugs' => $crossReactiveNames,
                     ];
                 }
             }
 
-            // 2) Cross-reactivity — reuse the DDI allergy engine.
-            try {
-                $response = $this->ddi->checkAllergyCrossReactivity($allergen);
-            } catch (AIServiceException $e) {
-                // Unknown allergen (404) or a transient error: skip this allergen
-                // rather than failing the whole verification.
-                Log::info('Allergy cross-reactivity check skipped', [
-                    'allergen' => $allergen,
-                    'error' => $e->getMessage(),
-                ]);
-                continue;
-            }
-
-            $crossReactive = $response['cross_reactive_drugs'] ?? [];
-
+            // 2) Cross-reactivity — a prescribed drug shares structure/class with the allergen.
             foreach ($crossReactive as $candidate) {
                 $candidateName = $candidate['name'] ?? null;
                 if (! is_string($candidateName)) {
@@ -161,12 +233,36 @@ class PrescriptionSafetyService
                         'risk' => $candidate['risk'] ?? 'MODERATE',
                         'tanimoto' => $candidate['tanimoto'] ?? null,
                         'note' => "May cross-react with the patient's allergy to {$allergen}.",
+                        'cross_reactive_drugs' => $crossReactiveNames,
                     ];
                 }
             }
         }
 
         return array_values($warnings);
+    }
+
+    /**
+     * The allergen's cross-reactive drugs (reuses /allergy). Returns the raw
+     * candidate objects, or [] if the allergen is unknown / the lookup fails —
+     * a failure never breaks the verification.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function allergenCrossReactives(string $allergen): array
+    {
+        try {
+            $response = $this->ddi->checkAllergyCrossReactivity($allergen);
+        } catch (AIServiceException $e) {
+            Log::info('Allergy cross-reactivity check skipped', [
+                'allergen' => $allergen,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+
+        return $response['cross_reactive_drugs'] ?? [];
     }
 
     /**
