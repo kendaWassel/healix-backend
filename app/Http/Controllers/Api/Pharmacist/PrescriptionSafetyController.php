@@ -23,13 +23,13 @@ class PrescriptionSafetyController extends Controller
 
     /**
      * Verify a prescription's clinical safety (drug interactions, allergy
-     * conflicts and pregnancy safety) before pricing. Supports both prescription
-     * types automatically:
+     * conflicts and pregnancy safety) before pricing.
      *
-     *  - Uploaded image (patient_uploaded): the pharmacist's manually-entered
-     *    medications are saved into prescription_medications first.
-     *  - Electronic (doctor_written): the doctor's medications already exist, so
-     *    they are loaded straight from the database — no entry required.
+     * One unified workflow for every prescription source (uploaded image or
+     * electronic): the pharmacist's entered medication list is always saved
+     * first — replacing whatever was previously on the prescription, including
+     * a doctor's original electronic list — and verification always runs
+     * against that just-confirmed list.
      *
      * POST /api/pharmacist/prescriptions/{prescription_id}/verify
      */
@@ -48,17 +48,13 @@ class PrescriptionSafetyController extends Controller
         $this->authorize('verify', $prescription);
 
         try {
-            // Uploaded image prescriptions: persist the pharmacist-entered
-            // medications first. Electronic prescriptions already have them.
-            if ($prescription->source === 'patient_uploaded') {
-                $this->medicationService->syncEnteredMedications(
-                    $prescription,
-                    $request->validated('medications')
-                );
-            }
+            // Persist the pharmacist-confirmed medications, replacing any
+            // previous list (manually entered or the doctor's original one).
+            $this->medicationService->syncEnteredMedications(
+                $prescription,
+                $request->validated('medications')
+            );
 
-            // Verify using the prescription's medications (saved above for
-            // uploads, or the doctor's original list for electronic ones).
             $prescription->load('medications.medication');
             $report = $this->safetyService->verify($prescription);
 

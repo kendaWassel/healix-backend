@@ -23,6 +23,7 @@ class MedicalRecord extends Model
     ];
     protected $casts = [
         'is_pregnant' => 'boolean',
+        
     ];
     
 
