@@ -1,0 +1,246 @@
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validation Language Lines (Arabic)
+    |--------------------------------------------------------------------------
+    |
+    | Mirrors every key in lang/en/validation.php so no rule ever falls back
+    | to English while the request locale is Arabic.
+    |
+    */
+
+    'accepted' => 'يجب قبول حقل :attribute.',
+    'accepted_if' => 'يجب قبول حقل :attribute عندما يكون :other هو :value.',
+    'active_url' => 'يجب أن يكون حقل :attribute رابطًا صحيحًا.',
+    'after' => 'يجب أن يكون حقل :attribute تاريخًا بعد :date.',
+    'after_or_equal' => 'يجب أن يكون حقل :attribute تاريخًا بعد أو يساوي :date.',
+    'alpha' => 'يجب أن يحتوي حقل :attribute على حروف فقط.',
+    'alpha_dash' => 'يجب أن يحتوي حقل :attribute على حروف وأرقام وشرطات وشرطات سفلية فقط.',
+    'alpha_num' => 'يجب أن يحتوي حقل :attribute على حروف وأرقام فقط.',
+    'array' => 'يجب أن يكون حقل :attribute مصفوفة.',
+    'ascii' => 'يجب أن يحتوي حقل :attribute على حروف وأرقام ورموز أحادية البايت فقط.',
+    'before' => 'يجب أن يكون حقل :attribute تاريخًا قبل :date.',
+    'before_or_equal' => 'يجب أن يكون حقل :attribute تاريخًا قبل أو يساوي :date.',
+    'between' => [
+        'array' => 'يجب أن يحتوي حقل :attribute على عدد عناصر بين :min و :max.',
+        'file' => 'يجب أن يكون حجم ملف :attribute بين :min و :max كيلوبايت.',
+        'numeric' => 'يجب أن تكون قيمة :attribute بين :min و :max.',
+        'string' => 'يجب أن يكون طول نص :attribute بين :min و :max حرفًا.',
+    ],
+    'boolean' => 'يجب أن تكون قيمة حقل :attribute صحيحة أو خاطئة.',
+    'can' => 'يحتوي حقل :attribute على قيمة غير مصرح بها.',
+    'confirmed' => 'تأكيد حقل :attribute غير متطابق.',
+    'contains' => 'حقل :attribute ينقصه قيمة مطلوبة.',
+    'current_password' => 'كلمة المرور غير صحيحة.',
+    'date' => 'يجب أن يكون حقل :attribute تاريخًا صحيحًا.',
+    'date_equals' => 'يجب أن يكون حقل :attribute تاريخًا مساويًا لـ :date.',
+    'date_format' => 'يجب أن يطابق حقل :attribute الصيغة :format.',
+    'decimal' => 'يجب أن يحتوي حقل :attribute على :decimal منازل عشرية.',
+    'declined' => 'يجب رفض حقل :attribute.',
+    'declined_if' => 'يجب رفض حقل :attribute عندما يكون :other هو :value.',
+    'different' => 'يجب أن يكون حقل :attribute مختلفًا عن :other.',
+    'digits' => 'يجب أن يتكون حقل :attribute من :digits أرقام.',
+    'digits_between' => 'يجب أن يتكون حقل :attribute من عدد أرقام بين :min و :max.',
+    'dimensions' => 'أبعاد صورة حقل :attribute غير صالحة.',
+    'distinct' => 'يحتوي حقل :attribute على قيمة مكررة.',
+    'doesnt_end_with' => 'يجب ألا ينتهي حقل :attribute بأحد القيم التالية: :values.',
+    'doesnt_start_with' => 'يجب ألا يبدأ حقل :attribute بأحد القيم التالية: :values.',
+    'email' => 'يجب أن يكون حقل :attribute بريدًا إلكترونيًا صحيحًا.',
+    'ends_with' => 'يجب أن ينتهي حقل :attribute بأحد القيم التالية: :values.',
+    'enum' => 'القيمة المحددة في :attribute غير صالحة.',
+    'exists' => 'القيمة المحددة في :attribute غير موجودة.',
+    'extensions' => 'يجب أن يحمل حقل :attribute أحد الامتدادات التالية: :values.',
+    'file' => 'يجب أن يكون حقل :attribute ملفًا.',
+    'filled' => 'يجب ألا يكون حقل :attribute فارغًا.',
+    'gt' => [
+        'array' => 'يجب أن يحتوي حقل :attribute على أكثر من :value عنصرًا.',
+        'file' => 'يجب أن يكون حجم ملف :attribute أكبر من :value كيلوبايت.',
+        'numeric' => 'يجب أن تكون قيمة :attribute أكبر من :value.',
+        'string' => 'يجب أن يكون طول نص :attribute أكبر من :value حرفًا.',
+    ],
+    'gte' => [
+        'array' => 'يجب أن يحتوي حقل :attribute على :value عنصرًا أو أكثر.',
+        'file' => 'يجب أن يكون حجم ملف :attribute :value كيلوبايت أو أكثر.',
+        'numeric' => 'يجب أن تكون قيمة :attribute :value أو أكبر.',
+        'string' => 'يجب أن يكون طول نص :attribute :value حرفًا أو أكثر.',
+    ],
+    'hex_color' => 'يجب أن يكون حقل :attribute لونًا سداسيًا صحيحًا.',
+    'image' => 'يجب أن يكون حقل :attribute صورة.',
+    'in' => 'القيمة المحددة في :attribute غير صالحة.',
+    'in_array' => 'يجب أن يكون حقل :attribute موجودًا ضمن :other.',
+    'integer' => 'يجب أن يكون حقل :attribute عددًا صحيحًا.',
+    'ip' => 'يجب أن يكون حقل :attribute عنوان IP صحيحًا.',
+    'ipv4' => 'يجب أن يكون حقل :attribute عنوان IPv4 صحيحًا.',
+    'ipv6' => 'يجب أن يكون حقل :attribute عنوان IPv6 صحيحًا.',
+    'json' => 'يجب أن يكون حقل :attribute نص JSON صحيحًا.',
+    'list' => 'يجب أن يكون حقل :attribute قائمة.',
+    'lowercase' => 'يجب أن يكون حقل :attribute بحروف صغيرة.',
+    'lt' => [
+        'array' => 'يجب أن يحتوي حقل :attribute على أقل من :value عنصرًا.',
+        'file' => 'يجب أن يكون حجم ملف :attribute أقل من :value كيلوبايت.',
+        'numeric' => 'يجب أن تكون قيمة :attribute أقل من :value.',
+        'string' => 'يجب أن يكون طول نص :attribute أقل من :value حرفًا.',
+    ],
+    'lte' => [
+        'array' => 'يجب ألا يحتوي حقل :attribute على أكثر من :value عنصرًا.',
+        'file' => 'يجب أن يكون حجم ملف :attribute :value كيلوبايت أو أقل.',
+        'numeric' => 'يجب أن تكون قيمة :attribute :value أو أقل.',
+        'string' => 'يجب أن يكون طول نص :attribute :value حرفًا أو أقل.',
+    ],
+    'mac_address' => 'يجب أن يكون حقل :attribute عنوان MAC صحيحًا.',
+    'max' => [
+        'array' => 'يجب ألا يحتوي حقل :attribute على أكثر من :max عنصرًا.',
+        'file' => 'يجب ألا يزيد حجم ملف :attribute عن :max كيلوبايت.',
+        'numeric' => 'يجب ألا تزيد قيمة :attribute عن :max.',
+        'string' => 'يجب ألا يزيد طول نص :attribute عن :max حرفًا.',
+    ],
+    'max_digits' => 'يجب ألا يحتوي حقل :attribute على أكثر من :max رقمًا.',
+    'mimes' => 'يجب أن يكون حقل :attribute ملفًا من نوع: :values.',
+    'mimetypes' => 'يجب أن يكون حقل :attribute ملفًا من نوع: :values.',
+    'min' => [
+        'array' => 'يجب أن يحتوي حقل :attribute على :min عنصرًا على الأقل.',
+        'file' => 'يجب أن يكون حجم ملف :attribute :min كيلوبايت على الأقل.',
+        'numeric' => 'يجب أن تكون قيمة :attribute :min على الأقل.',
+        'string' => 'يجب أن يكون طول نص :attribute :min حرفًا على الأقل.',
+    ],
+    'min_digits' => 'يجب أن يحتوي حقل :attribute على :min رقمًا على الأقل.',
+    'missing' => 'يجب ألا يكون حقل :attribute موجودًا.',
+    'missing_if' => 'يجب ألا يكون حقل :attribute موجودًا عندما يكون :other هو :value.',
+    'missing_unless' => 'يجب ألا يكون حقل :attribute موجودًا إلا إذا كان :other هو :value.',
+    'missing_with' => 'يجب ألا يكون حقل :attribute موجودًا عند وجود :values.',
+    'missing_with_all' => 'يجب ألا يكون حقل :attribute موجودًا عند وجود :values.',
+    'multiple_of' => 'يجب أن تكون قيمة حقل :attribute من مضاعفات :value.',
+    'not_in' => 'القيمة المحددة في :attribute غير صالحة.',
+    'not_regex' => 'صيغة حقل :attribute غير صالحة.',
+    'numeric' => 'يجب أن يكون حقل :attribute رقمًا.',
+    'password' => [
+        'letters' => 'يجب أن تحتوي كلمة المرور على حرف واحد على الأقل.',
+        'mixed' => 'يجب أن تحتوي كلمة المرور على حرف كبير وحرف صغير على الأقل.',
+        'numbers' => 'يجب أن تحتوي كلمة المرور على رقم واحد على الأقل.',
+        'symbols' => 'يجب أن تحتوي كلمة المرور على رمز واحد على الأقل.',
+        'uncompromised' => 'ظهرت كلمة المرور المدخلة في تسريب بيانات. يُرجى اختيار كلمة مرور أخرى.',
+    ],
+    'present' => 'يجب أن يكون حقل :attribute موجودًا.',
+    'present_if' => 'يجب أن يكون حقل :attribute موجودًا عندما يكون :other هو :value.',
+    'present_unless' => 'يجب أن يكون حقل :attribute موجودًا إلا إذا كان :other هو :value.',
+    'present_with' => 'يجب أن يكون حقل :attribute موجودًا عند وجود :values.',
+    'present_with_all' => 'يجب أن يكون حقل :attribute موجودًا عند وجود :values.',
+    'prohibited' => 'حقل :attribute غير مسموح به.',
+    'prohibited_if' => 'حقل :attribute غير مسموح به عندما يكون :other هو :value.',
+    'prohibited_if_accepted' => 'حقل :attribute غير مسموح به عند قبول :other.',
+    'prohibited_if_declined' => 'حقل :attribute غير مسموح به عند رفض :other.',
+    'prohibited_unless' => 'حقل :attribute غير مسموح به إلا إذا كان :other ضمن :values.',
+    'prohibits' => 'حقل :attribute يمنع وجود :other.',
+    'regex' => 'صيغة حقل :attribute غير صالحة.',
+    'required' => 'حقل :attribute مطلوب.',
+    'required_array_keys' => 'يجب أن يحتوي حقل :attribute على مدخلات لـ: :values.',
+    'required_if' => 'حقل :attribute مطلوب عندما يكون :other هو :value.',
+    'required_if_accepted' => 'حقل :attribute مطلوب عند قبول :other.',
+    'required_if_declined' => 'حقل :attribute مطلوب عند رفض :other.',
+    'required_unless' => 'حقل :attribute مطلوب إلا إذا كان :other ضمن :values.',
+    'required_with' => 'حقل :attribute مطلوب عند وجود :values.',
+    'required_with_all' => 'حقل :attribute مطلوب عند وجود :values.',
+    'required_without' => 'حقل :attribute مطلوب عند عدم وجود :values.',
+    'required_without_all' => 'حقل :attribute مطلوب عند عدم وجود أي من :values.',
+    'same' => 'يجب أن يتطابق حقل :attribute مع :other.',
+    'size' => [
+        'array' => 'يجب أن يحتوي حقل :attribute على :size عنصرًا.',
+        'file' => 'يجب أن يكون حجم ملف :attribute :size كيلوبايت.',
+        'numeric' => 'يجب أن تكون قيمة :attribute :size.',
+        'string' => 'يجب أن يكون طول نص :attribute :size حرفًا.',
+    ],
+    'starts_with' => 'يجب أن يبدأ حقل :attribute بأحد القيم التالية: :values.',
+    'string' => 'يجب أن يكون حقل :attribute نصًا.',
+    'timezone' => 'يجب أن يكون حقل :attribute منطقة زمنية صحيحة.',
+    'unique' => 'قيمة :attribute مستخدمة من قبل.',
+    'uploaded' => 'فشل رفع حقل :attribute.',
+    'uppercase' => 'يجب أن يكون حقل :attribute بحروف كبيرة.',
+    'url' => 'يجب أن يكون حقل :attribute رابطًا صحيحًا.',
+    'ulid' => 'يجب أن يكون حقل :attribute معرّف ULID صحيحًا.',
+    'uuid' => 'يجب أن يكون حقل :attribute معرّف UUID صحيحًا.',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Language Lines
+    |--------------------------------------------------------------------------
+    */
+
+    'custom' => [
+        'attribute-name' => [
+            'rule-name' => 'custom-message',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validation Response Envelope
+    |--------------------------------------------------------------------------
+    */
+
+    'failed' => 'فشل التحقق من البيانات.',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Validation Attributes
+    |--------------------------------------------------------------------------
+    */
+
+    'attributes' => [
+        'full_name' => 'الاسم الكامل',
+        'email' => 'البريد الإلكتروني',
+        'password' => 'كلمة المرور',
+        'phone' => 'رقم الهاتف',
+        'role' => 'الدور',
+        'gender' => 'الجنس',
+        'birth_date' => 'تاريخ الميلاد',
+        'address' => 'العنوان',
+        'latitude' => 'خط العرض',
+        'longitude' => 'خط الطول',
+        'specialization' => 'التخصص',
+        'consultation_fee' => 'رسوم الاستشارة',
+        'session_fee' => 'رسوم الجلسة',
+        'pharmacy_name' => 'اسم الصيدلية',
+        'cr_number' => 'رقم السجل التجاري',
+        'vehicle_type' => 'نوع المركبة',
+        'plate_number' => 'رقم اللوحة',
+        'from' => 'وقت البداية',
+        'to' => 'وقت النهاية',
+        'doctor_id' => 'الطبيب',
+        'patient_id' => 'المريض',
+        'pharmacist_id' => 'الصيدلاني',
+        'conversation_id' => 'المحادثة',
+        'task_id' => 'المهمة',
+        'call_type' => 'نوع المكالمة',
+        'scheduled_at' => 'الموعد المحدد',
+        'title' => 'العنوان',
+        'message' => 'الرسالة',
+        'audio' => 'الملف الصوتي',
+        'file' => 'الملف',
+        'image' => 'الصورة',
+        'category' => 'الفئة',
+        'stars' => 'التقييم',
+        'diagnosis' => 'التشخيص',
+        'treatment_plan' => 'الخطة العلاجية',
+        'chronic_diseases' => 'الأمراض المزمنة',
+        'previous_surgeries' => 'العمليات الجراحية السابقة',
+        'allergies' => 'الحساسية',
+        'current_medications' => 'الأدوية الحالية',
+        'is_pregnant' => 'حالة الحمل',
+        'medicines' => 'الأدوية',
+        'medications' => 'الأدوية',
+        'attachments_id' => 'المرفقات',
+        'drug' => 'الدواء',
+        'drug_a' => 'الدواء الأول',
+        'drug_b' => 'الدواء الثاني',
+        'drugs' => 'قائمة الأدوية',
+        'pairs' => 'أزواج الأدوية',
+        'name' => 'الاسم',
+        'age' => 'العمر',
+        'pre_existing_conditions' => 'الحالات المرضية السابقة',
+        'max_results' => 'الحد الأقصى للنتائج',
+    ],
+
+];
