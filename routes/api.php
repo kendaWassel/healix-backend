@@ -3,7 +3,7 @@
 
 use App\Http\Controllers\{FaqController, FirstAidController};
 use App\Http\Controllers\Api\UploadController;
-use App\Http\Controllers\Api\Auth\{RegisterController, VerifyEmailController, LoginController};
+use App\Http\Controllers\Api\Auth\{RegisterController, VerifyEmailController, LoginController, PasswordResetController};
 use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\NotificationController;
@@ -34,7 +34,28 @@ Route::prefix('auth')->group(function () {
     Route::get('email/verify/{id}/{hash}', [VerifyEmailController::class, 'verify'])
         ->middleware(['signed'])
         ->name('verification.verify');
+
+    // OTP password reset (public — the user cannot sign in at this point).
+    // Per-IP throttles sit on top of the per-email resend cooldown and the
+    // per-OTP attempt cap enforced in PasswordResetOtpService.
+
+    // Issuing a code sends mail, so this is the tightest limit.
+    Route::post('/forgot-password', [PasswordResetController::class, 'forgot'])
+        ->middleware('throttle:5,1')
+        ->name('password.otp.request');
+
+    // Guessing is capped per OTP anyway; this stops an attacker cycling through
+    // fresh codes from one address.
+    Route::post('/verify-reset-otp', [PasswordResetController::class, 'verifyOtp'])
+        ->middleware('throttle:10,1')
+        ->name('password.otp.verify');
+
+    Route::post('/reset-password', [PasswordResetController::class, 'reset'])
+        ->middleware('throttle:10,1')
+        ->name('password.reset');
 });
+
+
 
 // Public Information
 Route::get('/faqs', [FaqController::class, 'index']);
