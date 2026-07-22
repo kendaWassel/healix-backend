@@ -49,6 +49,24 @@ return [
     | Account approval / activation
     */
 
+    /*
+    | Password reset
+    |
+    | forgot_password_sent is deliberately generic: it is returned whether or
+    | not the address is registered, so the endpoint cannot be used to discover
+    | which emails have accounts.
+    */
+
+    'forgot_password_sent' => 'If this email exists, a verification code has been sent.',
+    'password_reset_success' => 'Your password has been reset successfully. Please sign in with your new password.',
+    'password_reset_failed' => 'We could not reset your password. Please request a new verification code.',
+
+    'otp_verified' => 'Verification code confirmed. You can now set a new password.',
+    'otp_invalid' => 'The verification code is incorrect.',
+    'otp_expired' => 'The verification code has expired. Please request a new one.',
+    'otp_too_many_attempts' => 'Too many incorrect attempts. Please request a new verification code.',
+    'reset_token_invalid' => 'This reset session is invalid or has expired. Please start again.',
+
     'account_not_active' => 'Account not fully activated',
     'account_pending' => 'Your account is pending administrator approval.',
     'account_rejected' => 'Your account request has been rejected.',

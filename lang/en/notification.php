@@ -60,6 +60,18 @@ return [
     'verify_footer' => 'If you did not create an account, no further action is required.',
 
     /*
+    | Password reset OTP mail
+    */
+
+    'otp_subject' => 'Your Healix password reset code',
+    'otp_greeting' => 'Password reset code',
+    'otp_hello' => 'Hello :name,',
+    'otp_body' => 'We received a request to reset the password for your Healix account. Enter the code below in the app to continue.',
+    'otp_expiry' => 'This code will expire in :count minutes.',
+    'otp_warning' => 'Never share this code with anyone. Healix staff will never ask you for it.',
+    'otp_footer' => 'If you did not request a password reset, you can safely ignore this email and your password will stay unchanged.',
+
+    /*
     | Messaging gateways
     */
 
