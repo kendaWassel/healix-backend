@@ -69,7 +69,7 @@ class NotificationController extends Controller
         if (!$notification) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Notification not found',
+                'message' => __('notification.not_found'),
             ], 404);
         }
 
@@ -77,7 +77,7 @@ class NotificationController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Notification marked as read',
+            'message' => __('notification.marked_read'),
         ]);
     }
 
@@ -92,7 +92,7 @@ class NotificationController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'All notifications marked as read',
+            'message' => __('notification.all_marked_read'),
         ]);
     }
 
@@ -123,7 +123,7 @@ class NotificationController extends Controller
         if (!$notification) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Notification not found',
+                'message' => __('notification.not_found'),
             ], 404);
         }
 
@@ -131,7 +131,7 @@ class NotificationController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Notification deleted',
+            'message' => __('notification.deleted'),
         ]);
     }
 }

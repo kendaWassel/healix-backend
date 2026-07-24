@@ -21,14 +21,14 @@ class OrderController extends Controller
             if (!$order) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Order not found'
+                    'message' => __('pharmacy.order_not_found')
                 ], 404);
             }
 
             if ($order->status !== 'accepted') {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Order must be accepted before marking as ready for delivery'
+                    'message' => __('pharmacy.order_must_be_accepted')
                 ], 422);
             }
 
@@ -37,7 +37,7 @@ class OrderController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Order marked as ready for delivery',
+                'message' => __('pharmacy.order_ready'),
                 'data' => [
                     'order_id' => $order->id,
                     'status' => $order->status
@@ -47,7 +47,7 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to mark order as ready for delivery',
+                'message' => __('pharmacy.order_ready_failed'),
                 'error' => $e->getMessage()
             ], 500);
         }

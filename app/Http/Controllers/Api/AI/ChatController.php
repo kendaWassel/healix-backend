@@ -29,7 +29,7 @@ class ChatController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'AI response generated successfully.',
+            'message' => __('ai.chat_response'),
             'data' => [
                 'user_message' => $userMessage,
                 'ai_response' => $aiResponse,

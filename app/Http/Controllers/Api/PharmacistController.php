@@ -6,16 +6,19 @@ use App\Models\Order;
 use App\Models\Medication;
 use App\Models\Pharmacist;
 use App\Models\Prescription;
+use App\Models\Upload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use App\Models\PrescriptionMedication;
 use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class PharmacistController extends Controller
 {
+
     use AuthorizesRequests;
     /**
      * GET api/pharmacist/prescriptions
@@ -27,7 +30,7 @@ class PharmacistController extends Controller
         if (!$pharmacist) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pharmacist profile not found.'
+                'message' => __('messages.pharmacist_profile_not_found')
             ], 404);
         }
 
@@ -52,7 +55,7 @@ class PharmacistController extends Controller
         if ($prescriptions->isEmpty()) {
             return response()->json([
                 'status' => 'empty',
-                'message' => 'No prescriptions found.',
+                'message' => __('pharmacy.no_prescriptions'),
                 'data' => [],
                 'meta' => [
                     'current_page' => $prescriptions->currentPage(),
@@ -64,8 +67,8 @@ class PharmacistController extends Controller
         }
 
         $data = $prescriptions->getCollection()->map(function ($prescription) {
-            $patientName = $prescription->patient && $prescription->patient->user 
-                ? $prescription->patient->user->full_name 
+            $patientName = $prescription->patient && $prescription->patient->user
+                ? $prescription->patient->user->full_name
                 : null;
 
             $medicines = $prescription->medications->map(function ($item) {
@@ -78,7 +81,7 @@ class PharmacistController extends Controller
             })->filter();
 
             $totalBoxes = $prescription->medications->sum('boxes');
-            
+
             // Get the latest order (since order() is hasMany)
             $order = $prescription->order->first();
 
@@ -147,7 +150,7 @@ class PharmacistController extends Controller
         if (!$order) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Order not found'
+                'message' => __('pharmacy.order_not_found')
             ], 404);
         }
 
@@ -190,7 +193,7 @@ class PharmacistController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Pharmacist profile not found.'
+                    'message' => __('messages.pharmacist_profile_not_found')
                 ], 404);
             }
 
@@ -203,7 +206,7 @@ class PharmacistController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Prescription not found.'
+                    'message' => __('pharmacy.prescription_not_found')
                 ], 404);
             }
 
@@ -212,7 +215,7 @@ class PharmacistController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'You are not authorized to accept this prescription.'
+                    'message' => __('pharmacy.prescription_not_authorized_accept')
                 ], 403);
             }
 
@@ -221,7 +224,9 @@ class PharmacistController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Prescription cannot be accepted. Current status: ' . $prescription->status
+                    'message' => __('pharmacy.prescription_cannot_accept', [
+                        'status' => \App\Support\Locale::label('prescription_status', $prescription->status),
+                    ])
                 ], 422);
             }
 
@@ -258,13 +263,13 @@ class PharmacistController extends Controller
                     'prescription_status' => $prescription->status,
                     'order_status' => $order->status,
                 ],
-                'message' => 'Prescription accepted successfully'
+                'message' => __('pharmacy.prescription_accepted')
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to accept prescription.',
+                'message' => __('pharmacy.prescription_accept_failed'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -291,7 +296,7 @@ class PharmacistController extends Controller
             if (!$pharmacist) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Pharmacist profile not found.'
+                    'message' => __('messages.pharmacist_profile_not_found')
                 ], 404);
             }
 
@@ -304,7 +309,7 @@ class PharmacistController extends Controller
             if (!$order) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Prescription not authorized for this pharmacist.'
+                    'message' => __('pharmacy.prescription_not_authorized')
                 ], 403);
             }
             $prescription = $order->prescription;
@@ -313,7 +318,7 @@ class PharmacistController extends Controller
             if ($prescription->status === 'priced') {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Prescription is already priced.'
+                    'message' => __('pharmacy.already_priced')
                 ], 422);
             }
 
@@ -321,67 +326,67 @@ class PharmacistController extends Controller
             if ($prescription->status !== 'accepted') {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Prescription must be accepted before adding prices.'
+                    'message' => __('pharmacy.must_accept_before_pricing')
                 ], 422);
             }
 
             $totalPrice = 0;
-        $updatedItems = [];
-        $totalQuantity = 0;
-        // Create order medications with prices
-        foreach ($validated['items'] as $item) {
-            $medicineName = $item['medicine_name'];
-            $dosage = $item['dosage'];
-            $price = (float) $item['price'];
-            $quantity = 1; // Default quantity
+            $updatedItems = [];
+            $totalQuantity = 0;
+            // Create order medications with prices
+            foreach ($validated['items'] as $item) {
+                $medicineName = $item['medicine_name'];
+                $dosage = $item['dosage'];
+                $price = (float) $item['price'];
+                $quantity = 1; // Default quantity
 
-            // Find medication or create new one
-            $medication = Medication::firstOrCreate([
-                'name' => $medicineName,
-                'dosage' => $dosage,
+                // Find medication or create new one
+                $medication = Medication::firstOrCreate([
+                    'name' => $medicineName,
+                    'dosage' => $dosage,
+                ]);
+
+                // Calculate total price for this medication (price * quantity)
+                $itemTotalPrice = $price * $quantity;
+
+                // Add to prescription medications
+                PrescriptionMedication::create([
+                    'prescription_id' => $prescription->id,
+                    'medication_id' => $medication->id,
+                    'boxes' => $quantity,
+                    'price' => $price,
+                ]);
+
+                $totalPrice += $itemTotalPrice;
+                $totalQuantity += $quantity;
+                $updatedItems[] = [
+                    'medicine_name' => $medicineName,
+                    'dosage' => $dosage,
+                    'quantity' => $quantity,
+                    'price' => $price,
+                ];
+            }
+
+            // Calculate total price from order medications
+            $calculatedTotalPrice = PrescriptionMedication::where('prescription_id', $prescription->id)
+                ->selectRaw('SUM(price * boxes) as total')
+                ->value('total') ?? 0;
+
+            // Update prescription with totals and change status to priced
+            $prescription->update([
+                'total_quantity' => $totalQuantity,
+                'total_price' => $calculatedTotalPrice,
+                'status' => 'priced',
             ]);
 
-            // Calculate total price for this medication (price * quantity)
-            $itemTotalPrice = $price * $quantity;
-
-            // Add to prescription medications
-            PrescriptionMedication::create([
-                'prescription_id' => $prescription->id,
-                'medication_id' => $medication->id,
-                'boxes' => $quantity,
-                'price' => $price,
-            ]);
-
-            $totalPrice += $itemTotalPrice;
-            $totalQuantity += $quantity;
-            $updatedItems[] = [
-                'medicine_name' => $medicineName,
-                'dosage' => $dosage,
-                'quantity' => $quantity,
-                'price' => $price,
-            ];
-        }
-
-        // Calculate total price from order medications
-        $calculatedTotalPrice = PrescriptionMedication::where('prescription_id', $prescription->id)
-            ->selectRaw('SUM(price * boxes) as total')
-            ->value('total') ?? 0;
-
-        // Update prescription with totals and change status to priced
-        $prescription->update([
-            'total_quantity' => $totalQuantity,
-            'total_price' => $calculatedTotalPrice,
-            'status' => 'priced',
-        ]);
-
-        // Refresh to get updated status
-        $prescription->refresh();
+            // Refresh to get updated status
+            $prescription->refresh();
 
             DB::commit();
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Prices added successfully',
+                'message' => __('pharmacy.prices_added'),
                 'data' => [
                     'prescription_id' => $prescription->id,
                     'order_id' => $order->id,
@@ -395,7 +400,7 @@ class PharmacistController extends Controller
             DB::rollBack();
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to add prices.',
+                'message' => __('pharmacy.prices_add_failed'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -415,7 +420,7 @@ class PharmacistController extends Controller
         if (!$pharmacist) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pharmacist profile not found.'
+                'message' => __('messages.pharmacist_profile_not_found')
             ], 404);
         }
 
@@ -461,7 +466,7 @@ class PharmacistController extends Controller
                 return $medicine['quantity'] * $medicine['price_per_unit'];
             });
 
-            
+
             $result = [
                 'id' => $order->id,
                 'source' => $prescription->source === 'patient_uploaded' ? 'paper' : 'electronic',
@@ -514,7 +519,7 @@ class PharmacistController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Pharmacist profile not found.'
+                    'message' => __('messages.pharmacist_profile_not_found')
                 ], 404);
             }
 
@@ -527,7 +532,7 @@ class PharmacistController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Prescription not found.'
+                    'message' => __('pharmacy.prescription_not_found')
                 ], 404);
             }
 
@@ -536,7 +541,7 @@ class PharmacistController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'You are not authorized to reject this prescription.'
+                    'message' => __('pharmacy.prescription_not_authorized_reject')
                 ], 403);
             }
 
@@ -545,7 +550,9 @@ class PharmacistController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Prescription cannot be rejected. Current status: ' . $prescription->status
+                    'message' => __('pharmacy.prescription_cannot_reject', [
+                        'status' => \App\Support\Locale::label('prescription_status', $prescription->status),
+                    ])
                 ], 422);
             }
 
@@ -584,13 +591,13 @@ class PharmacistController extends Controller
                     'order_status' => $order->status,
                     'rejection_reason' => $order->rejection_reason,
                 ],
-                'message' => 'Prescription rejected successfully'
+                'message' => __('pharmacy.prescription_rejected')
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to reject prescription.',
+                'message' => __('pharmacy.prescription_reject_failed'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -607,7 +614,7 @@ class PharmacistController extends Controller
         if (!$pharmacist) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pharmacist profile not found.'
+                'message' => __('messages.pharmacist_profile_not_found')
             ], 404);
         }
 
@@ -620,13 +627,15 @@ class PharmacistController extends Controller
 
         // Get all orders
         $orders = Order::with([
-            'deliveryTask.delivery','patient.user','prescription.medications.medication'
+            'deliveryTask.delivery',
+            'patient.user',
+            'prescription.medications.medication'
         ])
-        ->where('pharmacist_id', $pharmacist->id)
+            ->where('pharmacist_id', $pharmacist->id)
 
-        ->whereIn('status', ['accepted', 'ready_for_delivery','out_for_delivery'])
-        ->orderByDesc('created_at')
-        ->paginate($perPage)->appends($request->query());
+            ->whereIn('status', ['accepted', 'ready_for_delivery', 'out_for_delivery'])
+            ->orderByDesc('created_at')
+            ->paginate($perPage)->appends($request->query());
 
         $data = $orders->getCollection()->map(function ($order) {
             $deliveryTask = $order->deliveryTask;
@@ -635,7 +644,7 @@ class PharmacistController extends Controller
             if ($deliveryTask && $deliveryTask->delivery_id) {
                 $delivery = $deliveryTask->delivery;
                 $deliveryUser = $delivery->user;
-                
+
                 // Get delivery image
                 $deliveryImageUrl = null;
                 if ($delivery->delivery_image_id) {
@@ -660,7 +669,7 @@ class PharmacistController extends Controller
             }
 
             // Map medications with name, quantity, price, and dosage
-            $medications = $order->prescription && $order->prescription->medications 
+            $medications = $order->prescription && $order->prescription->medications
                 ? $order->prescription->medications->map(function ($item) {
                     return [
                         'name' => $item->medication->name ?? null,
@@ -712,7 +721,7 @@ class PharmacistController extends Controller
         if (!$pharmacist) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pharmacist profile not found.'
+                'message' => __('messages.pharmacist_profile_not_found')
             ], 404);
         }
 
@@ -721,15 +730,15 @@ class PharmacistController extends Controller
             'patient.user',
             'prescription.medications.medication'
         ])
-        ->where('id', $orderId)
-        ->where('pharmacist_id', $pharmacist->id)
-        ->whereNotIn('status', ['delivered', 'rejected'])
-        ->first();
+            ->where('id', $orderId)
+            ->where('pharmacist_id', $pharmacist->id)
+            ->whereNotIn('status', ['delivered', 'rejected'])
+            ->first();
 
         if (!$order) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Order not found or not accessible.'
+                'message' => __('pharmacy.order_not_accessible')
             ], 404);
         }
 
@@ -739,7 +748,7 @@ class PharmacistController extends Controller
         if ($deliveryTask && $deliveryTask->delivery_id) {
             $delivery = $deliveryTask->delivery;
             $deliveryUser = $delivery->user;
-            
+
             // Get delivery image
             $deliveryImageUrl = null;
             if ($delivery->delivery_image_id) {
@@ -795,7 +804,7 @@ class PharmacistController extends Controller
         if (!$pharmacist) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pharmacist profile not found.'
+                'message' => __('messages.pharmacist_profile_not_found')
             ], 404);
         }
 
@@ -812,15 +821,15 @@ class PharmacistController extends Controller
             'prescription.medications.medication',
             'deliveryTask.delivery.user',
         ])
-        ->where('pharmacist_id', $pharmacist->id)
-        ->where('status', 'delivered')
-        ->orderByDesc('created_at')
-        ->paginate($perPage)->appends($request->query());
+            ->where('pharmacist_id', $pharmacist->id)
+            ->where('status', 'delivered')
+            ->orderByDesc('created_at')
+            ->paginate($perPage)->appends($request->query());
 
         $data = $orders->getCollection()->map(function ($order) {
             $patient = $order->patient;
             $patientUser = $patient->user;
-            
+
             // Get delivery info
             $deliveryTask = $order->deliveryTask;
             $deliveryData = null;
@@ -850,7 +859,7 @@ class PharmacistController extends Controller
 
             return [
                 'order_id' => $order->id,
-                'delivered_at' => $deliveryTask && $deliveryTask->delivered_at 
+                'delivered_at' => $deliveryTask && $deliveryTask->delivered_at
                     ? $deliveryTask->delivered_at->format('Y-m-d H:i:s')
                     : $order->updated_at->format('Y-m-d H:i:s'),
                 'patient' => [
@@ -882,28 +891,34 @@ class PharmacistController extends Controller
     public function getProfile(Request $request)
     {
         $this->authorize('view', Pharmacist::class);
-        $user = $request->user();
+        $user = Auth::user();
         $pharmacist = $user->pharmacist;
 
         if (!$pharmacist) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pharmacist profile not found'
+                'message' => __('messages.pharmacist_profile_not_found')
             ], 404);
         }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Profile retrieved successfully',
+            'message' => __('messages.profile_retrieved'),
             'data' => [
                 'id' => $pharmacist->id,
                 'full_name' => $user->full_name,
+                'email' => $user->email,
+                'phone' => $user->phone,
                 'pharmacy_name' => $pharmacist->pharmacy_name,
+                'cr_number' => $pharmacist->cr_number,
                 'address' => $pharmacist->address,
-                'working_hours' => [
-                    'from' => $pharmacist->from,
-                    'to' => $pharmacist->to,
-                ],
+                'latitude' => $pharmacist->latitude,
+                'longitude' => $pharmacist->longitude,
+                'from' => $pharmacist->from,
+                'to' => $pharmacist->to,
+
+                'license_file_id' => $pharmacist->license_file_id,
+                'license_file' => $pharmacist->license_file_id ? asset('storage/' . ltrim($pharmacist->license_file->file_path, '/')) : null,
                 'rating_avg' => $pharmacist->rating_avg,
             ]
         ]);
@@ -916,23 +931,44 @@ class PharmacistController extends Controller
     {
         $this->authorize('update', Pharmacist::class);
         $request->validate([
-            'from' => 'sometimes|date_format:H:i',
-            'to' => 'sometimes|date_format:H:i',
+            'full_name' => 'sometimes|string|max:255',
+            // Ignore the current user so re-saving one's own phone is allowed;
+            // a phone taken by someone else returns a clean 422 (not a 500).
+            'phone' => 'sometimes|string|max:20|unique:users,phone,' . Auth::id(),
+            'pharmacy_name' => 'sometimes|string|max:255',
+            // Accept the times a picker sends: "18:30", single-digit hours like
+            // "6:30", and an optional seconds form "18:30:00". TIME column normalizes.
+            'from' => 'sometimes|date_format:H:i,G:i,H:i:s',
+            'to' => 'sometimes|date_format:H:i,G:i,H:i:s',
             'address' => 'sometimes|string|max:500',
             'latitude' => 'sometimes|numeric',
             'longitude' => 'sometimes|numeric',
+            // The client sends the actual file directly in this request.
+            'license_file' => 'sometimes|file|mimes:pdf,jpeg,png,jpg,gif|max:5120',
         ]);
 
-        $user = $request->user();
+        $user = Auth::user();
         $pharmacist = $user->pharmacist;
 
         if (!$pharmacist) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pharmacist profile not found'
+                'message' => __('messages.pharmacist_profile_not_found')
             ], 404);
         }
 
+        // Core account fields live on the user row.
+        if ($request->has('full_name')) {
+            $user->full_name = $request->full_name;
+        }
+        if ($request->has('phone')) {
+            $user->phone = $request->phone;
+        }
+        $user->save();
+
+        if ($request->has('pharmacy_name')) {
+            $pharmacist->pharmacy_name = $request->pharmacy_name;
+        }
         if ($request->has('from')) {
             $pharmacist->from = $request->from;
         }
@@ -948,11 +984,34 @@ class PharmacistController extends Controller
         if ($request->has('longitude')) {
             $pharmacist->longitude = $request->longitude;
         }
+
+        $oldLicenseId = $pharmacist->license_file_id;
+
+        if ($request->hasFile('license_file')) {
+            $file = $request->file('license_file');
+            $path = $file->store('certificates', 'public');
+            $upload = Upload::create([
+                'user_id' => $user->id,
+                'category' => 'certificate',
+                'file' => basename($path),
+                'file_path' => $path,
+                'mime' => $file->getClientMimeType(),
+            ]);
+            $pharmacist->license_file_id = $upload->id;
+        }
+
         $pharmacist->save();
+
+        if ($oldLicenseId && $oldLicenseId != $pharmacist->license_file_id) {
+            if ($old = Upload::find($oldLicenseId)) {
+                Storage::disk('public')->delete($old->file_path);
+                $old->delete();
+            }
+        }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Profile updated successfully',
+            'message' => __('messages.profile_updated'),
             'data' => [
                 'pharmacist' => [
                     'id' => $pharmacist->id,
@@ -961,6 +1020,8 @@ class PharmacistController extends Controller
                         'from' => $pharmacist->from,
                         'to' => $pharmacist->to,
                     ],
+                    'license_file_id' => $pharmacist->license_file_id,
+                    'license_file' => $pharmacist->license_file_id ? asset('storage/' . ltrim($pharmacist->license_file->file_path, '/')) : null,
                 ]
             ]
         ]);

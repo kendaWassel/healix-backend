@@ -59,21 +59,21 @@ class VerifyEmailController extends Controller
 
         if (!$request->hasValidSignature()) {
             if ($request->wantsJson()) {
-                return response()->json(['message' => 'Invalid or expired verification link'], 400);
+                return response()->json(['message' => __('auth.verification_link_expired')], 400);
             }
             return redirect(env('FRONTEND_URL') . '?verified=false&message=Invalid+or+expired+verification+link');
         }
 
         if (!hash_equals((string) $hash, sha1($user->email))) {
             if ($request->wantsJson()) {
-                return response()->json(['message' => 'Invalid verification link'], 400);
+                return response()->json(['message' => __('auth.verification_link_invalid')], 400);
             }
             return redirect(env('FRONTEND_URL') . '?verified=false&message=Invalid+verification+link');
         }
 
         if ($user->hasVerifiedEmail()) {
             if ($request->wantsJson()) {
-                return response()->json(['message' => 'Email already verified'], 400);
+                return response()->json(['message' => __('auth.email_already_verified')], 400);
             }
             return redirect(env('FRONTEND_URL') . '?verified=true&message=Email+already+verified');
         }
@@ -99,7 +99,7 @@ class VerifyEmailController extends Controller
                     'verified' => true,
                     'token' => $token,
                     'email' => $user->email,
-                    'message' => 'Email verified successfully',
+                    'message' => __('auth.email_verified'),
                 ]);
             }
 
@@ -107,20 +107,20 @@ class VerifyEmailController extends Controller
                 'verified' => 'true',
                 'token' => $token,
                 'email' => $user->email,
-                'message' => 'Email verified successfully'
+                'message' => __('auth.email_verified')
             ]));
         }
 
         if ($request->wantsJson()) {
             return response()->json([
                 'verified' => false,
-                'message' => 'Failed to verify email',
+                'message' => __('auth.verification_failed'),
             ], 500);
         }
 
         return redirect(env('FRONTEND_URL') . 'api/auth/login?' . http_build_query([
             'verified' => 'false',
-            'message' => 'Failed to verify email'
+            'message' => __('auth.verification_failed')
         ]));
     }
 

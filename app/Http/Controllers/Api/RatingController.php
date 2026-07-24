@@ -34,7 +34,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Unauthenticated.'
+                    'message' => __('auth.unauthenticated')
                 ], 401);
             }
 
@@ -43,7 +43,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Patient profile not found.'
+                    'message' => __('messages.patient_profile_not_found')
                 ], 404);
             }
 
@@ -53,7 +53,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',    
-                    'message' => 'Doctor not found.'
+                    'message' => __('messages.doctor_not_found')
                 ], 404);
             }
 
@@ -68,7 +68,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'you can only rate doctors after completing a consultation with them.'
+                    'message' => __('rating.doctor_requires_completed_consultation')
                 ], 403);
             }
 
@@ -89,7 +89,7 @@ class RatingController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Rating submitted successfully',
+                'message' => __('rating.submitted'),
                 'data' => [
                     'rating' => $rating->stars,
                     'target_type' => $rating->target_type,
@@ -102,7 +102,7 @@ class RatingController extends Controller
             DB::rollBack();
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to submit rating',
+                'message' => __('rating.submit_failed'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -120,7 +120,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Unauthenticated.'
+                    'message' => __('auth.unauthenticated')
                 ], 401);
             }
 
@@ -129,7 +129,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Patient profile not found.'
+                    'message' => __('messages.patient_profile_not_found')
                 ], 404);
             }
 
@@ -143,7 +143,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Delivery task not found.'
+                    'message' => __('delivery.delivery_task_not_found')
                 ], 404);
             }
 
@@ -152,7 +152,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'You can only rate deliveries for your own orders.'
+                    'message' => __('rating.delivery_requires_own_order')
                 ], 403);
             }
 
@@ -161,7 +161,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'You can only rate deliveries that have been delivered.'
+                    'message' => __('rating.delivery_requires_delivered')
                 ], 403);
             }
 
@@ -171,7 +171,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Delivery not found.'
+                    'message' => __('messages.delivery_not_found')
                 ], 404);
             }
 
@@ -192,7 +192,7 @@ class RatingController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Rating submitted successfully',
+                'message' => __('rating.submitted'),
                 'data' => [
                     'rating' => $rating->stars,
                     'target_type' => $rating->target_type,
@@ -205,7 +205,7 @@ class RatingController extends Controller
             DB::rollBack();
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to submit rating',
+                'message' => __('rating.submit_failed'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -223,7 +223,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Unauthenticated.'
+                    'message' => __('auth.unauthenticated')
                 ], 401);
             }
 
@@ -232,7 +232,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Patient profile not found.'
+                    'message' => __('messages.patient_profile_not_found')
                 ], 404);
             }
 
@@ -247,7 +247,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'You can only rate pharmacists for orders that were completed for you.'
+                    'message' => __('rating.pharmacist_requires_completed_order')
                 ], 403);
             }
 
@@ -257,7 +257,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Pharmacist not found.'
+                    'message' => __('messages.pharmacist_not_found')
                 ], 404);
             }
 
@@ -281,14 +281,14 @@ class RatingController extends Controller
                 'data' => [
                     'rating_id' => $rating->id
                 ],
-                'message' => 'Rating submitted successfully'
+                'message' => __('rating.submitted')
             ], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to submit rating',
+                'message' => __('rating.submit_failed'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -305,7 +305,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Unauthenticated.'
+                    'message' => __('auth.unauthenticated')
                 ], 401);
             }
 
@@ -314,7 +314,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Patient profile not found.'
+                    'message' => __('messages.patient_profile_not_found')
                 ], 404);
             }
 
@@ -324,7 +324,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Care provider not found.'
+                    'message' => __('messages.care_provider_not_found')
                 ], 404);
             }
 
@@ -339,7 +339,7 @@ class RatingController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'You can only rate care providers after completing a session with them.'
+                    'message' => __('rating.care_provider_requires_completed_session')
                 ], 403);
             }
 
@@ -363,14 +363,14 @@ class RatingController extends Controller
                 'data' => [
                     'rating_id' => $rating->id
                 ],
-                'message' => 'Rating submitted successfully'
+                'message' => __('rating.submitted')
             ], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to submit rating',
+                'message' => __('rating.submit_failed'),
                 'error' => $e->getMessage()
             ], 500);
         }

@@ -32,7 +32,7 @@ class ConsultationController extends Controller
 
             $responseData = [
                 'status' => 'success',
-                'message' => 'Consultation booked successfully.',
+                'message' => __('consultation.booked'),
                 'data' => [
                     'consultation_id' => $consultation->id,
                     'doctor_id' => $consultation->doctor_id,
@@ -68,7 +68,7 @@ class ConsultationController extends Controller
             if ($result['is_joining']) {
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'Joining already-started consultation.',
+                    'message' => __('consultation.joined_started'),
                     'data' => [
                         'consultation_id' => $consultation->id,
                         'role' => $result['role'],
@@ -80,7 +80,7 @@ class ConsultationController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Consultation started successfully.',
+                'message' => __('consultation.started'),
                 'data' => [
                     'consultation_id' => $consultation->id,
                     'role' => $result['role'],
@@ -117,7 +117,7 @@ class ConsultationController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Consultation ended successfully.',
+                'message' => __('consultation.ended'),
                 'data' => [
                     'consultation_id' => $consultation->id,
                     'ended_by' => $result['ended_by'],

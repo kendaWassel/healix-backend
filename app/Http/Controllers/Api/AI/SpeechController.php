@@ -37,7 +37,7 @@ class SpeechController extends Controller
         if (! $this->userOwnsConversation($user, $conversation)) {
             return response()->json([
                 'success' => false,
-                'message' => 'You are not authorized to send messages in this conversation.',
+                'message' => __('ai.conversation_not_authorized'),
             ], 403);
         }
         Log::info('Speech upload started', [
@@ -90,7 +90,7 @@ class SpeechController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Speech converted successfully.',
+                'message' => __('ai.speech_converted'),
                 'message_id' => $message->id,
                 'text' => $transcribedText,
                 'detected_symptoms' => $message->detected_symptoms,
@@ -136,7 +136,7 @@ class SpeechController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'An unexpected error occurred during speech processing.',
+                'message' => __('ai.speech_unexpected_error'),
             ], 500);
         }
     }

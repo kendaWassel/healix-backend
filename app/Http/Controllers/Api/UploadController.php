@@ -60,6 +60,7 @@ class UploadController extends Controller
         }
 
     }
+    
        public function downloadFile($id): Response
     {
         $upload = Upload::findOrFail($id);
