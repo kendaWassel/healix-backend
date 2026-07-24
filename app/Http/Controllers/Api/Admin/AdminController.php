@@ -344,7 +344,7 @@ class AdminController extends Controller
 	{
 		$user = User::find($user_id);
 		if (!$user) {
-			return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
+			return response()->json(['status' => 'error', 'message' => __('messages.user_not_found')], 404);
 		}
 
 		$uploads = Upload::where('user_id', $user->id)->orderByDesc('created_at')->get();
@@ -377,14 +377,14 @@ class AdminController extends Controller
         if (!$user) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'User not found'
+                'message' => __('messages.user_not_found')
             ], 404);
         }
 
         if ($user->status === 'approved') {
             return response()->json([
                 'status' => 'success',
-                'message' => 'Account already approved'
+                'message' => __('admin.user_already_approved')
             ]);
         }
 
@@ -398,7 +398,7 @@ class AdminController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Account approved and activated'
+            'message' => __('admin.user_approved')
         ]);
     }
 
@@ -413,7 +413,7 @@ class AdminController extends Controller
         if (!$user) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'User not found'
+                'message' => __('messages.user_not_found')
             ], 404);
         }
 
@@ -426,7 +426,7 @@ class AdminController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Account rejected successfully',
+            'message' => __('admin.user_rejected'),
         ]);
     }
 
@@ -446,20 +446,20 @@ public function editUser(Request $request, $id)
     if (!$user) {
         return response()->json([
             'status' => 'error',
-            'message' => 'User not found'
+            'message' => __('messages.user_not_found')
         ], 404);
     }
     // simple: only allow editing active accounts
     if (isset($user->is_active)) {
         if (!$user->is_active) {
-            return response()->json(['status' => 'error', 'message' => 'Only active accounts can be edited.'], 403);
+            return response()->json(['status' => 'error', 'message' => __('admin.only_active_can_be_edited')], 403);
         }
     } elseif (isset($user->status)) {
         if (!in_array($user->status, ['approved', 'activated', 'active'])) {
-            return response()->json(['status' => 'error', 'message' => 'Only active accounts can be edited.'], 403);
+            return response()->json(['status' => 'error', 'message' => __('admin.only_active_can_be_edited')], 403);
         }
     } elseif (method_exists($user, 'hasVerifiedEmail') && !$user->hasVerifiedEmail()) {
-        return response()->json(['status' => 'error', 'message' => 'Only active accounts can be edited.'], 403);
+        return response()->json(['status' => 'error', 'message' => __('admin.only_active_can_be_edited')], 403);
     }
     
     $user->fill($request->only(['full_name', 'email', 'phone']));
@@ -467,7 +467,7 @@ public function editUser(Request $request, $id)
 
     return response()->json([
         'status' => 'success',
-        'message' => 'Account updated successfully',
+        'message' => __('admin.user_updated'),
         'user' => [
             'id' => $user->id,
             'full_name' => $user->full_name,
@@ -487,28 +487,28 @@ public function deleteUser($id)
     if (!$user) {
         return response()->json([
             'status' => 'error',
-            'message' => 'User not found'
+            'message' => __('messages.user_not_found')
         ], 404);
     }
 
     // simple: only allow deleting active accounts
     if (isset($user->is_active)) {
         if (!$user->is_active) {
-            return response()->json(['status' => 'error', 'message' => 'Only active accounts can be deleted.'], 403);
+            return response()->json(['status' => 'error', 'message' => __('admin.only_active_can_be_deleted')], 403);
         }
     } elseif (isset($user->status)) {
         if (!in_array($user->status, ['approved', 'activated', 'active'])) {
-            return response()->json(['status' => 'error', 'message' => 'Only active accounts can be deleted.'], 403);
+            return response()->json(['status' => 'error', 'message' => __('admin.only_active_can_be_deleted')], 403);
         }
     } elseif (method_exists($user, 'hasVerifiedEmail') && !$user->hasVerifiedEmail()) {
-        return response()->json(['status' => 'error', 'message' => 'Only active accounts can be deleted.'], 403);
+        return response()->json(['status' => 'error', 'message' => __('admin.only_active_can_be_deleted')], 403);
     }
 
     $user->delete();
 
     return response()->json([
         'status' => 'success',
-        'message' => 'Account deleted successfully',
+        'message' => __('admin.user_deleted'),
     ]);
 
 }

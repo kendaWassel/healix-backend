@@ -40,7 +40,7 @@ class HomeVisitController extends Controller
         if (!$consultation) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Consultation does not belong to this doctor.'
+                'message' => __('consultation.not_owned_by_doctor')
             ], 403);
         }
 
@@ -56,7 +56,7 @@ class HomeVisitController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Home visit request created successfully.',
+            'message' => __('homevisit.requested'),
             'data' => $homeVisit
         ]);
     }
@@ -82,7 +82,7 @@ class HomeVisitController extends Controller
         if (!$originalVisit) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Original home visit not found or not eligible for follow-up.'
+                'message' => __('homevisit.not_eligible_for_follow_up')
             ], 404);
         }
 
@@ -102,7 +102,7 @@ class HomeVisitController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Follow-up home visit created successfully.',
+            'message' => __('homevisit.follow_up_created'),
             'data' => $followUpVisit
         ]);
     }

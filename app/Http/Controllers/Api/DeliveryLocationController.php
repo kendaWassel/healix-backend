@@ -30,7 +30,7 @@ class DeliveryLocationController extends Controller
         if (!$delivery) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized.',
+                'message' => __('messages.unauthorized'),
             ], 403);
         }
 
@@ -39,14 +39,14 @@ class DeliveryLocationController extends Controller
         if (!$task) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Task not found or not assigned to this delivery user.',
+                'message' => __('delivery.task_not_assigned'),
             ], 404);
         }
 
         if (!$this->service->taskAllowsLocationUpdates($task)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Location updates are only allowed while picking up or delivering the order.',
+                'message' => __('delivery.location_not_allowed'),
             ], 422);
         }
 
@@ -58,7 +58,7 @@ class DeliveryLocationController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Delivery location updated successfully.',
+            'message' => __('delivery.location_updated'),
             'data' => new DeliveryLocationResource($location),
         ]);
     }
@@ -76,7 +76,7 @@ class DeliveryLocationController extends Controller
         if (!$user->delivery && !$user->patient) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized.',
+                'message' => __('messages.unauthorized'),
             ], 403);
         }
 
@@ -94,7 +94,7 @@ class DeliveryLocationController extends Controller
         if (!$location) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Location data not available yet.',
+                'message' => __('delivery.location_unavailable'),
             ], 404);
         }
 

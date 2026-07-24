@@ -32,7 +32,7 @@ class PatientController extends Controller
             if ($consultations->isEmpty()) {
                 return response()->json([
                     'status' => 'empty',
-                    'message' => 'No scheduled consultations found',
+                    'message' => __('consultation.no_scheduled_consultations'),
                     'data' => []
                 ], 200);
             }
@@ -83,7 +83,7 @@ class PatientController extends Controller
             if ($prescriptions->isEmpty()) {
                 return response()->json([
                     'status'  => 'empty',
-                    'message' => 'No prescriptions found for this patient.',
+                    'message' => __('pharmacy.no_prescriptions_for_patient'),
                     'data'    => [
                         'items' => [],
                         'meta'  => [
@@ -111,7 +111,7 @@ class PatientController extends Controller
                         'total'    => $prescriptions->total(),
                     ],
                 ],
-                'message' => 'Prescriptions retrieved successfully.',
+                'message' => __('pharmacy.prescriptions_retrieved'),
             ], 200);
         } catch (\Exception $e) {
             $code = $e->getCode();
@@ -156,12 +156,12 @@ class PatientController extends Controller
                     'upload_id'       => $data['upload_id'],
                     'prescription_id' => $data['prescription_id'],
                 ],
-                'message' => 'Prescription uploaded successfully',
+                'message' => __('pharmacy.prescription_uploaded'),
             ], 200);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Validation failed.',
+                'message' => __('messages.validation_failed'),
                 'errors'  => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
@@ -196,7 +196,7 @@ class PatientController extends Controller
                     'pharmacy_id'     => $data['pharmacy_id'],
                     'status'          => $data['status'],
                 ],
-                'message' => 'Prescription sent to pharmacy',
+                'message' => __('pharmacy.prescription_sent'),
             ], 200);
         } catch (\Exception $e) {
             $code = $e->getCode();
@@ -244,7 +244,7 @@ class PatientController extends Controller
             if ($prescriptions->isEmpty()) {
                 return response()->json([
                     'status' => 'empty',
-                    'message' => 'No prescriptions with pricing found.',
+                    'message' => __('pharmacy.no_prescriptions_with_pricing'),
                     'data' => [],
                     'meta' => [
                         'current_page' => $prescriptions->currentPage(),
@@ -357,7 +357,7 @@ class PatientController extends Controller
             if ($providers->isEmpty()) {
                 return response()->json([
                     'status' => 'empty',
-                    'message' => 'No scheduled care providers found',
+                    'message' => __('consultation.no_scheduled_care_providers'),
                     'data' => []
                 ], 200);
             }
@@ -406,7 +406,7 @@ class PatientController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'New care provider requested successfully.',
+                'message' => __('homevisit.new_care_provider_requested'),
                 'data' => $data,
             ], 200);
         } catch (\Exception $e) {

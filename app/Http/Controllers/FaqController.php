@@ -48,7 +48,7 @@ class FaqController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to fetch FAQs',
+                'message' => __('content.faqs_failed'),
             ], 500);
         }
     }

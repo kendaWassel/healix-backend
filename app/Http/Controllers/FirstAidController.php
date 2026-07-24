@@ -48,7 +48,7 @@ class FirstAidController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to fetch first aid articles',
+                'message' => __('content.first_aid_failed'),
             ], 500);
         }
     }

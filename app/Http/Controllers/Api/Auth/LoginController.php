@@ -24,7 +24,7 @@ public function __construct(AuthService $authService)
         );
         
         if (!$result) {
-            return response()->json(['error' => 'Invalid credentials'], 401);
+            return response()->json(['error' => __('auth.invalid_credentials')], 401);
         }
         
         return response()->json($result);

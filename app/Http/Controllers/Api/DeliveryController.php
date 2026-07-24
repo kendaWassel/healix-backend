@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Order;
 use App\Models\DeliveryTask;
+use App\Models\Upload;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class DeliveryController extends Controller
 {
+
     /**
      * الطلبات الجاهزة للتوصيل وغير محجوزة
      * GET /api/
@@ -272,20 +275,29 @@ class DeliveryController extends Controller
         if (!$delivery) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Delivery profile not found'
+                'message' => __('messages.delivery_profile_not_found')
             ], 404);
         }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Profile retrieved successfully',
+            'message' => __('messages.profile_retrieved'),
             'data' => [
                 'id' => $delivery->id,
                 'full_name' => $user->full_name,
+                'email' => $user->email,
                 'phone' => $user->phone,
+                'gender' => $delivery->gender,
+                'gender_label' => \App\Support\Locale::label('gender', $delivery->gender),
                 'vehicle_type' => $delivery->vehicle_type,
                 'plate_number' => $delivery->plate_number,
+                'driving_license_id' => $delivery->driving_license_id,
+                'driving_license_file' => $delivery->driving_license_id ? asset('/storage/' . $delivery->drivingLicense->file_path) : null,
+                'image_id' => $delivery->delivery_image_id,
+                'image' => $delivery->delivery_image_id ? asset('/storage/' . $delivery->deliveryImage->file_path) : null,
                 'rating_avg' => $delivery->rating_avg,
+                'role' => $user->role,
+                'email_verified' => $user->email_verified_at ? true : false,
             ]
         ]);
     }
@@ -298,9 +310,13 @@ class DeliveryController extends Controller
         $request->validate([
             'full_name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|max:255',
+            'phone' => 'sometimes|string|max:20',
+            'gender' => 'sometimes|in:male,female',
             'vehicle_type' => 'sometimes|string|max:255',
             'plate_number' => 'sometimes|string|max:255',
-            'bank_account' => 'sometimes|string|max:255',
+            // The client sends the actual file directly in this request.
+            'image' => 'sometimes|file|mimes:jpeg,png,jpg,gif|max:2048',
+            'driving_license' => 'sometimes|file|mimes:pdf,jpeg,png,jpg,gif|max:5120',
         ]);
 
         $user = $request->user();
@@ -309,7 +325,7 @@ class DeliveryController extends Controller
         if (!$delivery) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Delivery profile not found'
+                'message' => __('messages.delivery_profile_not_found')
             ], 404);
         }
         if ($request->has('full_name')) {
@@ -320,25 +336,79 @@ class DeliveryController extends Controller
             $user->email = $request->email;
             $user->save();
         }
+        if ($request->has('phone')) {
+            $user->phone = $request->phone;
+            $user->save();
+        }
+        if ($request->has('gender')) {
+            $delivery->gender = $request->gender;
+        }
         if ($request->has('vehicle_type')) {
             $delivery->vehicle_type = $request->vehicle_type;
         }
         if ($request->has('plate_number')) {
             $delivery->plate_number = $request->plate_number;
         }
-        if ($request->has('bank_account')) {
-            $delivery->bank_account = $request->bank_account;
+
+        $oldImageId = $delivery->delivery_image_id;
+        $oldLicenseId = $delivery->driving_license_id;
+
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $path = $file->store('profile_images', 'public');
+            $upload = Upload::create([
+                'user_id' => $user->id,
+                'category' => 'profile',
+                'file' => basename($path),
+                'file_path' => $path,
+                'mime' => $file->getClientMimeType(),
+            ]);
+            $delivery->delivery_image_id = $upload->id;
         }
+        if ($request->hasFile('driving_license')) {
+            $file = $request->file('driving_license');
+            $path = $file->store('certificates', 'public');
+            $upload = Upload::create([
+                'user_id' => $user->id,
+                'category' => 'certificate',
+                'file' => basename($path),
+                'file_path' => $path,
+                'mime' => $file->getClientMimeType(),
+            ]);
+            $delivery->driving_license_id = $upload->id;
+        }
+
         $delivery->save();
+
+        if ($oldImageId && $oldImageId != $delivery->delivery_image_id) {
+            if ($old = Upload::find($oldImageId)) {
+                Storage::disk('public')->delete($old->file_path);
+                $old->delete();
+            }
+        }
+        if ($oldLicenseId && $oldLicenseId != $delivery->driving_license_id) {
+            if ($old = Upload::find($oldLicenseId)) {
+                Storage::disk('public')->delete($old->file_path);
+                $old->delete();
+            }
+        }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Profile updated successfully',
+            'message' => __('messages.profile_updated'),
             'data' => [
                 'delivery' => [
                     'id' => $delivery->id,
+                    'full_name' => $user->full_name,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'gender' => $delivery->gender,
                     'vehicle_type' => $delivery->vehicle_type,
                     'plate_number' => $delivery->plate_number,
+                    'image_id' => $delivery->delivery_image_id,
+                    'image' => $delivery->delivery_image_id ? asset('/storage/' . $delivery->deliveryImage->file_path) : null,
+                    'driving_license_id' => $delivery->driving_license_id,
+                    'driving_license_file' => $delivery->driving_license_id ? asset('/storage/' . $delivery->drivingLicense->file_path) : null,
                 ]
             ]
         ]);

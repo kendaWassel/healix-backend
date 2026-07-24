@@ -62,7 +62,7 @@ class LabAnalysisController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Lab analyses retrieved successfully.',
+            'message' => __('ai.lab_analyses_retrieved'),
             'data' => LabAnalysisResource::collection($analyses->items()),
             'meta' => [
                 'current_page' => $analyses->currentPage(),
@@ -86,7 +86,7 @@ class LabAnalysisController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Lab analysis retrieved successfully.',
+            'message' => __('ai.lab_analysis_retrieved'),
             'data' => new LabAnalysisResource($analysis->load('upload')),
         ]);
     }
@@ -150,7 +150,7 @@ class LabAnalysisController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'The PDF report is not available for this analysis.',
+                'message' => __('ai.lab_pdf_unavailable'),
             ], 404);
         }
 
@@ -179,7 +179,7 @@ class LabAnalysisController extends Controller
         if (! $analysis) {
             return response()->json([
                 'success' => false,
-                'message' => 'Lab analysis not found.',
+                'message' => __('ai.lab_analysis_not_found'),
             ], 404);
         }
 
@@ -195,7 +195,7 @@ class LabAnalysisController extends Controller
     {
         return response()->json([
             'success' => false,
-            'message' => 'Only patients can access lab analyses.',
+            'message' => __('ai.lab_patients_only'),
         ], 403);
     }
 
@@ -230,7 +230,7 @@ class LabAnalysisController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'An unexpected error occurred during the lab analysis.',
+                'message' => __('ai.lab_unexpected_error'),
             ], 500);
         }
     }

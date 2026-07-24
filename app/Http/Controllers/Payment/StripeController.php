@@ -38,7 +38,7 @@ class StripeController extends Controller
         $payable = $payableClass::find($payableId);
 
         if (! $payable) {
-            return response()->json([ 'message' => 'Payable resource not found.' ], 404);
+            return response()->json([ 'message' => __('payment.payable_not_found') ], 404);
         }
 
         Stripe::setApiKey(config('services.stripe.secret'));
@@ -68,7 +68,7 @@ class StripeController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Payment intent created successfully.',
+            'message' => __('payment.intent_created'),
             'data' => [
                 'id' => $payment->id,
                 'payment_intent_id' => $intent->id,
@@ -95,7 +95,7 @@ class StripeController extends Controller
 
     } catch (\Exception $e) {
         \Log::error('Webhook Error: ' . $e->getMessage());
-        return response()->json(['message' => 'Webhook error'], 400);
+        return response()->json(['message' => __('payment.webhook_error')], 400);
     }
 
     // التعامل مع حدث الدفع فقط
@@ -127,7 +127,7 @@ class StripeController extends Controller
 
         if ($payment) {
             return response()->json([
-                'message' => 'Payment status retrieved.',
+                'message' => __('payment.status_retrieved'),
                 'data' => [
                     'payment_intent_id' => $payment->payment_intent_id,
                     'status' => $payment->status,
@@ -145,11 +145,11 @@ class StripeController extends Controller
         try {
             $intent = \Stripe\PaymentIntent::retrieve($paymentIntentId);
         } catch (\Exception $exception) {
-            return response()->json(['message' => 'Payment intent not found.'], 404);
+            return response()->json(['message' => __('payment.intent_not_found')], 404);
         }
 
         return response()->json([
-            'message' => 'Payment status retrieved from Stripe.',
+            'message' => __('payment.status_retrieved_stripe'),
             'data' => [
                 'payment_intent_id' => $intent->id,
                 'status' => $intent->status,

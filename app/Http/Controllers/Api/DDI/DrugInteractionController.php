@@ -171,7 +171,7 @@ class DrugInteractionController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Drug interaction checks retrieved successfully.',
+            'message' => __('ai.ddi_checks_retrieved'),
             'data' => DrugInteractionCheckResource::collection($checks->items()),
             'meta' => [
                 'current_page' => $checks->currentPage(),
@@ -194,13 +194,13 @@ class DrugInteractionController extends Controller
         if (! $check) {
             return response()->json([
                 'success' => false,
-                'message' => 'Drug interaction check not found.',
+                'message' => __('ai.ddi_check_not_found'),
             ], 404);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Drug interaction check retrieved successfully.',
+            'message' => __('ai.ddi_check_retrieved'),
             'data' => new DrugInteractionCheckResource($check),
         ]);
     }
@@ -262,7 +262,7 @@ class DrugInteractionController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'An unexpected error occurred during the drug safety check.',
+                'message' => __('ai.ddi_unexpected_error'),
             ], 500);
         }
     }

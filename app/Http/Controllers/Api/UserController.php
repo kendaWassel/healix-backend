@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Locale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -21,17 +22,36 @@ class UserController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Profile retrieved successfully',
-            'data' => [
-                'id' => $user->id,
-                'full_name' => $user->full_name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'address' => $patient ? $patient->address : null,
-                'role' => $user->role,
-                'email_verified' => $user->email_verified_at ? true : false,
-            ]
+            'message' => __('messages.profile_retrieved'),
+            'data' => $this->profilePayload($user),
         ]);
+    }
+
+    /**
+     * Shared profile shape returned by both getProfile and updateProfile.
+     *
+     * birth_date and gender live on the patient profile, not the user row —
+     * that is why the account screen showed them empty before: they were never
+     * in the payload. gender_label is an additive localized display value; the
+     * raw gender key is unchanged so existing clients keep working.
+     */
+    protected function profilePayload(User $user): array
+    {
+        $patient = $user->patient;
+
+        return [
+            'id' => $user->id,
+            'full_name' => $user->full_name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'birth_date' => $patient?->birth_date,
+            'gender' => $patient?->gender,
+            'gender_label' => Locale::label('gender', $patient?->gender),
+            'address' => $patient?->address,
+            'role' => $user->role,
+            'email_verified' => $user->email_verified_at ? true : false,
+            'preferred_locale' => $user->preferredLocale(),
+        ];
     }
 
     /**
@@ -43,6 +63,9 @@ class UserController extends Controller
             'full_name' => 'sometimes|string|max:255',
             'phone' => 'sometimes|string|max:20',
             'address' => 'sometimes|string|max:500',
+            'birth_date' => 'sometimes|nullable|date|before:today',
+            'gender' => 'sometimes|nullable|in:male,female',
+            'preferred_locale' => 'sometimes|string|in:' . implode(',', config('localization.supported')),
         ]);
 
         $user = Auth::user();
@@ -54,31 +77,31 @@ class UserController extends Controller
         if ($request->has('phone')) {
             $user->phone = $request->phone;
         }
+        // Lets the user pin the language used for queued mail/SMS, independently
+        // of whatever Accept-Language the current device happens to send.
+        if ($request->has('preferred_locale')) {
+            $user->preferred_locale = $request->preferred_locale;
+        }
         $user->save();
 
-        // Update patient address if exists
-        if ($request->has('address')) {
-            $patient = $user->patient;
-            if ($patient) {
-                $patient->address = $request->address;
-                $patient->save();
+        // address / birth_date / gender live on the patient profile.
+        $patient = $user->patient;
+        if ($patient) {
+            foreach (['address', 'birth_date', 'gender'] as $field) {
+                if ($request->has($field)) {
+                    $patient->{$field} = $request->input($field);
+                }
             }
+            $patient->save();
         }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Profile updated successfully',
+            'message' => __('messages.profile_updated'),
             'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'full_name' => $user->full_name,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                    'address' => $user->patient ? $user->patient->address : null,
-                    'role' => $user->role,
-                    'email_verified' => $user->email_verified_at ? true : false,
-                ]
-            ]
+                // Kept nested under `user` to preserve the existing response shape.
+                'user' => $this->profilePayload($user->refresh()),
+            ],
         ]);
     }
 }

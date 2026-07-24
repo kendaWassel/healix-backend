@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Pharmacist;
+use App\Support\ArabicSearch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -20,10 +21,11 @@ class PharmacyController extends Controller
         $perPage = $request->get('per_page', 10);
 
         // Since we don't have an explicit city column, filter by address containing the city (best-effort).
+        // ArabicSearch escapes LIKE wildcards and folds Arabic letter variants so
+        // "دمشق"/"الحمرا" match the same rows as their hamza/teh-marbuta spellings.
         $query = Pharmacist::with('user')
             ->when($request->filled('city'), function ($q) use ($validated) {
-                $city = $validated['city'];
-                $q->where('address', 'like', '%' . $city . '%');
+                ArabicSearch::apply($q, ['address'], $validated['city']);
             });
 
         $pharmacies = $query->paginate($perPage)->appends($request->query());
@@ -74,7 +76,7 @@ class PharmacyController extends Controller
         if (!$pharmacy) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Pharmacy not found.',
+                'message' => __('messages.pharmacy_not_found'),
             ], 404);
         }
 

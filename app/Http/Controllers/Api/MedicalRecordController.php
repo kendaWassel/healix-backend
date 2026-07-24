@@ -26,7 +26,7 @@ class MedicalRecordController extends Controller
         if (!$patient) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Patient not found.'
+                'message' => __('messages.patient_not_found')
             ], 404);
         }
 
@@ -81,7 +81,7 @@ class MedicalRecordController extends Controller
         if (!$patient) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Patient not found.'
+                'message' => __('messages.patient_not_found')
             ], 404);
         }
 
@@ -117,7 +117,7 @@ class MedicalRecordController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Medical record updated successfully.',
+            'message' => __('medical.record_updated'),
             'data' => [
                 'medical_record_id' => $medicalRecord->id,
                 'patient_id' => $medicalRecord->patient_id,
@@ -155,7 +155,7 @@ class MedicalRecordController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Pregnancy information updated successfully.',
+            'message' => __('medical.pregnancy_updated'),
             'data' => [
                 'medical_record_id' => $record->id,
                 'is_pregnant' => $record->is_pregnant,
@@ -176,7 +176,7 @@ class MedicalRecordController extends Controller
         if (!$patient) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Patient not found for this user.'
+                'message' => __('messages.patient_not_found_for_user')
             ], 404);
         }
         $this->authorize('view', $patient);
@@ -186,13 +186,13 @@ class MedicalRecordController extends Controller
         if (!$record) {
             return response()->json([
                 'status' => 'empty',
-                'message' => 'No medical record found.',
+                'message' => __('medical.record_not_found'),
                 'data' => null
             ], 200);
         }
         return response()->json([
             'status' => 'success',
-            'message' => 'Medical record retrieved successfully.',
+            'message' => __('medical.record_retrieved'),
             'data' => 
                 new MedicalRecordResource($record)
         ], 200);

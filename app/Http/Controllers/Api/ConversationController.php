@@ -32,7 +32,7 @@ class ConversationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Conversations retrieved successfully.',
+            'message' => __('ai.conversations_retrieved'),
             'data' => ConversationResource::collection($conversations)->response()->getData(true),
         ]);
     }
@@ -49,7 +49,7 @@ class ConversationController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Conversation created successfully.',
+                'message' => __('ai.conversation_created'),
                 'data' => new ConversationResource($conversation),
             ], 201);
         } catch (\RuntimeException $e) {
@@ -68,7 +68,7 @@ class ConversationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Conversation retrieved successfully.',
+            'message' => __('ai.conversation_retrieved'),
             'data' => new ConversationResource($conversation),
         ]);
     }
@@ -81,7 +81,7 @@ class ConversationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Conversation deleted successfully.',
+            'message' => __('ai.conversation_deleted'),
         ]);
     }
 
@@ -96,7 +96,7 @@ class ConversationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Messages retrieved successfully.',
+            'message' => __('ai.messages_retrieved'),
             'data' => MessageResource::collection($messages)->response()->getData(true),
         ]);
     }
@@ -114,7 +114,13 @@ class ConversationController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Message sent successfully.',
+                'message' => __('ai.message_sent'),
+                // Flat fields mirror POST /api/speech-to-text's response shape,
+                // so the chat screen reads the assistant's reply the same way
+                // whether the patient typed or spoke this turn.
+                'question' => $result['assistant_message']?->message,
+                'detected_symptoms' => $result['patient_message']->detected_symptoms,
+                'finished' => $result['finished'],
                 'data' => [
                     'patient_message' => new MessageResource($result['patient_message']),
                     'assistant_message' => $result['assistant_message']
@@ -122,7 +128,7 @@ class ConversationController extends Controller
                         : null,
                 ],
             ], 201);
-        } catch (\RuntimeException $e) {
+        } catch (\RuntimeException $e) { 
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),

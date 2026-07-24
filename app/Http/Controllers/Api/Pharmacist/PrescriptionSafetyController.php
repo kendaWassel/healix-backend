@@ -40,7 +40,7 @@ class PrescriptionSafetyController extends Controller
         if (! $prescription) {
             return response()->json([
                 'success' => false,
-                'message' => 'Prescription not found.',
+                'message' => __('pharmacy.prescription_not_found'),
             ], 404);
         }
 
@@ -60,7 +60,7 @@ class PrescriptionSafetyController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Prescription safety verification completed.',
+                'message' => __('ai.safety_verification_completed'),
                 'data' => $report,
             ]);
         } catch (AIServiceException $e) {
@@ -82,7 +82,7 @@ class PrescriptionSafetyController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'An unexpected error occurred during safety verification.',
+                'message' => __('ai.verification_unexpected_error'),
             ], 500);
         }
     }

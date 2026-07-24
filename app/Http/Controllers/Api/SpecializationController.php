@@ -12,9 +12,15 @@ class SpecializationController extends Controller
     public function listForRegistration()
     {
         try {
-            $specializations = Specialization::select('id', 'name')
-                ->orderBy('name', 'asc')
-                ->get();
+            // name_ar must be selected too, otherwise the model has no
+            // translation column loaded and always falls back to English.
+            $specializations = Specialization::select('id', 'name', 'name_ar')
+                ->orderBy(app()->getLocale() === 'ar' ? 'name_ar' : 'name', 'asc')
+                ->get()
+                ->map(fn (Specialization $specialization) => [
+                    'id' => $specialization->id,
+                    'name' => $specialization->name,
+                ]);
             
             return response()->json([
                 'status' => 'success',
@@ -24,7 +30,7 @@ class SpecializationController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to retrieve specializations',
+                'message' => __('medical.specializations_failed'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -47,7 +53,7 @@ class SpecializationController extends Controller
         if ($specializationsPaginated->isEmpty()) {
             return response()->json([
                 'status' => 'empty',
-                'message' => 'No specializations found',
+                'message' => __('medical.specializations_not_found'),
                 'data' => [],
             ], 200);
         }
@@ -69,7 +75,7 @@ class SpecializationController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Specializations retrieved successfully.',
+            'message' => __('medical.specializations_retrieved'),
             'data' => $data,
             'meta' => $pager,
         ], 200);
