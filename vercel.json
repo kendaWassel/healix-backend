@@ -1,7 +1,7 @@
 {
     "version": 2,
     "$schema": "https://openapi.vercel.sh/vercel.json",
-    "outputDir": "public",
+    "outputDirectory": "public",
     "functions": {
         "api/lambda.js": {
             "runtime": "vercel-php@0.5.0"
