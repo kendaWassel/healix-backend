@@ -3,7 +3,7 @@
     "$schema": "https://openapi.vercel.sh/vercel.json",
     "outputDirectory": "public",
     "functions": {
-        "api/lambda.js": {
+        "api/lambda.php": {
             "runtime": "vercel-php@0.5.0"
         }
     },
