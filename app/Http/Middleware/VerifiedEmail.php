@@ -15,15 +15,15 @@ class VerifiedEmail
     public function handle(Request $request, Closure $next)
     {
         if (!Auth::check()) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
+            return response()->json(['message' => __('auth.unauthenticated')], 401);
         }
 
         $user = Auth::user();
 
         if ($user->email_verified_at === null) {
             return response()->json([
-                'message' => 'Email not verified',
-                'error' => 'Please verify your email address before accessing this resource',
+                'message' => __('auth.email_not_verified'),
+                'error' => __('auth.email_verification_required'),
             ], 403);
         }
 

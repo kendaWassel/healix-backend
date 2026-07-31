@@ -25,22 +25,22 @@ class ConsultationService
     {
         $doctor = Doctor::find($validated['doctor_id']);
         if (!$doctor) {
-            throw new \Exception('Doctor not found', 404);
+            throw new \Exception(__('messages.doctor_not_found'), 404);
         }
         
 
         $user = Auth::user();
         if (!$user) {
-            throw new \Exception('Unauthenticated', 401);
+            throw new \Exception(__('auth.unauthenticated'), 401);
         }
 
         $patient = $user->patient;
         if (!$patient) {
-            throw new \Exception('Patient profile not found', 404);
+            throw new \Exception(__('messages.patient_profile_not_found'), 404);
         }
 
         if ($validated['call_type'] === 'schedule' && empty($validated['scheduled_at'])) {
-            throw new \Exception('scheduled_at is required for schedule', 422);
+            throw new \Exception(__('consultation.scheduled_at_required'), 422);
         }
 
         // Validate booking time within doctor's available hours for schedule
@@ -49,10 +49,10 @@ class ConsultationService
             $time = $scheduled->format('H:i');
             if (!empty($doctor->from) && !empty($doctor->to)) {
                 if (!($time >= $doctor->from && $time <= $doctor->to)) {
-                    throw new \Exception('The scheduled time is outside the doctor\'s available hours', 422);
+                    throw new \Exception(__('consultation.scheduled_outside_hours'), 422);
                 }
             } else {
-                throw new \Exception('Doctor availability hours are not set', 422);
+                throw new \Exception(__('consultation.doctor_hours_not_set'), 422);
             }
         }
 
@@ -62,10 +62,10 @@ class ConsultationService
 
             if (!empty($doctor->from) && !empty($doctor->to)) {
                 if (!($now >= $doctor->from && $now <= $doctor->to)) {
-                    throw new \Exception('Doctor is not available now', 409);
+                    throw new \Exception(__('consultation.doctor_unavailable'), 409);
                 }
             } else {
-                throw new \Exception('Doctor availability hours are not set', 409);
+                throw new \Exception(__('consultation.doctor_hours_not_set'), 409);
             }
 
             $activeConsultation = Consultation::where('doctor_id', $doctor->id)
@@ -73,7 +73,7 @@ class ConsultationService
                 ->first();
 
             if ($activeConsultation) {
-                throw new \Exception('Doctor is currently busy with another consultation.', 409);
+                throw new \Exception(__('consultation.doctor_busy'), 409);
             }
         }
 
@@ -84,7 +84,7 @@ class ConsultationService
                 ->exists();
 
             if ($exists) {
-                throw new \Exception('Requested time slot is already booked', 409);
+                throw new \Exception(__('consultation.slot_taken'), 409);
             }
         }
 
@@ -206,7 +206,7 @@ class ConsultationService
         $patient = $user->patient;
 
         if (!$doctor && !$patient) {
-            throw new \Exception('Unauthorized.', 403);
+            throw new \Exception(__('messages.unauthorized'), 403);
         }
 
         // Fetch consultation based on role
@@ -216,7 +216,7 @@ class ConsultationService
             ->first();
 
         if (!$consultation) {
-            throw new \Exception('Consultation not found.', 404);
+            throw new \Exception(__('consultation.not_found'), 404);
         }
 
         // If already started → user just joins
@@ -231,24 +231,24 @@ class ConsultationService
         // Pending → this user is the first to start
         // Allowed types are 'schedule' and 'call_now'
         if (!in_array($consultation->type, ['schedule', 'call_now'])) {
-            throw new \Exception('Invalid consultation type.', 422);
+            throw new \Exception(__('consultation.invalid_type'), 422);
         }
 
         // Only pending consultations can be started
         if ($consultation->status !== 'pending') {
-            throw new \Exception('Consultation is not in a state to be started.', 409);
+            throw new \Exception(__('consultation.cannot_start'), 409);
         }
 
         // If it's a scheduled consultation, ensure scheduled_at has arrived
         if ($consultation->type === 'schedule') {
             if (empty($consultation->scheduled_at)) {
-                throw new \Exception('Scheduled time is missing for this consultation.', 422);
+                throw new \Exception(__('consultation.scheduled_time_missing'), 422);
             }
 
             $now = Carbon::now();
             $scheduled = Carbon::parse($consultation->scheduled_at);
             if ($now->lt($scheduled) || $now->lte($scheduled)) {
-                throw new \Exception('It is not time to start the scheduled consultation yet.', 409);
+                throw new \Exception(__('consultation.too_early'), 409);
             }
         }
 
@@ -271,7 +271,7 @@ class ConsultationService
         $patient = $user->patient;
 
         if (!$doctor && !$patient) {
-            throw new \Exception('Unauthorized.', 403);
+            throw new \Exception(__('messages.unauthorized'), 403);
         }
 
         // Fetch consultation based on role
@@ -281,11 +281,11 @@ class ConsultationService
             ->first();
 
         if (!$consultation) {
-            throw new \Exception('Consultation not found or not authorized.', 404);
+            throw new \Exception(__('consultation.not_found_or_unauthorized'), 404);
         }
 
         if ($consultation->status !== 'in_progress') {
-            throw new \Exception('Consultation is not in progress.', 409);
+            throw new \Exception(__('consultation.not_in_progress'), 409);
         }
 
         // End the consultation

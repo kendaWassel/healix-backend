@@ -17,6 +17,10 @@ class HomeVisit extends Model
         'reason',
         'scheduled_at',
         'status',
+        // Without this the Stripe webhook's update(['payment_status' => 'paid'])
+        // is silently dropped by mass-assignment protection: the customer is
+        // charged but the visit stays "pending" forever.
+        'payment_status',
         'started_at',
         'ended_at',
     ];

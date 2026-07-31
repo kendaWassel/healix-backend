@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\Locale;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,7 +24,9 @@ class PrescriptionResource extends JsonResource
             'diagnosis' => $this->diagnosis,
             'notes' => $this->notes,
             'source' => $this->source,
+            'source_label' => Locale::label('prescription_source', $this->source),
             'status' => $this->status,
+            'status_label' => Locale::label('prescription_status', $this->status),
             'prescription_image_id' => $this->prescription_image_id,
             'total_quantity' => $this->total_quantity,
             'total_price' => $this->total_price,

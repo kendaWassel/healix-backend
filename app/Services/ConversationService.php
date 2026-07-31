@@ -53,10 +53,9 @@ class ConversationService
      *
      * Delegates to the MedicalAssistantService orchestrator, which stores the
      * patient message, the AI question, extracted symptoms, the session id and
-     * interview status. The return shape is unchanged, so ConversationController
-     * and the API contract are untouched.
+     * interview status.
      *
-     * @return array{patient_message: \App\Models\Message, assistant_message: \App\Models\Message|null}
+     * @return array{patient_message: \App\Models\Message, assistant_message: \App\Models\Message|null, finished: bool}
      */
     public function sendMessage(User $user, Conversation $conversation, string $messageText): array
     {
@@ -65,6 +64,7 @@ class ConversationService
         return [
             'patient_message' => $turn['patient_message'],
             'assistant_message' => $turn['assistant_message'],
+            'finished' => $turn['result']['finished'],
         ];
     }
 
@@ -73,7 +73,7 @@ class ConversationService
         $patient = $user->patient;
 
         if (! $patient) {
-            throw new \RuntimeException('Patient profile not found.', 404);
+            throw new \RuntimeException(__('messages.patient_profile_not_found'), 404);
         }
 
         return $patient;

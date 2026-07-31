@@ -96,7 +96,6 @@ class PharmacistVerificationSeeder extends Seeder
         $this->command->info("Also gave allergy/pregnancy records to {$enriched} patient(s) behind his pre-existing prescriptions.");
     }
 
-     */
     protected function enrichExistingPharmacistPatients(\App\Models\Pharmacist $pharmacist): int
     {
         $seedPatientIds = Patient::whereHas('user', fn ($q) => $q->where('email', 'like', 'seed.%@healix.test'))

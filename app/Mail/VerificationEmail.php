@@ -30,7 +30,7 @@ class VerificationEmail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '  Email Verification',
+            subject: __('notification.verify_subject'),
         );
     }
 

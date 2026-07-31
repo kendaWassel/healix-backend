@@ -88,13 +88,13 @@ class RegisterRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'email.unique' => 'Email already exists',
-            'phone.unique' => 'Phone number already exists',
-            'password.min' => 'Password must be at least 8 characters',
-            'role.in' => 'Invalid role selected',
-            'gender.in' => 'Gender must be either male or female',
-            'type.in' => 'Care provider type must be either nurse or physiotherapist',
-            'medical_record.is_pregnant.in' => 'Pregnancy answer must be yes or no.',
+            'email.unique' => __('requests.register.email_unique'),
+            'phone.unique' => __('requests.register.phone_unique'),
+            'password.min' => __('requests.register.password_min'),
+            'role.in' => __('requests.register.role_in'),
+            'gender.in' => __('requests.register.gender_in'),
+            'type.in' => __('requests.register.type_in'),
+            'medical_record.is_pregnant.in' => __('requests.register.is_pregnant_in'),
         ];
     }
 
@@ -125,7 +125,7 @@ class RegisterRequest extends FormRequest
         $errors = $validator->errors()->all();
         $response = response()->json([
             'status' => 'error',
-            'message' => 'Validation failed',
+            'message' => __('messages.validation_failed'),
             'errors' => $errors
         ], 422);
 

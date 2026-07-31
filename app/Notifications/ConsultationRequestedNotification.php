@@ -34,7 +34,7 @@ class ConsultationRequestedNotification extends Notification
     $scheduledAt = optional($this->consultation->scheduled_at);
 
     return (new MailMessage)
-        ->subject('New Consultation Requested')
+        ->subject(__('notification.consultation_requested_subject'))
         ->markdown('emails.notifications.consultation-booked', [
             'consultation' => $this->consultation,
             'patient' => $this->patient,
@@ -45,22 +45,32 @@ class ConsultationRequestedNotification extends Notification
     public function toDatabase(object $notifiable)
     {
         return [
-            'title' => 'New Consultation Requested',
+            'title' => __('notification.consultation_requested_title'),
             'consultation_id' => $this->consultation->id,
             'patient_id' => $this->patient->id,
             'patient_name' => $this->patient->full_name ?? $this->patient->name,
             'call_type' => $this->consultation->type,
             'scheduled_at' => optional($this->consultation->scheduled_at)->toIso8601String(),
-            'message' => 'A new consultation has been requested by ' . ($this->patient->full_name ?? $this->patient->name),
+            'message' => __('notification.consultation_requested', [
+                'name' => $this->patient->full_name ?? $this->patient->name,
+            ]),
 
         ];
     }
     public function toSms(object $notifiable): array{
-        $message = "New Consultation Requested by " . ($this->patient->full_name ?? $this->patient->name) . ".";
+        $message = __('notification.sms_consultation_requested', [
+            'name' => $this->patient->full_name ?? $this->patient->name,
+        ]);
+
         if ($this->consultation->scheduled_at) {
-            $message .= " Scheduled at: " . $this->consultation->scheduled_at->format('Y-m-d H:i');
+            $message .= __('notification.sms_scheduled_at', [
+                'time' => $this->consultation->scheduled_at->format('Y-m-d H:i'),
+            ]);
         }
-        $message .= " Type: " . ucfirst($this->consultation->type) . ".";
+
+        $message .= __('notification.sms_call_type', [
+            'type' => \App\Support\Locale::label('consultation_type', $this->consultation->type),
+        ]);
         return [
             'to' => $this->doctor->phone,
             'message' => $message,

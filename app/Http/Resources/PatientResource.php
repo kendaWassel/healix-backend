@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\Locale;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,6 +20,7 @@ class PatientResource extends JsonResource
             'user_id' => $this->user_id,
             'birth_date' => $this->birth_date,
             'gender' => $this->gender,
+            'gender_label' => Locale::label('gender', $this->gender),
             'address' => $this->address,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,

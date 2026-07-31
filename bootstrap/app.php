@@ -3,7 +3,9 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\EncodeJsonUnescaped;
 use App\Http\Middleware\RoleMiddleware;
+use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\VerifiedEmail;
 
 
@@ -17,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withSchedule(function ($schedule) {
         $schedule->command('consultations:send-reminders')->everyMinute();
+        $schedule->command('password-otp:prune')->hourly();
     })
     ->withMiddleware(function (Middleware $middleware) {
 
@@ -27,8 +30,17 @@ return Application::configure(basePath: dirname(__DIR__))
     // the wrong scheme/host and rejects them as "Invalid signature."
     $middleware->trustProxies(at: '*');
 
+    // SetLocale runs before anything that can emit a user-facing string, so
+    // validation errors and auth failures are already translated by the time
+    // they are rendered.
     $middleware->api(prepend: [
         \Illuminate\Http\Middleware\HandleCors::class,
+        SetLocale::class,
+        EncodeJsonUnescaped::class,
+    ]);
+
+    $middleware->web(prepend: [
+        SetLocale::class,
     ]);
 
     $middleware->alias([
@@ -37,6 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
         'role' => RoleMiddleware::class,
         'verified' => VerifiedEmail::class,
         'active.account' => \App\Http\Middleware\EnsureAccountIsActive::class,
+        'locale' => SetLocale::class,
     ]);
 })
     ->withExceptions(function (Exceptions $exceptions) {

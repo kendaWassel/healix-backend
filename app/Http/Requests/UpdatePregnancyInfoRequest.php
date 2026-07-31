@@ -22,7 +22,7 @@ class UpdatePregnancyInfoRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'is_pregnant.required' => 'Please indicate whether the patient is currently pregnant.',
+            'is_pregnant.required' => __('requests.pregnancy_info.is_pregnant_required'),
         ];
     }
 

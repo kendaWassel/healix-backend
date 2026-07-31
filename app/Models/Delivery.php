@@ -22,4 +22,12 @@ class Delivery extends Model
     {
         return $this->belongsTo(User::class);
     }
+    public function deliveryImage()
+    {
+        return $this->belongsTo(Upload::class, 'delivery_image_id');
+    }
+    public function drivingLicense()
+    {
+        return $this->belongsTo(Upload::class, 'driving_license_id');
+    }
 }

@@ -67,7 +67,7 @@ class ConsultationBooked implements ShouldBroadcast
             'type' => $this->consultation->type,
             'status' => $this->consultation->status,
             'scheduled_at' => $this->consultation->scheduled_at ? $this->consultation->scheduled_at->toIso8601String() : null,
-            'message' => 'A new consultation has been booked by ' . $this->getPatientName(),
+            'message' => __('notification.consultation_booked', ['name' => $this->getPatientName()]),
             'created_at' => $this->consultation->created_at->toIso8601String(),
         ];
     }

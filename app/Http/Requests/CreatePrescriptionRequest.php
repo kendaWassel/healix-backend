@@ -31,8 +31,8 @@ class CreatePrescriptionRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'medicines.required'=> 'At least one medication must be provided.',
-            'medicines.array'   => 'Medications must be an array list.',
+            'medicines.required'=> __('requests.create_prescription.medicines_required'),
+            'medicines.array'   => __('requests.create_prescription.medicines_array'),
         ];
     }
 }

@@ -9,7 +9,10 @@ Route::middleware(['auth:sanctum', 'verified', 'role:delivery'])
     ->group(function () {
 
         Route::get('/profile', [DeliveryController::class, 'getProfile']);
-        Route::put('/profile', [DeliveryController::class, 'updateProfile']);
+        // PUT is kept for JSON-only clients; POST is required for multipart
+        // file uploads (image/driving_license) — PHP never populates
+        // $_FILES/$_POST for multipart bodies on PUT requests.
+        Route::match(['put', 'post'], '/profile', [DeliveryController::class, 'updateProfile']);
 
         Route::get('/new-orders', [DeliveryController::class, 'newOrders']);
         Route::post('/new-orders/{order_id}/accept', [DeliveryController::class, 'accept']);

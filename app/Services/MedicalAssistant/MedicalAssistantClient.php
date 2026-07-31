@@ -17,4 +17,6 @@ class MedicalAssistantClient extends FastApiClient
     protected string $configKey = 'medical_assistant';
 
     protected string $serviceLabel = 'Medical Assistant service';
+
+    protected string $serviceLabelKey = 'ai.service_label_medical_assistant';
 }

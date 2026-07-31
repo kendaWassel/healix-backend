@@ -28,13 +28,13 @@ class TranscribeSpeechRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'conversation_id.required' => 'Conversation ID is required.',
-            'conversation_id.exists' => 'The selected conversation does not exist.',
-            'audio.required' => 'Audio file is required.',
-            'audio.file' => 'The uploaded item must be a valid audio file.',
-            'audio.max' => 'Audio file size must not exceed 10MB.',
-            'audio.mimes' => 'Audio must be one of: m4a, mp3, wav, ogg, webm.',
-            'audio.mimetypes' => 'Audio must be a supported audio format.',
+            'conversation_id.required' => __('requests.speech.conversation_id_required'),
+            'conversation_id.exists' => __('requests.speech.conversation_id_exists'),
+            'audio.required' => __('requests.speech.audio_required'),
+            'audio.file' => __('requests.speech.audio_file'),
+            'audio.max' => __('requests.speech.audio_max'),
+            'audio.mimes' => __('requests.speech.audio_mimes'),
+            'audio.mimetypes' => __('requests.speech.audio_mimetypes'),
         ];
     }
 }

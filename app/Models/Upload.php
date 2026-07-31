@@ -13,7 +13,8 @@ class Upload extends Model
         'category',
         'file',
         'file_path',
-        'mime'
+        'mime',
+        'medical_record_id',
     ];
     public function user(){
         return $this->belongsTo(User::class);

@@ -16,8 +16,14 @@ class FastApiClient
     /** Key under config('services.*') holding url/timeout/retries. */
     protected string $configKey = 'medical_assistant';
 
-    /** Human-readable name used in logs and exception messages. */
+    /**
+     * Human-readable name used in LOGS ONLY. Deliberately not translated so
+     * log lines stay greppable regardless of the caller's locale.
+     */
     protected string $serviceLabel = 'Medical Assistant service';
+
+    /** Translation key for the service name shown to end users. */
+    protected string $serviceLabelKey = 'ai.service_label_medical_assistant';
 
     protected string $baseUrl;
 
@@ -30,6 +36,14 @@ class FastApiClient
         $this->baseUrl = rtrim(config("services.{$this->configKey}.url"), '/');
         $this->timeout = (int) config("services.{$this->configKey}.timeout", 60);
         $this->retries = (int) config("services.{$this->configKey}.retries", 3);
+    }
+
+    /**
+     * Localized service name for user-facing exception messages.
+     */
+    protected function serviceName(): string
+    {
+        return __($this->serviceLabelKey);
     }
 
     /**
@@ -88,7 +102,7 @@ class FastApiClient
                     $data = $response->json();
 
                     if (! is_array($data)) {
-                        throw new AIServiceInvalidResponseException("{$this->serviceLabel} response is not valid JSON.");
+                        throw new AIServiceInvalidResponseException(__('ai.service_invalid_json', ['service' => $this->serviceName()]));
                     }
 
                     return $data;
@@ -108,7 +122,7 @@ class FastApiClient
                 throw new AIServiceException(
                     is_string($detail) && $detail !== ''
                         ? $detail
-                        : "{$this->serviceLabel} request failed with status " . $response->status() . '.',
+                        : __('ai.service_request_failed', ['service' => $this->serviceName(), 'status' => $response->status()]),
                     $response->status() >= 400 && $response->status() < 600 ? $response->status() : 502
                 );
             } catch (ConnectionException $e) {
@@ -120,13 +134,13 @@ class FastApiClient
                 ]);
 
                 if ($attempt >= $this->retries) {
-                    throw new AIServiceUnavailableException("Unable to connect to {$this->serviceLabel}.");
+                    throw new AIServiceUnavailableException(__('ai.service_connection_failed', ['service' => $this->serviceName()]));
                 }
             }
         }
 
         throw new AIServiceUnavailableException(
-            $lastException?->getMessage() ?? "{$this->serviceLabel} is unavailable after multiple attempts."
+            $lastException?->getMessage() ?? __('ai.service_unavailable_named', ['service' => $this->serviceName()])
         );
     }
 
@@ -144,7 +158,7 @@ class FastApiClient
         try {
             $response = Http::timeout($this->timeout)->get($url);
         } catch (ConnectionException $e) {
-            throw new AIServiceUnavailableException("Unable to connect to {$this->serviceLabel}.");
+            throw new AIServiceUnavailableException(__('ai.service_connection_failed', ['service' => $this->serviceName()]));
         }
 
         if (! $response->successful()) {
@@ -153,7 +167,7 @@ class FastApiClient
             throw new AIServiceException(
                 is_string($detail) && $detail !== ''
                     ? $detail
-                    : "{$this->serviceLabel} file download failed with status " . $response->status() . '.',
+                    : __('ai.service_download_failed', ['service' => $this->serviceName(), 'status' => $response->status()]),
                 $response->status() >= 400 && $response->status() < 600 ? $response->status() : 502
             );
         }
@@ -199,7 +213,7 @@ class FastApiClient
                     $data = $response->json();
 
                     if (! is_array($data)) {
-                        throw new AIServiceInvalidResponseException("{$this->serviceLabel} response is not valid JSON.");
+                        throw new AIServiceInvalidResponseException(__('ai.service_invalid_json', ['service' => $this->serviceName()]));
                     }
 
                     return $data;
@@ -220,7 +234,7 @@ class FastApiClient
                 throw new AIServiceException(
                     is_string($detail) && $detail !== ''
                         ? $detail
-                        : "{$this->serviceLabel} request failed with status " . $response->status() . '.',
+                        : __('ai.service_request_failed', ['service' => $this->serviceName(), 'status' => $response->status()]),
                     $response->status() >= 400 && $response->status() < 600 ? $response->status() : 502
                 );
             } catch (ConnectionException $e) {
@@ -232,11 +246,11 @@ class FastApiClient
                 ]);
 
                 if ($attempt >= $this->retries) {
-                    throw new AIServiceUnavailableException("Unable to connect to {$this->serviceLabel}.");
+                    throw new AIServiceUnavailableException(__('ai.service_connection_failed', ['service' => $this->serviceName()]));
                 }
             } catch (RequestException $e) {
                 if ($e->response?->status() === 408 || str_contains(strtolower($e->getMessage()), 'timeout')) {
-                    throw new AIServiceTimeoutException("{$this->serviceLabel} request timed out.");
+                    throw new AIServiceTimeoutException(__('ai.service_timeout'));
                 }
 
                 throw new AIServiceException($e->getMessage(), $e->response?->status() ?? 502, $e);
@@ -248,7 +262,7 @@ class FastApiClient
         }
 
         throw new AIServiceUnavailableException(
-            $lastException?->getMessage() ?? "{$this->serviceLabel} is unavailable after multiple attempts."
+            $lastException?->getMessage() ?? __('ai.service_unavailable_named', ['service' => $this->serviceName()])
         );
     }
 }

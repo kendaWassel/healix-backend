@@ -42,5 +42,9 @@ class Pharmacist extends Model
 
         return $currentTime->between($from, $to);
     }
+    public function license_file()
+    {
+        return $this->belongsTo(Upload::class, 'license_file_id');
+    }   
 
 }

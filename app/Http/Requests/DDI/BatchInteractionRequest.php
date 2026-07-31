@@ -23,10 +23,10 @@ class BatchInteractionRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'pairs.required' => 'At least one drug pair is required.',
-            'pairs.max' => 'A maximum of 50 drug pairs can be checked per request.',
-            'pairs.*.drug_a.required' => 'Each pair must include the first drug name.',
-            'pairs.*.drug_b.required' => 'Each pair must include the second drug name.',
+            'pairs.required' => __('requests.ddi_batch.pairs_required'),
+            'pairs.max' => __('requests.ddi_batch.pairs_max'),
+            'pairs.*.drug_a.required' => __('requests.ddi_batch.drug_a_required'),
+            'pairs.*.drug_b.required' => __('requests.ddi_batch.drug_b_required'),
         ];
     }
 }

@@ -3,16 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Patient;
-use Illuminate\Http\Request;
 use App\Models\MedicalRecord;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\UpdateMedicalRecordRequest;
+use App\Http\Requests\UpdatePatientMedicalRecordRequest;
 use App\Http\Requests\UpdatePregnancyInfoRequest;
 use App\Http\Resources\MedicalRecordResource;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Upload;
-use App\Policies\MedicalRecordPolicy;
 
 class MedicalRecordController extends Controller
 {
@@ -36,13 +35,14 @@ class MedicalRecordController extends Controller
         if ($record) {
             $medicalRecordData = new MedicalRecordResource($record);
         }
+        $gender = $patient->gender === 'male' ? __('personal.gender_male') : ($patient->gender === 'female' ? __('personal.gender_female') : __('personal.gender_other'));
 
         return response()->json([
             'status' => 'success',
             'data' => [
                 'patient_id' => $patient->id,
                 'patient_name' => $patient->user->full_name,
-                'gender' => $patient->gender,
+                'gender' => $gender,
                 'birth_date' => $patient->birth_date,
                 'medical_record' => $medicalRecordData
             ]
@@ -87,10 +87,6 @@ class MedicalRecordController extends Controller
 
         $user = Auth::user();
         $doctor = $user->doctor;
-
-        
-        
-
         $medicalRecord = MedicalRecord::updateOrCreate(
             [
                 'patient_id' => $patientId,
@@ -129,6 +125,35 @@ class MedicalRecordController extends Controller
         ], 200);
     }
     
+    /**
+     * Patient: Update the self-reported fields of their own medical record
+     * (chronic diseases, allergies, previous surgeries, current medications).
+     *
+     * Diagnosis and treatment plan are clinical judgment and stay
+     * provider-only via updateMedicalRecord().
+     *
+     * Endpoint: PUT /api/patient/medical-record
+     */
+    public function updateOwnMedicalRecord(UpdatePatientMedicalRecordRequest $request)
+    {
+        $validated = $request->validated();
+        $patient = $request->user()->patient;
+
+        // Same get-or-create-latest pattern as updatePregnancyInfo, so both
+        // self-service edits land on the same "current" record.
+        $record = $patient->medicalRecords()->latest('id')->first()
+            ?? new MedicalRecord(['patient_id' => $patient->id]);
+
+        $record->fill($validated);
+        $record->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => __('medical.record_updated'),
+            'data' => new MedicalRecordResource($record->fresh(['doctor.user', 'uploads'])),
+        ], 200);
+    }
+
     /**
      * Patient: Update their own pregnancy information.
      *
@@ -179,9 +204,8 @@ class MedicalRecordController extends Controller
                 'message' => __('messages.patient_not_found_for_user')
             ], 404);
         }
-        $this->authorize('view', $patient);
-
         $record = $patient->medicalRecords()->with(['doctor.user', 'uploads'])->latest()->first();
+        
 
         if (!$record) {
             return response()->json([

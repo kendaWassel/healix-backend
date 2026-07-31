@@ -21,7 +21,7 @@ class ResolveDrugRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'A drug name is required.',
+            'name.required' => __('requests.ddi_resolve.name_required'),
         ];
     }
 }

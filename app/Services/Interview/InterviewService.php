@@ -42,13 +42,13 @@ class InterviewService
         ]);
 
         if (! array_key_exists('finished', $response) || ! is_bool($response['finished'])) {
-            throw new AIServiceInvalidResponseException('Interview service did not return a valid "finished" flag.');
+            throw new AIServiceInvalidResponseException(__('ai.interview_invalid_finished'));
         }
 
         $returnedSessionId = $response['session_id'] ?? $sessionId;
 
         if (! is_string($returnedSessionId) || $returnedSessionId === '') {
-            throw new AIServiceInvalidResponseException('Interview service did not return a session id.');
+            throw new AIServiceInvalidResponseException(__('ai.interview_no_session'));
         }
 
         $symptoms = [];

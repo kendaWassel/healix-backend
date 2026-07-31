@@ -4,8 +4,8 @@ namespace App\Exceptions\AI;
 
 class AIServiceInvalidResponseException extends AIServiceException
 {
-    public function __construct(string $message = 'AI service returned an invalid response.')
+    public function __construct(?string $message = null)
     {
-        parent::__construct($message, 502);
+        parent::__construct($message ?? __('ai.service_invalid_response'), 502);
     }
 }

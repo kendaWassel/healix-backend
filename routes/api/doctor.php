@@ -11,7 +11,7 @@ Route::middleware(['auth:sanctum', 'verified', 'role:doctor'])
     ->group(function () {
 
         Route::get('/profile', [DoctorController::class, 'getProfile']);
-        Route::put('/profile', [DoctorController::class, 'updateProfile']);
+        Route::match(['put', 'post'], '/profile', [DoctorController::class, 'updateProfile']);
 
         Route::get('/my-schedules', [DoctorController::class, 'getDoctorSchedules']);
 

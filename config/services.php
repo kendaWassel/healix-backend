@@ -43,6 +43,10 @@ return [
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+
+        // The charge currency is a business decision, not a client one — the
+        // client used to send it, which let a caller pay in a weaker currency.
+        'currency' => env('STRIPE_CURRENCY', 'usd'),
     ],
 
     'google' => [

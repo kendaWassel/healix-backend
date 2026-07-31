@@ -38,14 +38,19 @@ class AuthService
 
     public function logout(Request $request)
     {
-        $token = $request->user()->currentAccessToken;
+        // currentAccessToken() is a plain method on Sanctum's HasApiTokens trait,
+        // not a relationship. Accessing it as a property (no parentheses) makes
+        // Eloquent's __get() try to resolve it as a relation via the method's
+        // return value, which isn't a Relation instance — hence the "must return
+        // a relationship instance" LogicException. Must be called with ().
+        $token = $request->user()->currentAccessToken();
         
         if ($token) {
             $token->delete();
-            return true;
+            return response()->json(['message' => __('auth.logged_out_success')], 200)  ;
         }
 
-        return false;
+        return response()->json(['message' => __('auth.logout_failed')], 400);
     }
 
     public function register(array $data): array
@@ -96,6 +101,9 @@ class AuthService
             'phone' => $data['phone'],
             'role' => $data['role'],
             'password' => Hash::make($data['password']),
+            // Remember the language the user registered in so queued mail and
+            // SMS (which run without a request) reach them in that language.
+            'preferred_locale' => app()->getLocale(),
         ]);
     }
 
@@ -118,7 +126,7 @@ class AuthService
                 $this->createDelivery($user, $data);
                 break;
             default:
-                throw new \Exception('Invalid role specified');
+                throw new \Exception(__('auth.invalid_role'));
         }
     }
 
@@ -175,10 +183,14 @@ class AuthService
     private function createDoctor(User $user, array $data): void
     {
         // Handle specialization
-        $specialization = Specialization::where('name', $data['specialization'])->first();
+        // Accept the specialization in either language: the registration form is
+        // bilingual, so the client may post back whichever label it displayed.
+        $specialization = Specialization::where('name', $data['specialization'])
+            ->orWhere('name_ar', $data['specialization'])
+            ->first();
         
         if (!$specialization) {
-            throw new \Exception('Specialization not found: ' . $data['specialization']);
+            throw new \Exception(__('auth.specialization_not_found', ['name' => $data['specialization']]));
         }
         
         Doctor::create([

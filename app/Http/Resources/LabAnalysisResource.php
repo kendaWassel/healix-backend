@@ -2,11 +2,16 @@
 
 namespace App\Http\Resources;
 
+use App\Support\Locale;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * @mixin \App\Models\LabAnalysis
+ *
+ * summary, test_results, conditions and disclaimer are produced by the
+ * LabInsight AI service and are passed through verbatim — they are clinical
+ * output, not application copy, so they are never translated here.
  */
 class LabAnalysisResource extends JsonResource
 {
@@ -17,6 +22,7 @@ class LabAnalysisResource extends JsonResource
             'report_id' => $this->report_id,
             'patient_id' => $this->patient_id,
             'overall_severity' => $this->overall_severity,
+            'overall_severity_label' => Locale::label('lab_severity', $this->overall_severity),
             'summary' => $this->summary,
             'total_tests_analyzed' => $this->total_tests_analyzed,
             'abnormal_count' => $this->abnormal_count,
