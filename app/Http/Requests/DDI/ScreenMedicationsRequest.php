@@ -23,10 +23,10 @@ class ScreenMedicationsRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'drugs.required' => 'A list of drug names is required.',
-            'drugs.min' => 'At least two drugs are required to screen for interactions.',
-            'drugs.max' => 'A maximum of 20 drugs can be screened per request.',
-            'drugs.*.distinct' => 'The medication list contains duplicate drug names.',
+            'drugs.required' => __('requests.ddi_screen.drugs_required'),
+            'drugs.min' => __('requests.ddi_screen.drugs_min'),
+            'drugs.max' => __('requests.ddi_screen.drugs_max'),
+            'drugs.*.distinct' => __('requests.ddi_screen.drugs_distinct'),
         ];
     }
 }

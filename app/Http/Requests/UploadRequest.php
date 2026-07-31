@@ -31,16 +31,16 @@ class UploadRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'file.required' => 'File is required.',
-            'file.file' => 'The uploaded item must be a file.',
-            'file.max' => 'File size must not exceed 10MB.',
-            'image.required' => 'Image is required.',
-            'image.image' => 'The file must be an image.',
-            'image.mimes' => 'Image must be jpeg, png, jpg, or gif.',
-            'image.max' => 'Image size must not exceed 5MB.',
-            'category.required' => 'Category is required.',
-            'category.string' => 'Category must be a string.',
-            'category.in' => 'Category must be one of: certificate, report, document, prescription, profile.',
+            'file.required' => __('requests.upload.file_required'),
+            'file.file' => __('requests.upload.file_file'),
+            'file.max' => __('requests.upload.file_max'),
+            'image.required' => __('requests.upload.image_required'),
+            'image.image' => __('requests.upload.image_image'),
+            'image.mimes' => __('requests.upload.image_mimes'),
+            'image.max' => __('requests.upload.image_max'),
+            'category.required' => __('requests.upload.category_required'),
+            'category.string' => __('requests.upload.category_string'),
+            'category.in' => __('requests.upload.category_in'),
         ];
     }
 }

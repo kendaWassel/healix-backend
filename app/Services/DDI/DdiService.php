@@ -43,7 +43,7 @@ class DdiService
         ]);
 
         if (! array_key_exists('resolved', $result)) {
-            throw new AIServiceInvalidResponseException('DDI service did not return a resolution result.');
+            throw new AIServiceInvalidResponseException(__('ai.ddi_no_resolution'));
         }
 
         return $result;
@@ -68,7 +68,7 @@ class DdiService
         ]);
 
         if (! isset($result['prediction'])) {
-            throw new AIServiceInvalidResponseException('DDI service did not return an interaction prediction.');
+            throw new AIServiceInvalidResponseException(__('ai.ddi_no_prediction'));
         }
 
         return $result;
@@ -88,7 +88,7 @@ class DdiService
         ]);
 
         if (! isset($result['results']) || ! is_array($result['results'])) {
-            throw new AIServiceInvalidResponseException('DDI service did not return batch results.');
+            throw new AIServiceInvalidResponseException(__('ai.ddi_no_batch_results'));
         }
 
         return $result;
@@ -113,7 +113,7 @@ class DdiService
         ]);
 
         if (! isset($result['findings']) || ! is_array($result['findings'])) {
-            throw new AIServiceInvalidResponseException('DDI service did not return screening findings.');
+            throw new AIServiceInvalidResponseException(__('ai.ddi_no_findings'));
         }
 
         return $result;

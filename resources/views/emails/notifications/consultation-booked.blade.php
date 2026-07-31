@@ -1,19 +1,20 @@
 @component('mail::message')
 
-Hello {{ $doctor->name }}
-You have a new consultation booked.
+{{ __('notification.booked_mail_hello', ['name' => $doctor->name]) }}
+
+{{ __('notification.booked_mail_intro') }}
 
 
-Patient Name: {{ $patient->full_name ?? $patient->name }} 
+{{ __('notification.booked_mail_patient', ['name' => $patient->full_name ?? $patient->name]) }}
 
-Consultation Type: {{ ucfirst($consultation->type) }} 
+{{ __('notification.booked_mail_type', ['type' => \App\Support\Locale::label('consultation_type', $consultation->type)]) }}
 
-Scheduled Date & Time: {{ optional($consultation->scheduled_at)->format('Y-m-d H:i') }}
+{{ __('notification.booked_mail_scheduled', ['time' => optional($consultation->scheduled_at)->format('Y-m-d H:i')]) }}
 
-Check our website for more details
+{{ __('notification.booked_mail_outro') }}
 
 
 
-Thanks,<br>
+{{ __('notification.booked_mail_thanks') }}<br>
 
 @endcomponent

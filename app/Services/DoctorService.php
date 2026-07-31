@@ -22,7 +22,7 @@ class DoctorService
     {
         $specialization = Specialization::find($specializationId);
         if (!$specialization) {
-            throw new \Exception('Specialization not found', 404);
+            throw new \Exception(__('medical.specialization_not_found'), 404);
         }
 
         $query = Doctor::with(['user', 'specialization'])
@@ -91,7 +91,7 @@ class DoctorService
     {
         $doctor = Doctor::find($doctorId);
         if (!$doctor) {
-            throw new \Exception('Doctor not found', 404);
+            throw new \Exception(__('messages.doctor_not_found'), 404);
         }
 
         // Use provided date or fallback to today (Y-m-d)
@@ -102,7 +102,7 @@ class DoctorService
 
         // Ensure working hours exist
         if (empty($doctor->from) || empty($doctor->to)) {
-            throw new \Exception('Doctor working hours not configured', 422);
+            throw new \Exception(__('consultation.doctor_hours_not_set'), 422);
         }
 
         // Try parsing "from" time (trying multiple formats)
@@ -114,7 +114,7 @@ class DoctorService
             try {
                 $fromTime = Carbon::parse($doctor->from);
             } catch (\Throwable $ex) {
-                throw new \Exception('Invalid doctor.from format: ' . $ex->getMessage(), 422);
+                throw new \Exception(__('consultation.invalid_from_format', ['error' => $ex->getMessage()]), 422);
             }
         }
 
@@ -126,7 +126,7 @@ class DoctorService
             try {
                 $toTime = Carbon::parse($doctor->to);
             } catch (\Throwable $ex) {
-                throw new \Exception('Invalid doctor.to format: ' . $ex->getMessage(), 422);
+                throw new \Exception(__('consultation.invalid_to_format', ['error' => $ex->getMessage()]), 422);
             }
         }
 
@@ -135,12 +135,12 @@ class DoctorService
             $from = Carbon::parse($date . ' ' . $fromTime->format('H:i:s'));
             $to   = Carbon::parse($date . ' ' . $toTime->format('H:i:s'));
         } catch (\Throwable $e) {
-            throw new \Exception('Failed to parse from/to with date: ' . $e->getMessage(), 422);
+            throw new \Exception(__('consultation.schedule_parse_failed', ['error' => $e->getMessage()]), 422);
         }
 
         // Ensure from < to
         if ($from->gte($to)) {
-            throw new \Exception('Invalid schedule: from must be before to', 422);
+            throw new \Exception(__('consultation.invalid_schedule_order'), 422);
         }
 
         // Time interval
@@ -151,7 +151,7 @@ class DoctorService
 
         // Validate period generation
         if (iterator_count($period) === 0) {
-            throw new \Exception('No time slots generated. Check from/to/interval.', 422);
+            throw new \Exception(__('consultation.no_slots_generated'), 422);
         }
 
         // Get booked slots for the date (normalized to 'H:i')
@@ -207,7 +207,7 @@ class DoctorService
         $doctor = $user?->doctor;
 
         if (!$doctor) {
-            throw new \Exception('Doctor profile not found. Please complete your doctor profile.', 404);
+            throw new \Exception(__('medical.doctor_profile_incomplete'), 404);
         }
 
         $doctorId = $doctor->id;
@@ -281,7 +281,7 @@ class DoctorService
         $doctor = Auth::user()?->doctor;
 
         if (!$doctor) {
-            throw new \Exception('Unauthorized - only doctors can create prescriptions.', 403);
+            throw new \Exception(__('pharmacy.only_doctors_create_prescriptions'), 403);
         }
 
         $consultation = Consultation::where('id', $validated['consultation_id'])
@@ -289,11 +289,11 @@ class DoctorService
             ->first();
 
         if (!$consultation) {
-            throw new \Exception('Consultation not found for this doctor.', 404);
+            throw new \Exception(__('consultation.not_found_for_doctor'), 404);
         }
 
         if ($consultation->status !== 'completed') {
-            throw new \Exception('Only completed consultations can have prescriptions.', 400);
+            throw new \Exception(__('pharmacy.only_completed_consultations'), 400);
         }
 
         $prescription = Prescription::create([

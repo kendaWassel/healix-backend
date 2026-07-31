@@ -21,10 +21,10 @@ class RateRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'stars.required' => 'Rating stars are required.',
-            'stars.integer' => 'Stars must be an integer.',
-            'stars.min' => 'Stars must be at least 1.',
-            'stars.max' => 'Stars must be at most 5.',
+            'stars.required' => __('requests.rate.stars_required'),
+            'stars.integer' => __('requests.rate.stars_integer'),
+            'stars.min' => __('requests.rate.stars_min'),
+            'stars.max' => __('requests.rate.stars_max'),
 
         ];
     }

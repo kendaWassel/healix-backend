@@ -30,9 +30,11 @@ Route::middleware(['auth:sanctum', 'verified', 'role:patient'])
         Route::post('/home-visits/{visit_id}/request-new-care-provider', [PatientController::class, 'requestNewCareProvider']);
 
         Route::get('/medical-record', [MedicalRecordController::class, 'getPatientMedicalRecord']);
+        // Patient self-edit: chronic diseases, allergies, previous surgeries, current medications only.
+        Route::put('/medical-record', [MedicalRecordController::class, 'updateOwnMedicalRecord']);
         Route::put('/medical-record/pregnancy', [MedicalRecordController::class, 'updatePregnancyInfo']);
 
-        Route::post('/consultation/{consultation_id}/rate/{doctor_id}', [RatingController::class, 'rateDoctor']);
+        Route::post('/consultations/{consultation_id}/rate/{doctor_id}', [RatingController::class, 'rateDoctor']);
         Route::post('/order/{order_id}/rate/{pharmacist_id}', [RatingController::class, 'ratePharmacy']);
         Route::post('/task/{task_id}/rate/{delivery_id}', [RatingController::class, 'rateDelivery']);
         Route::post('/session/{session_id}/rate/{care_provider_id}', [RatingController::class, 'rateCareProvider']);
@@ -51,11 +53,10 @@ Route::middleware(['auth:sanctum', 'verified', 'role:patient'])
         //tracking 
         Route::get('/delivery/location/{task_id}', [DeliveryLocationController::class, 'getLocation']);
 
-        // ========== USER PROFILE MANAGEMENT ==========
-        Route::prefix('users')->group(function () {
-            Route::get('/me', [UserController::class, 'getProfile']);
-            Route::put('/me', [UserController::class, 'updateProfile']);
-        });
+        // ========== PATIENT PROFILE MANAGEMENT ==========
+        Route::get('/profile', [UserController::class, 'getProfile']);
+        Route::put('/profile', [UserController::class, 'updateProfile']);
+
 
         Route::apiResource('conversations', ConversationController::class)->only([
             'index',

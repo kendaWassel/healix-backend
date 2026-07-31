@@ -12,7 +12,7 @@ class EnsureAccountIsActive
     {
         if (!Auth::check()) {
             return response()->json([
-                'message' => 'Unauthenticated'
+                'message' => __('auth.unauthenticated')
             ], 401);
         }
 
@@ -24,7 +24,7 @@ class EnsureAccountIsActive
             $user->is_active !== true
         ) {
             return response()->json([
-                'message' => 'Account not fully activated',
+                'message' => __('auth.account_not_active'),
                 'email_verified' => $user->email_verified_at !== null,
                 'status' => $user->status,
                 'rejection_reason' => $user->rejection_reason,

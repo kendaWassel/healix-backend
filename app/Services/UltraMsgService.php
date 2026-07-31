@@ -52,7 +52,7 @@ class UltraMsgService
             Log::warning('UltraMsg not configured. Missing ULTRAMSG_TOKEN or ULTRAMSG_INSTANCE');
             return [
                 'success' => false,
-                'message' => 'UltraMsg service not configured',
+                'message' => __('notification.whatsapp_not_configured'),
                 'response' => null
             ];
         }
@@ -64,7 +64,7 @@ class UltraMsgService
             Log::error("UltraMsg: Invalid phone number format: $to");
             return [
                 'success' => false,
-                'message' => 'Invalid phone number format',
+                'message' => __('notification.whatsapp_invalid_phone'),
                 'response' => null
             ];
         }
@@ -128,7 +128,9 @@ class UltraMsgService
 
         return [
             'success' => $success,
-            'message' => $success ? 'Message sent successfully' : 'Failed to send message',
+            'message' => $success
+                ? __('notification.whatsapp_sent')
+                : __('notification.whatsapp_failed'),
             'response' => $responseData,
             'http_code' => $httpCode
         ];

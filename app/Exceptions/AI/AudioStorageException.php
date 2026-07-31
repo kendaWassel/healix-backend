@@ -6,8 +6,8 @@ use Exception;
 
 class AudioStorageException extends Exception
 {
-    public function __construct(string $message = 'Failed to store audio file.')
+    public function __construct(?string $message = null)
     {
-        parent::__construct($message, 500);
+        parent::__construct($message ?? __('ai.speech_storage_failed'), 500);
     }
 }

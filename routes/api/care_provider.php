@@ -10,7 +10,10 @@ Route::middleware(['auth:sanctum', 'verified', 'role:care_provider'])
 
         Route::prefix('provider/nurse')->group(function () {
             Route::get('/profile', [NurseController::class, 'getProfile']);
-            Route::put('/profile', [NurseController::class, 'updateProfile']);
+            // PUT is kept for JSON-only clients; POST is required for multipart
+            // file uploads (image/license_file) — PHP never populates
+            // $_FILES/$_POST for multipart bodies on PUT requests.
+            Route::match(['put', 'post'], '/profile', [NurseController::class, 'updateProfile']);
             Route::get('/orders', [NurseController::class, 'orders']);
             Route::post('/orders/{id}/accept', [NurseController::class, 'accept']);
             Route::get('/schedules', [NurseController::class, 'schedules']);
@@ -23,7 +26,10 @@ Route::middleware(['auth:sanctum', 'verified', 'role:care_provider'])
 
         Route::prefix('provider/physiotherapist')->group(function () {
             Route::get('/profile', [PhysiotherapistController::class, 'getProfile']);
-            Route::put('/profile', [PhysiotherapistController::class, 'updateProfile']);
+            // PUT is kept for JSON-only clients; POST is required for multipart
+            // file uploads (image/license_file) — PHP never populates
+            // $_FILES/$_POST for multipart bodies on PUT requests.
+            Route::match(['put', 'post'], '/profile', [PhysiotherapistController::class, 'updateProfile']);
             Route::get('/orders', [PhysiotherapistController::class, 'orders']);
             Route::post('/orders/{id}/accept', [PhysiotherapistController::class, 'accept']);
             Route::get('/schedules', [PhysiotherapistController::class, 'schedules']);

@@ -33,6 +33,28 @@ return [
         'is_pregnant_in' => 'Pregnancy answer must be yes or no.',
     ],
 
+    'forgot_password' => [
+        'email_required' => 'Email is required',
+        'email_email' => 'Please provide a valid email address',
+        'email_max' => 'Email cannot exceed 255 characters',
+    ],
+
+    'verify_reset_otp' => [
+        'email_required' => 'Email is required',
+        'email_email' => 'Please provide a valid email address',
+        'otp_required' => 'The verification code is required.',
+        'otp_digits' => 'The verification code must be :digits digits.',
+    ],
+
+    'reset_password' => [
+        'token_required' => 'The reset token is required.',
+        'email_required' => 'Email is required',
+        'email_email' => 'Please provide a valid email address',
+        'password_required' => 'Password is required',
+        'password_min' => 'Password must be at least 8 characters',
+        'password_confirmed' => 'The password confirmation does not match.',
+    ],
+
     'book_consultation' => [
         'doctor_id_required' => 'A doctor is required for booking a consultation.',
         'doctor_id_exists' => 'Selected doctor does not exist.',

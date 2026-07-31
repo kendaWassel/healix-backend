@@ -25,7 +25,9 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    // Lets the browser frontend read back which locale the API actually served,
+    // so it can detect a fallback (e.g. asked for "ar", received "en").
+    'exposed_headers' => ['Content-Language'],
 
     'max_age' => 0,
 

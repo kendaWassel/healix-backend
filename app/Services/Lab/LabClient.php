@@ -15,4 +15,6 @@ class LabClient extends FastApiClient
     protected string $configKey = 'lab';
 
     protected string $serviceLabel = 'Lab analysis service';
+
+    protected string $serviceLabelKey = 'ai.service_label_lab';
 }

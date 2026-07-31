@@ -24,9 +24,9 @@ return [
     'unauthenticated' => 'Unauthenticated.',
     'unauthorized' => 'Unauthorized.',
     'forbidden' => 'Forbidden: Access denied',
-    'logged_out' => 'Logged out successfully.',
+    'logged_out_success' => 'Logged out successfully.',
     'logout_failed' => 'Unable to log out. No active session token was found.',
-
+    
     'registered' => 'User registered successfully. Please check your email for verification.',
     'registration_failed' => 'Registration failed. Please try again.',
     'invalid_role' => 'Invalid role specified',

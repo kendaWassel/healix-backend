@@ -25,11 +25,11 @@ class LoginRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'email.required' => 'Email is required',
-            'email.email' => 'Please provide a valid email address',
-            'email.max' => 'Email cannot exceed 255 characters',
-            'password.required' => 'Password is required',
-            'password.min' => 'Password must be at least 6 characters',
+            'email.required' => __('requests.login.email_required'),
+            'email.email' => __('requests.login.email_email'),
+            'email.max' => __('requests.login.email_max'),
+            'password.required' => __('requests.login.password_required'),
+            'password.min' => __('requests.login.password_min'),
         ];
     }
 

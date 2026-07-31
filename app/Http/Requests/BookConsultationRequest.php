@@ -23,11 +23,11 @@ class BookConsultationRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'doctor_id.required' => 'A doctor is required for booking a consultation.',
-            'doctor_id.exists' => 'Selected doctor does not exist.',
-            'call_type.required' => 'Call type is required.',
-            'call_type.in' => 'Call type must be either call_now or schedule.',
-            'scheduled_at.date' => 'Scheduled at must be a valid date and time format.',
+            'doctor_id.required' => __('requests.book_consultation.doctor_id_required'),
+            'doctor_id.exists' => __('requests.book_consultation.doctor_id_exists'),
+            'call_type.required' => __('requests.book_consultation.call_type_required'),
+            'call_type.in' => __('requests.book_consultation.call_type_in'),
+            'scheduled_at.date' => __('requests.book_consultation.scheduled_at_date'),
         ];
     }
 }

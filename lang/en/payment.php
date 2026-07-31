@@ -16,4 +16,10 @@ return [
     'webhook_error' => 'Webhook error',
     'failed' => 'The payment could not be processed. Please try again.',
 
+    'not_authorized' => 'You are not authorized to pay for this item.',
+    'not_authorized_view' => 'You are not authorized to view this payment.',
+    'already_paid' => 'This item has already been paid for.',
+    'amount_unavailable' => 'This item does not have a price yet, so it cannot be paid.',
+    'amount_too_small' => 'The payable amount is below the minimum accepted by the payment provider.',
+
 ];

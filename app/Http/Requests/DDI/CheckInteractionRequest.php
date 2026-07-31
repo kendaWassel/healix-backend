@@ -23,9 +23,9 @@ class CheckInteractionRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'drug_a.required' => 'The first drug name is required.',
-            'drug_b.required' => 'The second drug name is required.',
-            'drug_b.different' => 'Please provide two different drug names.',
+            'drug_a.required' => __('requests.ddi_interaction.drug_a_required'),
+            'drug_b.required' => __('requests.ddi_interaction.drug_b_required'),
+            'drug_b.different' => __('requests.ddi_interaction.drug_b_different'),
         ];
     }
 }

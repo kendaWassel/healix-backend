@@ -15,4 +15,6 @@ class DdiClient extends FastApiClient
     protected string $configKey = 'ddi';
 
     protected string $serviceLabel = 'DDI service';
+
+    protected string $serviceLabelKey = 'ai.service_label_ddi';
 }

@@ -28,7 +28,7 @@ class PatientService
         $patient = Patient::where('user_id', $user->id)->first();
 
         if (!$patient) {
-            throw new \Exception('Patient not found for this user', 404);
+            throw new \Exception(__('messages.patient_not_found_for_user'), 404);
         }
 
         return Consultation::with(['doctor.user', 'doctor.specialization'])
@@ -78,7 +78,7 @@ class PatientService
         $patient = Patient::where('user_id', $user->id)->first();
 
         if (!$patient) {
-            throw new \Exception('Patient not found for this user.', 404);
+            throw new \Exception(__('messages.patient_not_found_for_user'), 404);
         }
 
         return Prescription::with(['doctor.user', 'prescriptionImage'])
@@ -143,7 +143,7 @@ class PatientService
         $patient = Patient::where('user_id', $user->id)->first();
 
         if (!$patient) {
-            throw new \Exception('Patient not found for this user.', 404);
+            throw new \Exception(__('messages.patient_not_found_for_user'), 404);
         }
 
         $prescription = Prescription::with(['doctor.user', 'medications.medication'])
@@ -152,7 +152,7 @@ class PatientService
             ->first();
 
         if (!$prescription) {
-            throw new \Exception('Prescription not found.', 404);
+            throw new \Exception(__('pharmacy.prescription_not_found'), 404);
         }
 
         if ($prescription->source === 'patient_uploaded') {
@@ -196,7 +196,7 @@ class PatientService
         $patient = Patient::where('user_id', $user->id)->first();
 
         if (!$patient) {
-            throw new \Exception('Patient not found for this user.', 404);
+            throw new \Exception(__('messages.patient_not_found_for_user'), 404);
         }
 
         $file = $validated['image'];
@@ -209,7 +209,7 @@ class PatientService
         $path = $file->store('prescriptions', 'public');
 
         if (!$path) {
-            throw new \Exception('Failed to store the uploaded file.', 500);
+            throw new \Exception(__('content.upload_failed'), 500);
         }
 
         $upload = Upload::create([
@@ -251,7 +251,7 @@ class PatientService
         $user = Auth::user();
         $patient = $user->patient;
         if (!$patient) {
-            throw new \Exception('Patient not found for this user.', 404);
+            throw new \Exception(__('messages.patient_not_found_for_user'), 404);
         }
 
         $prescription = Prescription::where('id', $prescriptionId)
@@ -259,13 +259,13 @@ class PatientService
             ->first();
 
         if (!$prescription) {
-            throw new \Exception('Prescription not found.', 404);
+            throw new \Exception(__('pharmacy.prescription_not_found'), 404);
         }
 
         // Pharmacy closed check
         $pharmacist = Pharmacist::find($pharmacyId);
         if (!$pharmacist || !$pharmacist->isOpen()) {
-            throw new \Exception('Selected pharmacy is currently closed, please choose another one.', 400);
+            throw new \Exception(__('pharmacy.pharmacy_closed'), 400);
         }
 
         // Check if there's an existing rejected order for this prescription
@@ -316,7 +316,7 @@ class PatientService
         $prescription = Prescription::find($prescriptionId);
 
         if (!$prescription) {
-            throw new \Exception('Prescription not found', 404);
+            throw new \Exception(__('pharmacy.prescription_not_found'), 404);
         }
 
         // Fetch the latest order associated with the prescription
@@ -326,7 +326,7 @@ class PatientService
             ->first();
 
         if (!$order) {
-            throw new \Exception('No order found for this prescription', 404);
+            throw new \Exception(__('pharmacy.no_order_for_prescription'), 404);
         }
 
         return [
@@ -351,7 +351,7 @@ class PatientService
         $patient = Patient::where('user_id', $user->id)->first();
 
         if (!$patient) {
-            throw new \Exception('Patient not found for this user.', 404);
+            throw new \Exception(__('messages.patient_not_found_for_user'), 404);
         }
 
         return Prescription::where('patient_id', $patient->id)
@@ -442,7 +442,7 @@ class PatientService
         $patient = Patient::where('user_id', $user->id)->first();
 
         if (!$patient) {
-            throw new \Exception('Patient not found for this user.', 404);
+            throw new \Exception(__('messages.patient_not_found_for_user'), 404);
         }
 
         return Order::with([
@@ -528,7 +528,7 @@ class PatientService
         $patient = Patient::where('user_id', $user->id)->first();
 
         if (!$patient) {
-            throw new \Exception('Patient not found for this user.', 404);
+            throw new \Exception(__('messages.patient_not_found_for_user'), 404);
         }
 
         $order = Order::with([
@@ -543,7 +543,7 @@ class PatientService
             ->first();
 
         if (!$order) {
-            throw new \Exception('Order not found or not authorized.', 404);
+            throw new \Exception(__('pharmacy.order_not_accessible'), 404);
         }
 
         return $order;
@@ -555,7 +555,7 @@ class PatientService
         $patient = Patient::where('user_id', $user->id)->first();
 
         if (!$patient) {
-            throw new \Exception('Patient not found for this user.', 404);
+            throw new \Exception(__('messages.patient_not_found_for_user'), 404);
         }
 
         // Exclude canceled visits that have been replaced by a new request
@@ -652,7 +652,7 @@ class PatientService
         $patient = Patient::where('user_id', $user->id)->first();
 
         if (!$patient) {
-            throw new \Exception('Patient not found for this user.', 404);
+            throw new \Exception(__('messages.patient_not_found_for_user'), 404);
         }
 
         // Get the old canceled visit
@@ -661,17 +661,17 @@ class PatientService
             ->first();
 
         if (!$oldVisit) {
-            throw new \Exception('Home visit not found.', 404);
+            throw new \Exception(__('homevisit.not_found'), 404);
         }
 
         // Only allow canceled visits to be re-requested
         if (!in_array($oldVisit->status, ['canceled'])) {
-            throw new \Exception('Only canceled  home visits can be re-requested with a new schedule time.', 400);
+            throw new \Exception(__('homevisit.only_cancelled_re_request'), 400);
         }
         
         // Check if the new scheduled at is in the past
         if ($scheduledAt < now()) {
-            throw new \Exception('The scheduled time cannot be in the past.', 400);
+            throw new \Exception(__('consultation.scheduled_in_past'), 400);
         }
         
         // Create a new home visit with status 'pending' so a care provider can accept it

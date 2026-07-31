@@ -31,6 +31,28 @@ return [
         'is_pregnant_in' => 'يجب أن تكون إجابة الحمل بنعم أو لا.',
     ],
 
+    'forgot_password' => [
+        'email_required' => 'البريد الإلكتروني مطلوب',
+        'email_email' => 'يُرجى إدخال بريد إلكتروني صحيح',
+        'email_max' => 'يجب ألا يتجاوز البريد الإلكتروني 255 حرفًا',
+    ],
+
+    'verify_reset_otp' => [
+        'email_required' => 'البريد الإلكتروني مطلوب',
+        'email_email' => 'يُرجى إدخال بريد إلكتروني صحيح',
+        'otp_required' => 'رمز التحقق مطلوب.',
+        'otp_digits' => 'يجب أن يتكون رمز التحقق من :digits أرقام.',
+    ],
+
+    'reset_password' => [
+        'token_required' => 'رمز إعادة التعيين مطلوب.',
+        'email_required' => 'البريد الإلكتروني مطلوب',
+        'email_email' => 'يُرجى إدخال بريد إلكتروني صحيح',
+        'password_required' => 'كلمة المرور مطلوبة',
+        'password_min' => 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل',
+        'password_confirmed' => 'تأكيد كلمة المرور غير متطابق.',
+    ],
+
     'book_consultation' => [
         'doctor_id_required' => 'يجب تحديد طبيب لحجز الاستشارة.',
         'doctor_id_exists' => 'الطبيب المحدد غير موجود.',

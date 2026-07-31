@@ -24,11 +24,11 @@ class NurseService
         $careProvider = $user?->careProvider;
 
         if (!$careProvider || $careProvider->type !== 'nurse') {
-            throw new \Exception('Unauthorized or not a nurse.', 403);
+            throw new \Exception(__('homevisit.unauthorized_nurse'), 403);
         }
 
         if (is_null($careProvider->latitude) || is_null($careProvider->longitude)) {
-            throw new \Exception('Care provider location is not set.', 422);
+            throw new \Exception(__('homevisit.location_not_set'), 422);
         }
 
         return $this->nearbyRequestService->getNearbyPendingRequests(
@@ -75,7 +75,7 @@ class NurseService
         $careProvider = $user?->careProvider;
 
         if (!$careProvider || $careProvider->type !== 'nurse') {
-            throw new \Exception('Unauthorized or not a nurse.', 403);
+            throw new \Exception(__('homevisit.unauthorized_nurse'), 403);
         }
 
         $query = HomeVisit::with(['patient.user', 'careProvider.user'])
@@ -128,7 +128,7 @@ class NurseService
         $careProvider = $user?->careProvider;
 
         if (!$careProvider || $careProvider->type !== 'nurse') {
-            throw new \Exception('Unauthorized or not a nurse.', 403);
+            throw new \Exception(__('homevisit.unauthorized_nurse'), 403);
         }
 
         $visit = HomeVisit::where('id', $id)
@@ -137,11 +137,11 @@ class NurseService
             ->first();
 
         if (!$visit) {
-            throw new \Exception('Visit not found or already accepted.', 404);
+            throw new \Exception(__('homevisit.not_found_or_accepted'), 404);
         }
 
         if ($visit->service_type !== 'nurse') {
-            throw new \Exception('You can only accept nurse visits.', 403);
+            throw new \Exception(__('homevisit.only_nurse_visits'), 403);
         }
 
         $visit->care_provider_id = $careProvider->id;
@@ -157,7 +157,7 @@ class NurseService
         $careProvider = $user?->careProvider;
 
         if (!$careProvider || $careProvider->type !== 'nurse') {
-            throw new \Exception('Unauthorized or not a nurse.', 403);
+            throw new \Exception(__('homevisit.unauthorized_nurse'), 403);
         }
 
         $visit = HomeVisit::where('id', $id)
@@ -167,11 +167,11 @@ class NurseService
             ->first();
 
         if (!$visit) {
-            throw new \Exception('Visit not found or not in accepted status.', 404);
+            throw new \Exception(__('homevisit.not_in_accepted_status'), 404);
         }
 
         if ($visit->scheduled_at && now()->lt($visit->scheduled_at)) {
-            throw new \Exception('Cannot start session before the scheduled time.', 400);
+            throw new \Exception(__('homevisit.too_early_to_start'), 400);
         }
 
         $visit->status = 'in_progress';
@@ -187,7 +187,7 @@ class NurseService
         $careProvider = $user?->careProvider;
 
         if (!$careProvider || $careProvider->type !== 'nurse') {
-            throw new \Exception('Unauthorized or not a nurse.', 403);
+            throw new \Exception(__('homevisit.unauthorized_nurse'), 403);
         }
 
         $visit = HomeVisit::where('id', $id)
@@ -198,7 +198,7 @@ class NurseService
             ->first();
 
         if (!$visit) {
-            throw new \Exception('Visit not found or not in progress.', 404);
+            throw new \Exception(__('homevisit.not_in_progress'), 404);
         }
 
         $visit->ended_at = now();

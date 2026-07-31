@@ -54,6 +54,24 @@ return [
 
     'url' => env('APP_URL', 'https://unjuicy-schizogenous-gibson.ngrok-free.dev'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Frontend URL
+    |--------------------------------------------------------------------------
+    |
+    | Root of the SPA. Emails that must land the user on a frontend page — the
+    | password reset link, for example — are built from this rather than from
+    | APP_URL, because the API and the SPA are served from different origins.
+    |
+    | `password_reset_path` is the SPA route that renders the "choose a new
+    | password" form. The backend appends ?token=...&email=... to it.
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
+
+    'password_reset_path' => env('FRONTEND_PASSWORD_RESET_PATH', '/reset-password'),
+
     // 'api' => [
     // 'driver' => 'sanctum',
     // 'provider' => 'users',

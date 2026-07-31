@@ -38,13 +38,13 @@ class AIService
         ]);
 
         if (! ($response['success'] ?? false)) {
-            throw new AIServiceException('Speech-to-text conversion failed.');
+            throw new AIServiceException(__('ai.speech_failed'));
         }
 
         $text = $response['text'] ?? null;
 
         if (! is_string($text) || trim($text) === '') {
-            throw new AIServiceInvalidResponseException('Medical Assistant service did not return transcribed text.');
+            throw new AIServiceInvalidResponseException(__('ai.speech_no_text'));
         }
 
         Log::info('Speech-to-text finished', [

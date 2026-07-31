@@ -38,7 +38,6 @@ class LabAnalysisController extends Controller
                 $patient,
                 $request->filled('age') ? (int) $request->validated('age') : null,
                 $request->validated('gender'),
-                $request->validated('pre_existing_conditions'),
             );
 
             return new LabAnalysisResource($analysis->load('upload'));

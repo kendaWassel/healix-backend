@@ -26,13 +26,13 @@ class VerifyDraftPrescriptionRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'patient_id.required' => 'A patient is required.',
-            'patient_id.exists' => 'The selected patient does not exist.',
-            'medications.required' => 'Please enter the medications to verify.',
-            'medications.min' => 'At least one medication is required.',
-            'medications.max' => 'A maximum of 50 medications can be verified at once.',
-            'medications.*.required' => 'Medication name cannot be empty.',
-            'medications.*.distinct' => 'The medication list contains duplicates.',
+            'patient_id.required' => __('requests.verify_draft_prescription.patient_id_required'),
+            'patient_id.exists' => __('requests.verify_draft_prescription.patient_id_exists'),
+            'medications.required' => __('requests.verify_draft_prescription.medications_required'),
+            'medications.min' => __('requests.verify_draft_prescription.medications_min'),
+            'medications.max' => __('requests.verify_draft_prescription.medications_max'),
+            'medications.*.required' => __('requests.verify_draft_prescription.medication_required'),
+            'medications.*.distinct' => __('requests.verify_draft_prescription.medication_distinct'),
         ];
     }
 

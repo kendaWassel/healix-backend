@@ -46,4 +46,12 @@ protected $casts = [
     {
         return $this->hasMany(HomeVisit::class);
     }
+    public function careProviderImage()
+    {
+        return $this->belongsTo(Upload::class, 'care_provider_image_id');
+    }
+    public function licenseFile()
+    {
+        return $this->belongsTo(Upload::class, 'license_file_id');
+    }
 }

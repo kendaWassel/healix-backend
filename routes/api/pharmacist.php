@@ -11,7 +11,10 @@ Route::middleware(['auth:sanctum', 'verified', 'role:pharmacist'])
     ->group(function () {
 
         Route::get('/profile', [PharmacistController::class, 'getProfile']);
-        Route::put('/profile', [PharmacistController::class, 'updateProfile']);
+        // PUT is kept for JSON-only clients; POST is required for multipart
+        // file uploads (license_file) — PHP never populates $_FILES/$_POST
+        // for multipart bodies on PUT requests.
+        Route::match(['put', 'post'], '/profile', [PharmacistController::class, 'updateProfile']);
 
         Route::prefix('prescriptions')->group(function () {
             Route::get('/', [PharmacistController::class, 'listPrescriptions']);

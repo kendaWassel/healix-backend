@@ -6,11 +6,12 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable implements MustVerifyEmail, HasLocalePreference
 {
     use HasApiTokens, HasFactory, Notifiable,HasRoles;
 
@@ -23,6 +24,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'phone',
         'role',
+        'preferred_locale',
 
         // Account approval
         'status',
@@ -122,6 +124,34 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isActive(): bool
     {
         return (bool) $this->is_active;
+    }
+
+    /**
+     * Password reset OTPs issued to this user.
+     *
+     * Note there is no sendPasswordResetNotification() override: the flow no
+     * longer goes through Laravel's password broker at all. Codes are issued
+     * and verified by App\Services\Auth\PasswordResetOtpService.
+     */
+    public function passwordResetOtps()
+    {
+        return $this->hasMany(PasswordResetOtp::class);
+    }
+
+    /**
+     * Locale Laravel should use when rendering notifications for this user.
+     *
+     * Queued notifications run on a worker with no HTTP request, so the
+     * Accept-Language header is long gone by then; this stored preference is
+     * what keeps reminder mails and SMS in the recipient's own language.
+     */
+    public function preferredLocale(): ?string
+    {
+        $supported = (array) config('localization.supported', ['en']);
+
+        return in_array($this->preferred_locale, $supported, true)
+            ? $this->preferred_locale
+            : (string) config('localization.default', 'en');
     }
 
     //google account relationship

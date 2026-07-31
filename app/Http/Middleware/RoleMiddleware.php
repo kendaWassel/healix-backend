@@ -19,7 +19,7 @@ class RoleMiddleware
     public function handle(Request $request, Closure $next, string $roles)
     {
         if (!Auth::check()) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
+            return response()->json(['message' => __('auth.unauthenticated')], 401);
         }
 
         // Split roles by comma and trim whitespace
@@ -27,7 +27,7 @@ class RoleMiddleware
 
         if (!in_array(Auth::user()->role, $allowedRoles)) {
             return response()->json([
-                'message' => 'Forbidden: Access denied',
+                'message' => __('messages.forbidden'),
                 'required_role' => count(value: $allowedRoles) > 1 ? $allowedRoles : $allowedRoles[0],
             ], 403);
         }

@@ -21,9 +21,9 @@ class StoreConversationRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'title.required' => 'Conversation title is required.',
-            'title.string' => 'Conversation title must be a string.',
-            'title.max' => 'Conversation title must not exceed 255 characters.',
+            'title.required' => __('requests.conversation.title_required'),
+            'title.string' => __('requests.conversation.title_string'),
+            'title.max' => __('requests.conversation.title_max'),
         ];
     }
 }

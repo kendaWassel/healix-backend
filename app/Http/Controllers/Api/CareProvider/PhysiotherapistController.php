@@ -127,7 +127,44 @@ class PhysiotherapistController extends Controller
      */
     public function orders(Request $request)
     {
-        return $this->nearbyRequests($request);
+        // return $this->nearbyRequests($request);
+        //return orders that are assigned to all physiotherapist
+        $user = Auth::user();
+        $careProvider = $user->careProvider;
+
+        if (!$careProvider || $careProvider->type !== 'physiotherapist') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized or not a physiotherapist.'
+            ], 403);
+        }
+
+        try {
+            $visits = $this->physiotherapistService->getAllOrders($request->get('per_page', 10));
+
+            $data = $visits->getCollection()->map(function ($visit) {
+                return $this->physiotherapistService->formatScheduleData($visit);
+            })->values();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $data,
+                'meta' => [
+                    'current_page' => $visits->currentPage(),
+                    'last_page' => $visits->lastPage(),
+                    'per_page' => $visits->perPage(),
+                    'total' => $visits->total(),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $statusCode = ($e->getCode() >= 400 && $e->getCode() < 600) ? $e->getCode() : 500;
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], $statusCode);
+        }
+
     }
 
     public function accept($id)

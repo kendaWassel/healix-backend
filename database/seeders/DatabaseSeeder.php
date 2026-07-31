@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
             FaqSeeder::class,
             FirstAidSeeder::class,
             RolePermissionSeeder::class,
+            PharmacistVerificationSeeder::class,
         ]);
     }
 }

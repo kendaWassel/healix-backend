@@ -46,22 +46,25 @@ class ConsultationReminderNotification extends Notification
     {
         $scheduledTime = $this->consultation->scheduled_at
             ? $this->consultation->scheduled_at->format('Y-m-d H:i')
-            : 'now';
+            : __('notification.time_now');
 
         $otherName = $this->otherParty->full_name ?? $this->otherParty->name;
 
-        if ($this->recipientType === 'patient') {
-            $message = "Reminder: You have a consultation with Dr. {$otherName} scheduled for {$scheduledTime}";
-        } else {
-            $message = "Reminder: You have a consultation with {$otherName} scheduled for {$scheduledTime}";
-        }
+        $message = __(
+            $this->recipientType === 'patient'
+                ? 'notification.reminder_mail_patient'
+                : 'notification.reminder_mail_doctor',
+            ['name' => $otherName, 'time' => $scheduledTime]
+        );
+
         Log::info($message);
+
         return (new MailMessage)
-            ->subject('Consultation Reminder')
+            ->subject(__('notification.consultation_reminder_subject'))
             ->line($message)
-            ->line('Please be ready for the consultation.')
-            ->line('Thank you for using our platform!')
-            ->salutation('Healix Team'."\n");
+            ->line(__('notification.reminder_be_ready'))
+            ->line(__('notification.reminder_thanks'))
+            ->salutation(__('notification.salutation')."\n");
 
     }
 
@@ -69,17 +72,18 @@ class ConsultationReminderNotification extends Notification
     {
         $scheduledTime = $this->consultation->scheduled_at
             ? $this->consultation->scheduled_at->format('Y-m-d H:i')
-            : 'now';
+            : __('notification.time_now');
 
         $otherName = $this->otherParty->full_name ?? $this->otherParty->name;
 
-        if ($this->recipientType === 'patient') {
-            $title = 'Consultation Reminder';
-            $message = "You have a consultation with Dr. {$otherName} scheduled for {$scheduledTime}";
-        } else {
-            $title = 'Consultation Reminder';
-            $message = "You have a consultation with {$otherName} scheduled for {$scheduledTime}";
-        }
+        $title = __('notification.consultation_reminder_title');
+
+        $message = __(
+            $this->recipientType === 'patient'
+                ? 'notification.reminder_db_patient'
+                : 'notification.reminder_db_doctor',
+            ['name' => $otherName, 'time' => $scheduledTime]
+        );
 
         return [
             'title' => $title,

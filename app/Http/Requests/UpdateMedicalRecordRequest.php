@@ -31,15 +31,15 @@ class UpdateMedicalRecordRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'diagnosis.string' => 'Diagnosis must be a string.',
-            'treatment_plan.string' => 'Treatment plan must be a string.',
-            'current_medications.string' => 'Current medications must be a string.',
-            'chronic_diseases.string' => 'Chronic diseases must be a string.',
-            'previous_surgeries.string' => 'Previous surgeries must be a string.',
-            'allergies.string' => 'Allergies must be a string.',
-            'attachments_id.array' => 'Attachments must be an array.',
-            'attachments_id.*.integer' => 'Each attachment ID must be an integer.',
-            'attachments_id.*.exists' => 'Each attachment must exist.',
+            'diagnosis.string' => __('requests.medical_record.diagnosis_string'),
+            'treatment_plan.string' => __('requests.medical_record.treatment_plan_string'),
+            'current_medications.string' => __('requests.medical_record.current_medications_string'),
+            'chronic_diseases.string' => __('requests.medical_record.chronic_diseases_string'),
+            'previous_surgeries.string' => __('requests.medical_record.previous_surgeries_string'),
+            'allergies.string' => __('requests.medical_record.allergies_string'),
+            'attachments_id.array' => __('requests.medical_record.attachments_array'),
+            'attachments_id.*.integer' => __('requests.medical_record.attachments_integer'),
+            'attachments_id.*.exists' => __('requests.medical_record.attachments_exists'),
         ];
     }
 }

@@ -23,7 +23,7 @@ class PregnancyCheckRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'drug_a.required' => 'A drug name is required.',
+            'drug_a.required' => __('requests.ddi_pregnancy.drug_a_required'),
         ];
     }
 }

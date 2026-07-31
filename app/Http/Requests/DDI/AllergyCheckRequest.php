@@ -22,7 +22,7 @@ class AllergyCheckRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'drug.required' => 'The drug the patient is allergic to is required.',
+            'drug.required' => __('requests.ddi_allergy.drug_required'),
         ];
     }
 }

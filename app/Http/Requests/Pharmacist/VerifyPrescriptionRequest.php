@@ -26,11 +26,11 @@ class VerifyPrescriptionRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'medications.required' => 'Please enter the medications to verify and dispense.',
-            'medications.min' => 'At least one medication is required.',
-            'medications.max' => 'A maximum of 50 medications can be entered at once.',
-            'medications.*.required' => 'Medication name cannot be empty.',
-            'medications.*.distinct' => 'The medication list contains duplicates.',
+            'medications.required' => __('requests.verify_prescription.medications_required'),
+            'medications.min' => __('requests.verify_prescription.medications_min'),
+            'medications.max' => __('requests.verify_prescription.medications_max'),
+            'medications.*.required' => __('requests.verify_prescription.medication_required'),
+            'medications.*.distinct' => __('requests.verify_prescription.medication_distinct'),
         ];
     }
 
