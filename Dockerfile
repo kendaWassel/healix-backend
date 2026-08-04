@@ -1,44 +1,24 @@
-FROM php:8.3-fpm-cli
-
+FROM php:8.2-fpm
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    libzip-dev \
-    zip \
-    unzip \
-    git \
-    curl \
-    libonig-dev \
-    libxml2-dev \
-    libcurl4-openssl-dev \
-    libssl-dev \
-    libmcrypt-dev \
-    libmagickwand-dev \
-    libmagickwand-6.q16-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd \
-    && docker-php-ext-install pdo_mysql \
-    && docker-php-ext-install mbstring \        
-    && docker-php-ext-install zip \    
-    && docker-php-ext-install exif \
-    && docker-php-ext-install pcntl \
-    && docker-php-ext-install bcmath \
-    && docker-php-ext-install sockets \
-    && docker-php-ext-install intl \
-    && docker-php-ext-install curl \
-    && docker-php-ext-install xml \
-    && docker-php-ext-install soap \
-    && pecl install imagick \
-    && docker-php-ext-enable imagick \
-    && pecl install mcrypt-1.0.5 \
-    && docker-php-ext-enable mcrypt \    
-    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*   
+    git curl unzip libpq-dev libonig-dev libzip-dev zip \
+    && docker-php-ext-install pdo pdo_mysql mbstring zip
 
-# Get latest Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-# Set working directory
-WORKDIR /var/www/html
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www
+
+# Copy app files
+COPY . .
+
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader
+
+# Laravel setup
+RUN php artisan config:clear && \
+    php artisan route:clear && \
+    php artisan view:clear
+
+CMD ["php-fpm"]
