@@ -14,7 +14,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Telescope is a dev-only dependency, so its provider is registered here
+        // conditionally instead of in bootstrap/providers.php. This keeps
+        // `composer install --no-dev` (production/CI builds) from failing with
+        // "TelescopeApplicationServiceProvider not found".
+        if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
+            $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
+            $this->app->register(TelescopeServiceProvider::class);
+        }
     }
 
     /**
