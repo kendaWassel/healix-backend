@@ -120,6 +120,34 @@ class DdiService
     }
 
     /**
+     * Check prescribed drugs against a patient's chronic conditions
+     * (regulatory contraindication lookup, DrugCentral-backed).
+     *
+     * @param  array<int, string>  $medications
+     * @param  array<int, string>  $conditions
+     *
+     * @throws AIServiceException
+     */
+    public function checkConditionContraindications(array $medications, array $conditions): array
+    {
+        Log::info('DDI condition check started', [
+            'drug_count' => count($medications),
+            'condition_count' => count($conditions),
+        ]);
+
+        $result = $this->client->post('/condition-check', [
+            'medications' => array_values($medications),
+            'conditions' => array_values($conditions),
+        ]);
+
+        if (! isset($result['warnings']) || ! is_array($result['warnings'])) {
+            throw new AIServiceInvalidResponseException(__('ai.ddi_no_condition_warnings'));
+        }
+
+        return $result;
+    }
+
+    /**
      * Find drugs that may cross-react with one the patient is allergic to.
      *
      * @throws AIServiceException

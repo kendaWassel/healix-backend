@@ -97,6 +97,7 @@ class MedicalRecordController extends Controller
                 'treatment_plan' => $validated['treatment_plan'] ?? null,
                 'current_medications' => $validated['current_medications'] ?? null,
                 'chronic_diseases' => $validated['chronic_diseases'] ?? null,
+                'other_conditions' => $validated['other_conditions'] ?? null,
                 'previous_surgeries' => $validated['previous_surgeries'] ?? null,
                 'allergies' => $validated['allergies'] ?? null,
             ]

@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MedicalRecord extends Model
 {
@@ -16,6 +15,7 @@ class MedicalRecord extends Model
         'treatment_plan',
         'diagnosis',
         'chronic_diseases',
+        'other_conditions',
         'previous_surgeries',
         'allergies',
         'current_medications',
@@ -23,7 +23,10 @@ class MedicalRecord extends Model
     ];
     protected $casts = [
         'is_pregnant' => 'boolean',
-        
+        // Stored as a JSON array of DrugCentral-standard condition names.
+        'chronic_diseases' => 'array',
+        'allergies' => 'array',
+        'current_medications' => 'array',
     ];
     
 
