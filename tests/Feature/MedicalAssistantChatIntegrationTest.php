@@ -48,7 +48,7 @@ class MedicalAssistantChatIntegrationTest extends TestCase
         return $user->fresh();
     }
 
-    private function fakeInterviewEngine(array $overrides = []): void
+    private function fakeInterviewEngine(array $overrides = [], array $assessmentOverrides = []): void
     {
         Http::fake([
             '*/api/interview/turn' => Http::response(array_merge([
@@ -58,6 +58,22 @@ class MedicalAssistantChatIntegrationTest extends TestCase
                 'next_slot' => null,
                 'symptoms' => [['text' => 'headache', 'negated' => false, 'confidence' => 0.9]],
             ], $overrides)),
+            // Hit whenever the interview reports finished=true (MedicalAssistantService
+            // then calls the separate, stateless assessment endpoint). Faked so this
+            // stays a Laravel-contract test, not a live call to the Python service.
+            '*/api/assessment/run' => Http::response(array_merge([
+                'features' => [],
+                'predictions' => ['predictions' => [], 'predictor_version' => 'fake-v1'],
+                'urgency' => ['level' => 'URGENT', 'score' => 0.75, 'explanation' => 'fake urgency'],
+                'specialty' => ['specialty' => 'Neurology', 'confidence' => 0.7, 'explanation' => 'fake specialty'],
+                'confidence' => ['overall_confidence' => 0.7, 'requires_human_review' => false, 'explanation' => 'fake confidence'],
+                'explanation' => [
+                    'summary' => 'Fake assessment summary',
+                    'medical_reasoning' => 'Fake reasoning',
+                    'recommendation' => 'Fake recommendation',
+                    'disclaimer' => 'Fake disclaimer',
+                ],
+            ], $assessmentOverrides)),
         ]);
     }
 
@@ -95,7 +111,7 @@ class MedicalAssistantChatIntegrationTest extends TestCase
             ->assertJsonPath('finished', false);
     }
 
-    public function test_finished_interview_reports_finished_true_and_no_question(): void
+    public function test_finished_interview_reports_finished_true_and_returns_assessment_summary(): void
     {
         $user = $this->patientUser();
         $this->fakeInterviewEngine(['finished' => true, 'question' => null]);
@@ -109,9 +125,15 @@ class MedicalAssistantChatIntegrationTest extends TestCase
                 'message' => 'no other symptoms',
             ]);
 
+        // "finished" no longer means an empty chat turn: MedicalAssistantService
+        // now calls the assessment engine and returns its summary as "question"
+        // (same field the mobile screen already reads), so the conversation
+        // always ends with a visible result instead of silently going quiet.
         $response->assertStatus(201)
             ->assertJsonPath('finished', true)
-            ->assertJsonPath('question', null);
+            ->assertJsonPath('question', fn (?string $question) => $question !== null
+                && str_contains($question, 'Fake assessment summary')
+                && str_contains($question, 'Fake recommendation'));
     }
 
     public function test_voice_message_response_shape_matches_the_text_message_shape(): void

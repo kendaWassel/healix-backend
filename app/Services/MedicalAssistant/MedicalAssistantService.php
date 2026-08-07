@@ -2,29 +2,34 @@
 
 namespace App\Services\MedicalAssistant;
 
+use App\Exceptions\AI\AIServiceException;
 use App\Models\Conversation;
 use App\Models\ConversationSymptom;
 use App\Models\Message;
 use App\Services\Interview\InterviewService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * High-level orchestrator for the medical assistant conversation.
  *
- * Single entry point the conversation pipeline (text OR voice) calls. Today it
- * drives the history-taking interview engine; later it will also route to
- * assessment/diagnosis without changing its callers:
+ * Single entry point the conversation pipeline (text OR voice) calls. Drives
+ * the history-taking interview engine, then, once it signals "finished",
+ * hands the collected transcript + symptoms to the (separate, stateless)
+ * assessment engine and turns its result into the final chat message:
  *
- *   Conversation -> MedicalAssistantService -> InterviewEngine -> LLM (later) -> Assessment (later)
+ *   Conversation -> MedicalAssistantService -> InterviewEngine -> LLM -> Assessment
  *
  * Laravel is the source of truth: this class owns persistence of the patient
  * message, the AI reply, extracted symptoms, the Python session id and status.
- * InterviewService stays a thin engine adapter (the Python call only).
+ * InterviewService/AssessmentService stay thin engine adapters (the Python
+ * calls only).
  */
 class MedicalAssistantService
 {
     public function __construct(
-        protected InterviewService $interview
+        protected InterviewService $interview,
+        protected AssessmentService $assessment
     ) {}
 
     /**
@@ -90,6 +95,8 @@ class MedicalAssistantService
             'detected_symptoms' => array_map(static fn ($s) => $s['text'], $result['symptoms']),
         ])->save();
 
+        $this->persistSymptoms($conversation, $result['symptoms']);
+
         $assistantMessage = null;
         if (! $result['finished'] && ! empty($result['question'])) {
             $assistantMessage = Message::create([
@@ -99,9 +106,9 @@ class MedicalAssistantService
                 'message' => $result['question'],
                 'turn_number' => $turn,
             ]);
+        } elseif ($result['finished']) {
+            $assistantMessage = $this->runAssessmentAndPersist($conversation, $result['session_id'], $turn);
         }
-
-        $this->persistSymptoms($conversation, $result['symptoms']);
 
         $conversation->forceFill([
             'session_id' => $result['session_id'],
@@ -119,6 +126,81 @@ class MedicalAssistantService
     protected function nextTurn(Conversation $conversation): int
     {
         return (int) ($conversation->messages()->max('turn_number') ?? 0) + 1;
+    }
+
+    /**
+     * Run the (separate, stateless) assessment engine over the finished
+     * interview's transcript + symptoms, and persist its result as the final
+     * assistant message. The interview itself already succeeded by this
+     * point, so an assessment failure must not roll back the transaction —
+     * it degrades to a plain Arabic notice instead (same "never drop what's
+     * already computed" spirit as the Python explainer this calls into).
+     */
+    protected function runAssessmentAndPersist(Conversation $conversation, string $sessionId, int $turn): Message
+    {
+        $rawMessages = $conversation->messages()
+            ->where('sender', Message::SENDER_PATIENT)
+            ->orderBy('turn_number')
+            ->get()
+            ->map(fn (Message $m) => (string) ($m->message ?: $m->transcribed_text ?: ''))
+            ->filter(fn (string $text) => $text !== '')
+            ->values()
+            ->all();
+
+        $symptoms = $conversation->symptoms()->get()
+            ->map(fn (ConversationSymptom $s) => [
+                'text' => $s->symptom_text,
+                'negated' => $s->negated,
+                'confidence' => $s->confidence,
+            ])->all();
+
+        try {
+            $assessment = $this->assessment->run($sessionId, $rawMessages, $symptoms);
+            $text = $this->formatAssessmentSummary($assessment);
+        } catch (AIServiceException $e) {
+            Log::warning('Assessment run failed, falling back to a plain completion notice', [
+                'conversation_id' => $conversation->id,
+                'session_id' => $sessionId,
+                'error' => $e->getMessage(),
+            ]);
+            $text = __('ai.assessment_unavailable_notice');
+        }
+
+        return Message::create([
+            'conversation_id' => $conversation->id,
+            'sender' => Message::SENDER_ASSISTANT,
+            'message_type' => Message::TYPE_TEXT,
+            'message' => $text,
+            'turn_number' => $turn,
+        ]);
+    }
+
+    /**
+     * @param  array{urgency: array{level: string, explanation: string}, specialty: array{specialty: string}, explanation: array{summary: string, recommendation: string, disclaimer: string}}  $assessment
+     */
+    protected function formatAssessmentSummary(array $assessment): string
+    {
+        $urgencyKey = 'ai.urgency_level_' . strtolower((string) $assessment['urgency']['level']);
+        $urgencyLabel = __($urgencyKey);
+        // Missing translation: __() returns the key itself -- fall back to the raw level instead.
+        if ($urgencyLabel === $urgencyKey) {
+            $urgencyLabel = $assessment['urgency']['level'];
+        }
+
+        $lines = [
+            '📋 ' . __('ai.assessment_summary_title'),
+            '',
+            $assessment['explanation']['summary'],
+            '',
+            __('ai.assessment_urgency_line', ['level' => $urgencyLabel]),
+            __('ai.assessment_specialty_line', ['specialty' => $assessment['specialty']['specialty']]),
+            '',
+            $assessment['explanation']['recommendation'],
+            '',
+            '⚠️ ' . $assessment['explanation']['disclaimer'],
+        ];
+
+        return implode("\n", $lines);
     }
 
     /**

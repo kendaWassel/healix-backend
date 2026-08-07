@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class RegisterRequest extends FormRequest
@@ -39,10 +38,15 @@ class RegisterRequest extends FormRequest
                     // any nested key that has no rule.
                     'medical_record.diagnosis' => 'nullable|string',
                     'medical_record.treatment_plan' => 'nullable|string',
-                    'medical_record.chronic_diseases' => 'nullable|string',
+                    // JSON array of DrugCentral-standard condition names (picker).
+                    'medical_record.chronic_diseases' => 'nullable|array',
+                    'medical_record.chronic_diseases.*' => 'string|max:255',
+                    'medical_record.other_conditions' => 'nullable|string|max:1000',
                     'medical_record.previous_surgeries' => 'nullable|string',
-                    'medical_record.allergies' => 'nullable|string',
-                    'medical_record.current_medications' => 'nullable|string',
+                    'medical_record.allergies' => 'nullable|array',
+                    'medical_record.allergies.*' => 'string|max:255',
+                    'medical_record.current_medications' => 'nullable|array',
+                    'medical_record.current_medications.*' => 'string|max:255',
                     'medical_record.is_pregnant' => 'nullable|in:yes,no',
                 ],
                 'doctor' => [

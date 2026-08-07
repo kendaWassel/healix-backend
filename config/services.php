@@ -74,4 +74,12 @@ return [
         'retries' => env('LAB_SERVICE_RETRIES', 2),
     ],
 
+    // Medical Knowledge & Clinical Guidance Service (FastAPI: Groq LLM +
+    // WHO/CDC/NHS RAG + deterministic safety floor). Arabic + English only.
+    'clinical_guidance' => [
+        'url' => env('CLINICAL_GUIDANCE_SERVICE_URL', 'http://127.0.0.1:8001'),
+        'timeout' => env('CLINICAL_GUIDANCE_SERVICE_TIMEOUT', 60),
+        'retries' => env('CLINICAL_GUIDANCE_SERVICE_RETRIES', 2),
+    ],
+
 ];

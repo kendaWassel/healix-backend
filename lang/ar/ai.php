@@ -31,6 +31,7 @@ return [
     'service_label_medical_assistant' => 'خدمة المساعد الطبي',
     'service_label_ddi' => 'خدمة تداخلات الأدوية',
     'service_label_lab' => 'خدمة تحليل المختبر',
+    'service_label_clinical_guidance' => 'خدمة الإرشاد الطبي',
 
     /*
     | المحادثات
@@ -38,6 +39,7 @@ return [
 
     'chat_started' => 'تم بدء جلسة المحادثة بنجاح.',
     'chat_response' => 'تم توليد رد الذكاء الاصطناعي بنجاح.',
+    'guidance_greeting' => 'مرحباً — أساعدك على فهم أعراضك ومعرفة متى تطلب الرعاية. هذا إرشاد عام وليس تشخيصاً.',
     'conversation_created' => 'تم إنشاء المحادثة بنجاح.',
     'conversation_deleted' => 'تم حذف المحادثة بنجاح.',
     'conversation_retrieved' => 'تم جلب المحادثة بنجاح.',
@@ -81,6 +83,7 @@ return [
     'ddi_checks_retrieved' => 'تم جلب فحوصات تداخل الأدوية بنجاح.',
     'ddi_check_not_found' => 'فحص تداخل الأدوية غير موجود.',
     'ddi_no_resolution' => 'لم تُعِد خدمة تداخلات الأدوية نتيجة مطابقة للدواء.',
+    'ddi_no_condition_warnings' => 'لم تُعِد خدمة تداخلات الأدوية تنبيهات الحالات المزمنة.',
 
     /*
     | التحقق من سلامة الوصفة الطبية
@@ -89,6 +92,13 @@ return [
     'verification_completed' => 'اكتمل التحقق من الوصفة الطبية.',
     'safety_verification_completed' => 'اكتمل التحقق من سلامة الوصفة الطبية.',
     'verification_unexpected_error' => 'حدث خطأ غير متوقع أثناء التحقق من السلامة.',
+
+    // ملاحظات ثابتة يولّدها تقرير السلامة (تُترجَم حسب لغة الطلب).
+    'safety_allergy_direct_note' => 'المريض لديه حساسية مباشرة من هذا الدواء.',
+    'safety_allergy_cross_note' => 'قد يتفاعل بشكل متصالب مع حساسية المريض تجاه :allergen.',
+    'safety_interaction_alternative_note' => 'نفس تصنيف ATC الخاص بـ :reference_drug، ولا يوجد تداخل مسجّل مع :other_drug. يجب التأكد دائمًا من الصيدلي.',
+    'safety_condition_contraindicated_note' => ':medication (:ingredient) ممنوع استخدامه لدى المرضى المصابين بـ :condition.',
+    'safety_pregnancy_not_applicable' => 'المريضة غير مسجَّلة كحامل — تم تخطّي فحص الحمل.',
 
     /*
     | تحاليل المختبر
@@ -113,5 +123,20 @@ return [
     'interview_invalid_finished' => 'لم تُعِد خدمة المقابلة قيمة صالحة لعلامة "الانتهاء".',
     'interview_no_session' => 'لم تُعِد خدمة المقابلة معرّف جلسة.',
     'interview_no_patient' => 'لا يوجد مريض في قاعدة البيانات لربط المحادثة التجريبية به.',
+
+    /*
+    | محرك التقييم (بعد انتهاء المقابلة)
+    */
+
+    'assessment_invalid_response' => 'لم تُعِد خدمة التقييم استجابة صالحة.',
+    'assessment_unavailable_notice' => 'انتهت المقابلة وتمّ تسجيل إجاباتك، لكن تعذّر إتمام التقييم النهائي حالياً. يرجى مراجعة طبيب لتقييم الأعراض.',
+    'assessment_summary_title' => 'ملخّص التقييم الأولي',
+    'assessment_urgency_line' => 'درجة الاستعجال: :level',
+    'assessment_specialty_line' => 'التخصّص المقترح: :specialty',
+
+    'urgency_level_emergency' => 'طارئة',
+    'urgency_level_urgent' => 'عاجلة',
+    'urgency_level_semi_urgent' => 'شبه عاجلة',
+    'urgency_level_non_urgent' => 'غير عاجلة',
 
 ];
