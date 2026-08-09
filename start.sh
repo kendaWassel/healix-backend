@@ -14,3 +14,4 @@ php artisan vendor:publish --provider="CloudinaryLabs\CloudinaryLaravel\Cloudina
 
 echo "Running migrations..."
 php artisan migrate --force
+php artisan db:seed --force
