@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
-cd /var/www/html
+# cd to wherever this script actually lives instead of assuming a fixed
+# WORKDIR — different Dockerfile variants have used /var/www and
+# /var/www/html, and this script must work from either.
+cd "$(dirname "${BASH_SOURCE[0]}")"
 
 if [ ! -f .env ]; then
   cp .env.example .env
