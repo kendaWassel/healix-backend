@@ -31,11 +31,19 @@ class FastApiClient
 
     protected int $retries;
 
+    /** Optional shared secret the FastAPI side gates its endpoints with. */
+    protected ?string $apiKey;
+
+    /** Header name used to transmit the shared secret. Matches the FastAPI's expected key. */
+    protected string $apiKeyHeader = 'X-API-KEY';
+
     public function __construct()
     {
         $this->baseUrl = rtrim(config("services.{$this->configKey}.url"), '/');
         $this->timeout = (int) config("services.{$this->configKey}.timeout", 60);
         $this->retries = (int) config("services.{$this->configKey}.retries", 3);
+        $apiKey = config("services.{$this->configKey}.api_key");
+        $this->apiKey = is_string($apiKey) && $apiKey !== '' ? $apiKey : null;
     }
 
     /**
@@ -44,6 +52,25 @@ class FastApiClient
     protected function serviceName(): string
     {
         return __($this->serviceLabelKey);
+    }
+
+    /**
+     * Build a pending HTTP request with the common headers: Accept: application/json
+     * and, when configured, the X-API-KEY shared-secret header. Every outgoing call
+     * (plain JSON, multipart, binary download) routes through this so adding a new
+     * transport-level header is a one-line change.
+     *
+     * @return \Illuminate\Http\Client\PendingRequest
+     */
+    protected function buildRequest()
+    {
+        $pending = Http::timeout($this->timeout)->acceptJson();
+
+        if ($this->apiKey !== null) {
+            $pending = $pending->withHeaders([$this->apiKeyHeader => $this->apiKey]);
+        }
+
+        return $pending;
     }
 
     /**
@@ -88,8 +115,7 @@ class FastApiClient
 
             try {
                 // The attachment is consumed per request, so rebuild it on every attempt.
-                $response = Http::timeout($this->timeout)
-                    ->acceptJson()
+                $response = $this->buildRequest()
                     ->attach($fileField, $fileContents, $fileName)
                     ->post($url, $fields);
 
@@ -156,7 +182,7 @@ class FastApiClient
         Log::info("{$this->serviceLabel} binary download", ['url' => $url]);
 
         try {
-            $response = Http::timeout($this->timeout)->get($url);
+            $response = $this->buildRequest()->get($url);
         } catch (ConnectionException $e) {
             throw new AIServiceUnavailableException(__('ai.service_connection_failed', ['service' => $this->serviceName()]));
         }
@@ -197,7 +223,7 @@ class FastApiClient
             $attempt++;
 
             try {
-                $pending = Http::timeout($this->timeout)->acceptJson();
+                $pending = $this->buildRequest();
 
                 $response = $method === 'get'
                     ? $pending->get($url, $payload)

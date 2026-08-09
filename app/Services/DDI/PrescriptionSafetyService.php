@@ -217,6 +217,17 @@ class PrescriptionSafetyService
      * Cross-check each prescribed drug against the patient's recorded allergies,
      * both directly and via structural/pharmacological cross-reactivity (/allergy).
      *
+     * Uses the DDI v2 batch (prescription) mode: a single HTTP call compares the
+     * entire medication list against the entire allergen list at once, resolving
+     * direct matches by active ingredient (RxCUI) rather than exact drug name —
+     * e.g. a Panadol allergy now correctly flags a prescribed Paracetamol — plus
+     * structural/pharmacological cross-reactivity among the *prescribed* drugs.
+     * Unlike the legacy per-allergen lookup, the batch endpoint does not return
+     * the full list of non-prescribed cross-reactive candidates, so there is no
+     * "other drugs to avoid" list on this path. The old per-allergen loop is kept
+     * as a fallback when the batch endpoint is unreachable or returns an
+     * unexpected shape — the "degrade gracefully, never drop a warning" rule.
+     *
      * @param  array<int, string>  $medications
      * @return array<int, array<string, mixed>>
      */
@@ -228,21 +239,89 @@ class PrescriptionSafetyService
             return [];
         }
 
+        try {
+            $batch = $this->ddi->checkPrescriptionAllergies($medications, $allergens);
+        } catch (AIServiceException $e) {
+            Log::warning('Prescription allergy batch check failed, falling back to per-allergen loop', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return $this->allergyWarningsLegacy($medications, $allergens);
+        }
+
+        $warnings = [];
+
+        // 1) Ingredient-level DIRECT matches from the batch endpoint.
+        foreach ($batch['direct_matches'] ?? [] as $row) {
+            $allergen = $row['allergen'] ?? '';
+            $med = $row['medication'] ?? '';
+            if ($med === '' || $allergen === '') {
+                continue;
+            }
+            $risk = $row['risk'] ?? 'CRITICAL';
+            $ingredient = $row['matched_ingredient'] ?? null;
+            $key = $med . '|' . $allergen . '|direct';
+            $warnings[$key] = [
+                'medication' => $med,
+                'allergen' => $allergen,
+                'detected_by' => 'direct_match',
+                'detected_by_label' => Locale::label('ddi_detected_by', 'direct_match'),
+                'risk' => $risk,
+                'risk_label' => Locale::label('ddi_risk', $risk),
+                'note' => is_string($ingredient) && $ingredient !== ''
+                    ? __('ai.safety_allergy_direct_match_note', ['match' => $ingredient])
+                    : __('ai.safety_allergy_direct_note'),
+            ];
+        }
+
+        // 2) Structural/pharmacological cross-reactive matches among the
+        // prescribed drugs themselves.
+        foreach ($batch['cross_reactive_matches'] ?? [] as $row) {
+            $allergen = $row['allergen'] ?? '';
+            $med = $row['name'] ?? '';
+            if ($med === '' || $allergen === '') {
+                continue;
+            }
+            $detectedBy = $row['detected_by'] ?? 'cross_reactivity';
+            $risk = $row['risk'] ?? 'MODERATE';
+            $key = $med . '|' . $allergen . '|' . $detectedBy;
+
+            $warnings[$key] ??= [
+                'medication' => $med,
+                'allergen' => $allergen,
+                'detected_by' => $detectedBy,
+                'detected_by_label' => Locale::label('ddi_detected_by', $detectedBy),
+                'risk' => $risk,
+                'risk_label' => Locale::label('ddi_risk', $risk),
+                'tanimoto' => $row['tanimoto'] ?? null,
+                'note' => __('ai.safety_allergy_cross_note', ['allergen' => $allergen]),
+            ];
+        }
+
+        return array_values($warnings);
+    }
+
+    /**
+     * Legacy per-allergen loop — kept as a fallback so a transient batch-endpoint
+     * regression never leaves a prescription unverified for allergies.
+     *
+     * @param  array<int, string>  $medications
+     * @param  array<int, string>  $allergens
+     * @return array<int, array<string, mixed>>
+     */
+    protected function allergyWarningsLegacy(array $medications, array $allergens): array
+    {
         $warnings = [];
 
         foreach ($allergens as $allergen) {
             $allergenLower = mb_strtolower($allergen);
 
-            // Fetch the allergen's cross-reactive drugs once, and reduce them to
-            // plain names — attached to every warning below so the prescriber
-            // sees the other drugs to avoid (parallels interaction alternatives).
             $crossReactive = $this->allergenCrossReactives($allergen);
             $crossReactiveNames = array_values(array_filter(array_map(
                 fn ($candidate) => $candidate['name'] ?? null,
                 $crossReactive
             )));
 
-            // 1) Direct allergy — a prescribed drug IS the allergen.
             foreach ($medications as $med) {
                 if (mb_strtolower($med) === $allergenLower) {
                     $warnings[$med . '|' . $allergen] = [
@@ -258,7 +337,6 @@ class PrescriptionSafetyService
                 }
             }
 
-            // 2) Cross-reactivity — a prescribed drug shares structure/class with the allergen.
             foreach ($crossReactive as $candidate) {
                 $candidateName = $candidate['name'] ?? null;
                 if (! is_string($candidateName)) {

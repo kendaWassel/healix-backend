@@ -15,6 +15,7 @@ class DrugInteractionCheck extends Model
     public const TYPE_SCREEN = 'screen';
     public const TYPE_ALLERGY = 'allergy';
     public const TYPE_PREGNANCY = 'pregnancy';
+    public const TYPE_CONDITION = 'condition';
 
     protected $fillable = [
         'user_id',
