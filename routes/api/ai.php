@@ -32,6 +32,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::post('/screen', [DrugInteractionController::class, 'screenMedications']);
         Route::post('/allergy', [DrugInteractionController::class, 'checkAllergy']);
         Route::post('/pregnancy', [DrugInteractionController::class, 'checkPregnancy']);
+        Route::post('/condition-check', [DrugInteractionController::class, 'checkConditions']);
 
         // Persisted history of the authenticated patient's drug-safety checks.
         Route::get('/checks', [DrugInteractionController::class, 'history']);

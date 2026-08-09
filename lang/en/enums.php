@@ -174,6 +174,7 @@ return [
 
     // Risk level of an allergy / cross-reactivity finding.
     'ddi_risk' => [
+        'CRITICAL' => 'Critical',
         'HIGH' => 'High',
         'MODERATE' => 'Moderate',
         'LOW' => 'Low',
