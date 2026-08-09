@@ -1,49 +1,27 @@
-FROM php:8.3-cli
+FROM php:8.2-fpm
 
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    unzip \
-    zip \
-    libpng-dev \
-    libjpeg62-turbo-dev \
-    libfreetype6-dev \
-    libzip-dev \
-    libonig-dev \
-    libxml2-dev \
-    libicu-dev \
-    libmagickwand-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j"$(nproc)" \
-        bcmath \
-        exif \
-        gd \
-        intl \
-        mbstring \
-        pcntl \
-        pdo_mysql \
-        soap \
-        sockets \
-        xml \
-        zip \
-    && pecl install imagick \
-    && docker-php-ext-enable imagick \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    git curl unzip libpq-dev libonig-dev libzip-dev zip \
+    && docker-php-ext-install pdo pdo_mysql mbstring zip
 
+# Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www/html
+WORKDIR /var/www
 
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --no-scripts
-
+# Copy app files
 COPY . .
 
-RUN if [ ! -f .env ]; then cp .env.example .env; fi \
-    && php artisan package:discover --ansi \
-    && chmod +x /var/www/html/start.sh
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader
 
-EXPOSE 8080
+# Laravel setup
+RUN php artisan config:clear && \
+    php artisan route:clear && \
+    php artisan view:clear
 
-CMD ["/bin/bash", "/var/www/html/start.sh"]
+# Serve HTTP on Railway's injected $PORT. php-fpm alone speaks FastCGI, not HTTP,
+# so the platform proxy can't reach it — use artisan serve to bind an HTTP port.
+# Run migrations at startup so the schema is ready on each deploy.
+CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
