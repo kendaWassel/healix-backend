@@ -23,5 +23,7 @@ RUN php artisan config:clear && \
 
 # Serve HTTP on Railway's injected $PORT. php-fpm alone speaks FastCGI, not HTTP,
 # so the platform proxy can't reach it — use artisan serve to bind an HTTP port.
-# Run migrations at startup so the schema is ready on each deploy.
-CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
+# start.sh runs migrations, seeds an empty database, and then serves — see
+# that file for why seeding must be conditional rather than unconditional.
+RUN chmod +x start.sh
+CMD ["bash", "start.sh"]
