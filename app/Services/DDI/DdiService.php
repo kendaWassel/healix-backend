@@ -150,14 +150,69 @@ class DdiService
     /**
      * Find drugs that may cross-react with one the patient is allergic to.
      *
+     * Uses the DDI v2 POST /allergy endpoint in single-drug mode.
+     *
      * @throws AIServiceException
      */
     public function checkAllergyCrossReactivity(string $drug, int $maxResults = 10): array
     {
-        return $this->client->get('/allergy', [
+        return $this->client->post('/allergy', [
             'drug' => $drug,
             'max_results' => $maxResults,
         ]);
+    }
+
+    /**
+     * Prescription-mode allergy check: cross-check an entire medication list
+     * against an entire allergy list in a single round-trip.
+     *
+     * Matches the DDI v2 POST /allergy "prescription-check" contract (as of
+     * the service's 2026-08-08 allergy fix, commit 96fd9a6): ingredient-level
+     * direct matches (e.g. Paracetamol vs. a Panadol allergy, resolved via
+     * RxCUI — not just an exact-name match) plus structural/pharmacological
+     * cross-reactive matches among the *prescribed* drugs only. The service
+     * does not return the full non-prescribed candidate list in this mode.
+     *
+     * @param  array<int, string>  $medications  Prescribed drug names (brands or generics).
+     * @param  array<int, string>  $allergies    Patient-known allergens.
+     * @return array{
+     *     direct_matches: array<int, array{medication: string, matched_ingredient: string, risk: string, note: string, allergen: string}>,
+     *     cross_reactive_matches: array<int, array{name: string, tanimoto: ?float, detected_by: string, risk: string, allergen: string}>,
+     *     safe: bool,
+     * }
+     *
+     * @throws AIServiceException
+     */
+    public function checkPrescriptionAllergies(array $medications, array $allergies): array
+    {
+        $medications = array_values(array_filter($medications, fn ($m) => is_string($m) && trim($m) !== ''));
+        $allergies = array_values(array_filter($allergies, fn ($a) => is_string($a) && trim($a) !== ''));
+
+        if ($medications === [] || $allergies === []) {
+            return [
+                'direct_matches' => [],
+                'cross_reactive_matches' => [],
+                'safe' => true,
+            ];
+        }
+
+        Log::info('DDI prescription-allergy check started', [
+            'medication_count' => count($medications),
+            'allergy_count' => count($allergies),
+        ]);
+
+        $result = $this->client->post('/allergy', [
+            'medications' => $medications,
+            'allergies' => $allergies,
+        ]);
+
+        foreach (['direct_matches', 'cross_reactive_matches'] as $key) {
+            if (! isset($result[$key]) || ! is_array($result[$key])) {
+                throw new AIServiceInvalidResponseException(__('ai.ddi_no_prescription_allergies'));
+            }
+        }
+
+        return $result;
     }
 
     /**

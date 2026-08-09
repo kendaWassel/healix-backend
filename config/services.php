@@ -60,18 +60,21 @@ return [
         'url' => env('MEDICAL_ASSISTANT_SERVICE_URL', 'http://127.0.0.1:8000'),
         'timeout' => env('MEDICAL_ASSISTANT_SERVICE_TIMEOUT', 60),
         'retries' => env('MEDICAL_ASSISTANT_SERVICE_RETRIES', 3),
+        'api_key' => env('MEDICAL_ASSISTANT_SERVICE_API_KEY'),
     ],
 
     'ddi' => [
         'url' => env('DDI_SERVICE_URL', 'http://127.0.0.1:8002'),
         'timeout' => env('DDI_SERVICE_TIMEOUT', 60),
         'retries' => env('DDI_SERVICE_RETRIES', 3),
+        'api_key' => env('DDI_SERVICE_API_KEY'),
     ],
 
     'lab' => [
         'url' => env('LAB_SERVICE_URL', 'http://127.0.0.1:8000'),
         'timeout' => env('LAB_SERVICE_TIMEOUT', 120),
         'retries' => env('LAB_SERVICE_RETRIES', 2),
+        'api_key' => env('LAB_SERVICE_API_KEY'),
     ],
 
     // Medical Knowledge & Clinical Guidance Service (FastAPI: Groq LLM +
@@ -80,6 +83,7 @@ return [
         'url' => env('CLINICAL_GUIDANCE_SERVICE_URL', 'http://127.0.0.1:8001'),
         'timeout' => env('CLINICAL_GUIDANCE_SERVICE_TIMEOUT', 60),
         'retries' => env('CLINICAL_GUIDANCE_SERVICE_RETRIES', 2),
+        'api_key' => env('CLINICAL_GUIDANCE_SERVICE_API_KEY'),
     ],
 
 ];

@@ -95,6 +95,7 @@ return [
 
     // ملاحظات ثابتة يولّدها تقرير السلامة (تُترجَم حسب لغة الطلب).
     'safety_allergy_direct_note' => 'المريض لديه حساسية مباشرة من هذا الدواء.',
+    'safety_allergy_direct_match_note' => 'يحتوي على :match، وهي نفس المادة الفعّالة الموجودة في حساسية المريض المسجَّلة.',
     'safety_allergy_cross_note' => 'قد يتفاعل بشكل متصالب مع حساسية المريض تجاه :allergen.',
     'safety_interaction_alternative_note' => 'نفس تصنيف ATC الخاص بـ :reference_drug، ولا يوجد تداخل مسجّل مع :other_drug. يجب التأكد دائمًا من الصيدلي.',
     'safety_condition_contraindicated_note' => ':medication (:ingredient) ممنوع استخدامه لدى المرضى المصابين بـ :condition.',

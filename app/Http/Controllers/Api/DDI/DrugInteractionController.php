@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\DDI\AllergyCheckRequest;
 use App\Http\Requests\DDI\BatchInteractionRequest;
 use App\Http\Requests\DDI\CheckInteractionRequest;
+use App\Http\Requests\DDI\ConditionCheckRequest;
 use App\Http\Requests\DDI\PregnancyCheckRequest;
 use App\Http\Requests\DDI\ResolveDrugRequest;
 use App\Http\Requests\DDI\ScreenMedicationsRequest;
@@ -91,15 +92,29 @@ class DrugInteractionController extends Controller
     }
 
     /**
-     * Find drugs that may cross-react with a known allergy.
+     * Allergy cross-reactivity lookup. Accepts TWO modes:
      *
-     * The response is trimmed for display (see simplifyAllergyResult): the
-     * cross-reactive drugs are reduced to plain names and the safety note is
-     * kept last. The internal verify flow uses DdiService directly and still
-     * gets the full detail — this shaping is for this endpoint only.
+     *   (A) Legacy single-drug:   { drug, max_results? }
+     *         -> returns simplified cross_reactive_drugs + note
+     *   (B) Prescription batch:   { medications[], allergies[] }
+     *         -> returns full structured batch payload (direct_matches,
+     *            prescribed_matches, cross_reactive_drugs, note) as-is.
      */
     public function checkAllergy(AllergyCheckRequest $request): JsonResponse
     {
+        if ($request->mode() === 'prescription') {
+            return $this->handleAndRecord(
+                $request,
+                'Prescription allergy check completed.',
+                DrugInteractionCheck::TYPE_ALLERGY,
+                $request->validated(),
+                fn () => $this->ddiService->checkPrescriptionAllergies(
+                    $request->validated('medications'),
+                    $request->validated('allergies'),
+                ),
+            );
+        }
+
         return $this->handleAndRecord(
             $request,
             'Allergy cross-reactivity check completed.',
@@ -155,6 +170,24 @@ class DrugInteractionController extends Controller
                 $request->validated('drug_a'),
                 $request->validated('drug_b'),
                 $request->boolean('live_api', true),
+            ),
+        );
+    }
+
+    /**
+     * Check prescribed medications against a patient's chronic conditions
+     * (DrugCentral regulatory contraindication lookup).
+     */
+    public function checkConditions(ConditionCheckRequest $request): JsonResponse
+    {
+        return $this->handleAndRecord(
+            $request,
+            'Condition contraindication check completed.',
+            DrugInteractionCheck::TYPE_CONDITION,
+            $request->validated(),
+            fn () => $this->ddiService->checkConditionContraindications(
+                $request->validated('medications'),
+                $request->validated('conditions'),
             ),
         );
     }
