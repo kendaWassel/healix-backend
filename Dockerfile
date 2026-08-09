@@ -21,4 +21,7 @@ RUN php artisan config:clear && \
     php artisan route:clear && \
     php artisan view:clear
 
-CMD ["php-fpm"]
+# Serve HTTP on Railway's injected $PORT. php-fpm alone speaks FastCGI, not HTTP,
+# so the platform proxy can't reach it — use artisan serve to bind an HTTP port.
+# Run migrations at startup so the schema is ready on each deploy.
+CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}

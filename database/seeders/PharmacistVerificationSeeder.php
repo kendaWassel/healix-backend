@@ -51,6 +51,12 @@ class PharmacistVerificationSeeder extends Seeder
             ['profile' => 'allergic_multiple',   'source' => 'doctor_written',   'meds' => ['Amoxicillin', 'Aspirin']],
             ['profile' => 'clean_male',          'source' => 'patient_uploaded', 'meds' => []],
             ['profile' => 'clean_male',          'source' => 'doctor_written',   'meds' => ['Paracetamol']],
+
+            // Chronic-condition contraindication: NSAID + peptic ulcer.
+            // Verify the live match wording with GET /condition-check if it
+            // stops flagging — DrugCentral condition strings can differ.
+            ['profile' => 'condition_ulcer',     'source' => 'doctor_written',   'meds' => ['Ibuprofen', 'Aspirin']],
+            ['profile' => 'condition_ulcer',     'source' => 'patient_uploaded', 'meds' => []],
         ];
 
         $created = 0;
@@ -107,11 +113,12 @@ class PharmacistVerificationSeeder extends Seeder
             ->pluck('patient_id');
 
         // Rotated so the queue contains a mix of pregnant / allergic / clean.
+        // allergies are JSON arrays (the column is cast to array).
         $profiles = [
-            ['is_pregnant' => true,  'allergies' => 'panadol'],
-            ['is_pregnant' => false, 'allergies' => 'Aspirin'],
+            ['is_pregnant' => true,  'allergies' => ['panadol']],
+            ['is_pregnant' => false, 'allergies' => ['Aspirin']],
             ['is_pregnant' => true,  'allergies' => null],
-            ['is_pregnant' => false, 'allergies' => 'Aspirin, Amoxicillin'],
+            ['is_pregnant' => false, 'allergies' => ['Aspirin', 'Amoxicillin']],
             ['is_pregnant' => false, 'allergies' => null],
         ];
 
@@ -150,11 +157,11 @@ class PharmacistVerificationSeeder extends Seeder
             // showcase prescription (panadol + warfarin).
             'pregnant_allergic_panadol' => [
                 'name' => 'Seed Patient Pregnant Allergic Panadol', 'gender' => 'female',
-                'is_pregnant' => true, 'allergies' => 'panadol',
+                'is_pregnant' => true, 'allergies' => ['panadol'],
             ],
             'pregnant_allergic' => [
                 'name' => 'Seed Patient Pregnant Allergic', 'gender' => 'female',
-                'is_pregnant' => true, 'allergies' => 'Aspirin',
+                'is_pregnant' => true, 'allergies' => ['Aspirin'],
             ],
             'pregnant_clean' => [
                 'name' => 'Seed Patient Pregnant Clean', 'gender' => 'female',
@@ -162,11 +169,18 @@ class PharmacistVerificationSeeder extends Seeder
             ],
             'allergic_aspirin' => [
                 'name' => 'Seed Patient Allergic Aspirin', 'gender' => 'female',
-                'is_pregnant' => false, 'allergies' => 'Aspirin',
+                'is_pregnant' => false, 'allergies' => ['Aspirin'],
             ],
             'allergic_multiple' => [
                 'name' => 'Seed Patient Allergic Multiple', 'gender' => 'male',
-                'is_pregnant' => false, 'allergies' => 'Aspirin, Amoxicillin',
+                'is_pregnant' => false, 'allergies' => ['Aspirin', 'Amoxicillin'],
+            ],
+            // Chronic-condition case for the /condition-check integration:
+            // an NSAID prescribed to a patient with peptic ulcer.
+            'condition_ulcer' => [
+                'name' => 'Seed Patient Peptic Ulcer', 'gender' => 'male',
+                'is_pregnant' => false, 'allergies' => null,
+                'chronic_diseases' => ['Peptic ulcer'],
             ],
             'clean_male' => [
                 'name' => 'Seed Patient Clean', 'gender' => 'male',
@@ -207,6 +221,7 @@ class PharmacistVerificationSeeder extends Seeder
                 'doctor_id' => null,
                 'allergies' => $profile['allergies'],
                 'is_pregnant' => $profile['is_pregnant'],
+                'chronic_diseases' => $profile['chronic_diseases'] ?? null,
             ]);
 
             $patients[$key] = $patient;

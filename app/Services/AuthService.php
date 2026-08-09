@@ -152,7 +152,9 @@ class AuthService
             'doctor_id' => null, // No doctor assigned during registration
             'treatment_plan' => $medical['treatment_plan'] ?? null,
             'diagnosis' => $medical['diagnosis'] ?? null,
+            // Array of DrugCentral-standard condition names (cast to JSON).
             'chronic_diseases' => $medical['chronic_diseases'] ?? null,
+            'other_conditions' => $medical['other_conditions'] ?? null,
             'previous_surgeries' => $medical['previous_surgeries'] ?? null,
             'allergies' => $medical['allergies'] ?? null,
             'current_medications' => $medical['current_medications'] ?? null,

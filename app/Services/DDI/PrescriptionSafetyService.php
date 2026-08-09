@@ -5,15 +5,17 @@ namespace App\Services\DDI;
 use App\Exceptions\AI\AIServiceException;
 use App\Models\Patient;
 use App\Models\Prescription;
+use App\Services\AI\ConditionCheckService;
+use App\Support\Locale;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Verifies the clinical safety of a prescription before it is priced.
  *
- * Orchestrates the existing DDI microservice (via DdiService) across three
- * checks — drug interactions, allergy conflicts and pregnancy safety — and
- * merges them into one unified report. No clinical/ML logic lives here; it is
- * purely composition over DdiService.
+ * Orchestrates the existing DDI microservice across four checks — drug
+ * interactions, allergy conflicts, pregnancy safety and chronic-condition
+ * contraindications — and merges them into one unified report. No clinical/ML
+ * logic lives here; it is purely composition over the DDI services.
  */
 class PrescriptionSafetyService
 {
@@ -21,7 +23,8 @@ class PrescriptionSafetyService
     protected const PREGNANCY_WARNING_CATEGORIES = ['X', 'D', 'D*', 'C'];
 
     public function __construct(
-        protected DdiService $ddi
+        protected DdiService $ddi,
+        protected ConditionCheckService $conditionCheck,
     ) {}
 
     /**
@@ -66,10 +69,13 @@ class PrescriptionSafetyService
         $drugInteractions = $this->drugInteractions($medications);
         $allergyWarnings = $this->allergyWarnings($medications, $patient);
         [$pregnancyApplicable, $pregnancyWarnings, $pregnancyNote] = $this->pregnancyWarnings($medications, $patient);
+        $condition = $this->conditionCheck->check($medications, $this->patientConditions($patient));
+        $conditionWarnings = $this->conditionWarnings($condition['warnings']);
 
         $safe = $drugInteractions === []
             && $allergyWarnings === []
-            && $pregnancyWarnings === [];
+            && $pregnancyWarnings === []
+            && $conditionWarnings === [];
 
         return [
             'safe' => $safe,
@@ -79,6 +85,8 @@ class PrescriptionSafetyService
             'pregnancy_applicable' => $pregnancyApplicable,
             'pregnancy_warnings' => $pregnancyWarnings,
             'pregnancy_note' => $pregnancyNote,
+            'condition_warnings' => $conditionWarnings,
+            'condition_check_available' => $condition['available'],
         ];
     }
 
@@ -133,9 +141,18 @@ class PrescriptionSafetyService
         $findings = $this->ddi->screenMedications($medications)['findings'] ?? [];
 
         foreach ($findings as &$finding) {
+            // Localized labels alongside the raw enum values (frontend keys off raw).
+            $finding['severity_label'] = Locale::label('ddi_severity', $finding['severity'] ?? null);
+            $finding['severity_confidence_label'] = Locale::label('ddi_confidence', $finding['severity_confidence'] ?? null);
+
             $finding['alternatives'] = $this->interactionAlternatives(
                 (string) ($finding['drug_a'] ?? ''),
                 (string) ($finding['drug_b'] ?? '')
+            );
+            $finding['alternatives'] = $this->localizeAlternativesNote(
+                $finding['alternatives'],
+                (string) ($finding['drug_b'] ?? ''),
+                (string) ($finding['drug_a'] ?? '')
             );
         }
         unset($finding);
@@ -168,6 +185,32 @@ class PrescriptionSafetyService
         }
 
         return $result['alternatives'] ?? [];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $warnings
+     * @return array<int, array<string, mixed>>
+     */
+    protected function conditionWarnings(array $warnings): array
+    {
+        return array_values(array_map(function (array $warning): array {
+            $conditionLabel = Locale::label('ddi_condition', $warning['condition'] ?? null, $warning['condition'] ?? null);
+            $patientConditionLabel = Locale::label(
+                'ddi_condition',
+                $warning['patient_condition'] ?? null,
+                $warning['patient_condition'] ?? $conditionLabel
+            );
+
+            $warning['condition_label'] = $conditionLabel;
+            $warning['patient_condition_label'] = $patientConditionLabel;
+            $warning['note'] = __('ai.safety_condition_contraindicated_note', [
+                'medication' => $warning['medication'] ?? '',
+                'ingredient' => $warning['resolved_ingredient'] ?? ($warning['medication'] ?? ''),
+                'condition' => $conditionLabel,
+            ]);
+
+            return $warning;
+        }, $warnings));
     }
 
     /**
@@ -206,8 +249,10 @@ class PrescriptionSafetyService
                         'medication' => $med,
                         'allergen' => $allergen,
                         'detected_by' => 'direct_match',
+                        'detected_by_label' => Locale::label('ddi_detected_by', 'direct_match'),
                         'risk' => 'HIGH',
-                        'note' => 'Patient is directly allergic to this medication.',
+                        'risk_label' => Locale::label('ddi_risk', 'HIGH'),
+                        'note' => __('ai.safety_allergy_direct_note'),
                         'cross_reactive_drugs' => $crossReactiveNames,
                     ];
                 }
@@ -226,13 +271,18 @@ class PrescriptionSafetyService
                         continue;
                     }
 
+                    $detectedBy = $candidate['detected_by'] ?? 'cross_reactivity';
+                    $risk = $candidate['risk'] ?? 'MODERATE';
+
                     $warnings[$med . '|' . $allergen] ??= [
                         'medication' => $med,
                         'allergen' => $allergen,
-                        'detected_by' => $candidate['detected_by'] ?? 'cross_reactivity',
-                        'risk' => $candidate['risk'] ?? 'MODERATE',
+                        'detected_by' => $detectedBy,
+                        'detected_by_label' => Locale::label('ddi_detected_by', $detectedBy),
+                        'risk' => $risk,
+                        'risk_label' => Locale::label('ddi_risk', $risk),
                         'tanimoto' => $candidate['tanimoto'] ?? null,
-                        'note' => "May cross-react with the patient's allergy to {$allergen}.",
+                        'note' => __('ai.safety_allergy_cross_note', ['allergen' => $allergen]),
                         'cross_reactive_drugs' => $crossReactiveNames,
                     ];
                 }
@@ -274,7 +324,7 @@ class PrescriptionSafetyService
     protected function pregnancyWarnings(array $medications, ?Patient $patient): array
     {
         if (! $this->isPregnant($patient)) {
-            return [false, [], 'Patient is not recorded as pregnant — pregnancy check skipped.'];
+            return [false, [], __('ai.safety_pregnancy_not_applicable')];
         }
 
         if ($medications === []) {
@@ -300,6 +350,7 @@ class PrescriptionSafetyService
                 $warnings[] = [
                     'medication' => $med,
                     'category' => $category,
+                    'category_label' => Locale::label('ddi_pregnancy_category', $category),
                     'warning' => $result['warning'] ?? null,
                     'pllr_note' => $result['pllr_note'] ?? null,
                 ];
@@ -307,6 +358,23 @@ class PrescriptionSafetyService
         }
 
         return [true, $warnings, null];
+    }
+
+    /**
+     * Localize the alternatives note using the pair context we already have.
+     */
+    protected function localizeAlternativesNote(array $alternatives, string $referenceDrug, string $otherDrug): array
+    {
+        if ($alternatives === [] || ! array_key_exists('note', $alternatives)) {
+            return $alternatives;
+        }
+
+        $alternatives['note'] = __('ai.safety_interaction_alternative_note', [
+            'reference_drug' => $referenceDrug,
+            'other_drug' => $otherDrug,
+        ]);
+
+        return $alternatives;
     }
 
     /**
@@ -343,12 +411,64 @@ class PrescriptionSafetyService
         $allergens = [];
 
         foreach ($records as $record) {
-            foreach ($this->splitList($record->allergies) as $allergen) {
+            foreach ($this->fieldToList($record->allergies) as $allergen) {
                 $allergens[mb_strtolower($allergen)] = $allergen;
             }
         }
 
         return array_values($allergens);
+    }
+
+    /**
+     * Normalise a medical-record list field to trimmed string terms.
+     *
+     * `allergies` / `chronic_diseases` are now cast to arrays, but legacy rows
+     * (and some seeds) may still be plain / comma-joined strings, so accept
+     * both shapes rather than crash.
+     *
+     * @param  mixed  $value
+     * @return array<int, string>
+     */
+    protected function fieldToList($value): array
+    {
+        $items = is_array($value) ? $value : $this->splitList(is_string($value) ? $value : null);
+
+        return array_values(array_filter(
+            array_map(fn ($item) => trim((string) $item), $items),
+            fn ($item) => $item !== ''
+        ));
+    }
+
+    /**
+     * Distinct chronic-condition names from the patient's medical records.
+     *
+     * `chronic_diseases` is a JSON array of DrugCentral-standard names (the
+     * app's condition picker stores the English `value`). Legacy free-text /
+     * comma-joined values are tolerated so old rows still resolve. The separate
+     * `other_conditions` free-text field is intentionally NOT included — it is
+     * for clinician review only, not the automatic contraindication check.
+     *
+     * @return array<int, string>
+     */
+    protected function patientConditions(?Patient $patient): array
+    {
+        if ($patient === null) {
+            return [];
+        }
+
+        $records = $patient->relationLoaded('medicalRecords')
+            ? $patient->medicalRecords
+            : $patient->medicalRecords()->get();
+
+        $conditions = [];
+
+        foreach ($records as $record) {
+            foreach ($this->fieldToList($record->chronic_diseases) as $condition) {
+                $conditions[mb_strtolower($condition)] = $condition;
+            }
+        }
+
+        return array_values($conditions);
     }
 
     /**

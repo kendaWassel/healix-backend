@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Support\Locale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -38,6 +37,7 @@ class UserController extends Controller
     protected function profilePayload(User $user): array
     {
         $patient = $user->patient;
+        $gender = $patient->gender === 'male' ? __('personal.gender_male') : ($patient->gender === 'female' ? __('personal.gender_female') : __('personal.gender_other'));
 
         return [
             'id' => $user->id,
@@ -45,8 +45,7 @@ class UserController extends Controller
             'email' => $user->email,
             'phone' => $user->phone,
             'birth_date' => $patient?->birth_date,
-            'gender' => $patient?->gender,
-            'gender_label' => Locale::label('gender', $patient?->gender),
+            'gender' => $gender,
             'address' => $patient?->address,
             'role' => $user->role,
             'email_verified' => $user->email_verified_at ? true : false,
