@@ -25,7 +25,7 @@ class InterviewService
     /**
      * Send one patient message and return the assistant's turn decision.
      *
-     * @return array{session_id: string, finished: bool, question: ?string, next_slot: ?string, symptoms: array<int, array{text: string, negated: bool}>}
+     * @return array{session_id: string, finished: bool, question: ?string, next_slot: ?string, symptoms: array<int, array{text: string, negated: bool}>, emergency_detected: bool, risk_level: string, red_flags: array<int, array<string, mixed>>, recommended_action: ?string}
      *
      * @throws AIServiceException
      */
@@ -68,6 +68,7 @@ class InterviewService
         Log::info('Interview turn finished', [
             'session_id' => $returnedSessionId,
             'finished' => $response['finished'],
+            'emergency_detected' => $response['emergency_detected'] ?? false,
         ]);
 
         return [
@@ -80,6 +81,22 @@ class InterviewService
                 ? $response['next_slot']
                 : null,
             'symptoms' => $symptoms,
+            // Safety layer (Python RedFlagEngine, computed deterministically
+            // regardless of LLM success) — previously read off $response only
+            // for the finished/session checks above, then silently dropped
+            // here instead of reaching the caller. Same defensive-parsing
+            // style as the fields above: missing/wrong-typed -> safe default,
+            // never fabricated.
+            'emergency_detected' => isset($response['emergency_detected']) && is_bool($response['emergency_detected'])
+                ? $response['emergency_detected']
+                : false,
+            'risk_level' => isset($response['risk_level']) && is_string($response['risk_level'])
+                ? $response['risk_level']
+                : 'none',
+            'red_flags' => is_array($response['red_flags'] ?? null) ? $response['red_flags'] : [],
+            'recommended_action' => isset($response['recommended_action']) && is_string($response['recommended_action'])
+                ? $response['recommended_action']
+                : null,
         ];
     }
 }

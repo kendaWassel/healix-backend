@@ -107,7 +107,7 @@ class MedicalAssistantService
                 'turn_number' => $turn,
             ]);
         } elseif ($result['finished']) {
-            $assistantMessage = $this->runAssessmentAndPersist($conversation, $result['session_id'], $turn);
+            $assistantMessage = $this->runAssessmentAndPersist($conversation, $result['session_id'], $turn, $result);
         }
 
         $conversation->forceFill([
@@ -135,9 +135,19 @@ class MedicalAssistantService
      * point, so an assessment failure must not roll back the transaction —
      * it degrades to a plain Arabic notice instead (same "never drop what's
      * already computed" spirit as the Python explainer this calls into).
+     *
+     * @param  array{emergency_detected?: bool, risk_level?: string}  $interviewResult  The just-finished
+     *     turn's result from InterviewService::sendMessage() (same array advanceInterview() already
+     *     has) — its emergency_detected/risk_level are forwarded to AssessmentService::run() as
+     *     interview_risk so Python reuses the verdict already computed, instead of always falling
+     *     back to re-deriving it. Purely a pass-through; no new decision made here.
      */
-    protected function runAssessmentAndPersist(Conversation $conversation, string $sessionId, int $turn): Message
-    {
+    protected function runAssessmentAndPersist(
+        Conversation $conversation,
+        string $sessionId,
+        int $turn,
+        array $interviewResult = []
+    ): Message {
         $rawMessages = $conversation->messages()
             ->where('sender', Message::SENDER_PATIENT)
             ->orderBy('turn_number')
@@ -154,8 +164,19 @@ class MedicalAssistantService
                 'confidence' => $s->confidence,
             ])->all();
 
+        // Optional accelerant only (see AssessmentService::run()'s PHPDoc):
+        // 'emergency_detected' being absent from $interviewResult (e.g. a
+        // future caller that doesn't have it) keeps $interviewRisk null,
+        // which keeps the request body exactly as it was before this change.
+        $interviewRisk = array_key_exists('emergency_detected', $interviewResult)
+            ? [
+                'emergency_detected' => $interviewResult['emergency_detected'],
+                'risk_level' => $interviewResult['risk_level'] ?? 'none',
+            ]
+            : null;
+
         try {
-            $assessment = $this->assessment->run($sessionId, $rawMessages, $symptoms);
+            $assessment = $this->assessment->run($sessionId, $rawMessages, $symptoms, $interviewRisk);
             $text = $this->formatAssessmentSummary($assessment);
         } catch (AIServiceException $e) {
             Log::warning('Assessment run failed, falling back to a plain completion notice', [

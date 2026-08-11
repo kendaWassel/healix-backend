@@ -24,6 +24,14 @@ class AssessmentService
     /**
      * @param  array<int, string>  $rawMessages  Patient messages, in turn order.
      * @param  array<int, array{text: string, negated: bool, confidence: float|null}>  $symptoms
+     * @param  array{emergency_detected: bool, risk_level: string}|null  $interviewRisk  Red-flag
+     *     verdict the interview engine already computed (InterviewService::sendMessage()'s
+     *     emergency_detected/risk_level), forwarded verbatim as AssessmentRequest.interview_risk
+     *     so the Python side doesn't re-run RedFlagEngine on raw_messages itself. Optional: when
+     *     null (no interview call preceded this, or the caller doesn't have it), the field is
+     *     simply omitted from the request body — the Python endpoint's own same-process
+     *     RedFlagEngine fallback already covers that case, so this is a latency/cost
+     *     optimization, not a correctness requirement. No new red-flag logic here.
      * @return array{
      *     urgency: array{level: string, score: float, explanation: string},
      *     specialty: array{specialty: string, confidence: float, explanation: string},
@@ -34,15 +42,16 @@ class AssessmentService
      *
      * @throws AIServiceException
      */
-    public function run(string $sessionId, array $rawMessages, array $symptoms): array
+    public function run(string $sessionId, array $rawMessages, array $symptoms, ?array $interviewRisk = null): array
     {
         Log::info('Assessment run started', [
             'session_id' => $sessionId,
             'message_count' => count($rawMessages),
             'symptom_count' => count($symptoms),
+            'interview_risk_supplied' => $interviewRisk !== null,
         ]);
 
-        $response = $this->client->post('/api/assessment/run', [
+        $payload = [
             'session_id' => $sessionId,
             'raw_messages' => $rawMessages,
             'symptoms' => array_map(static fn (array $s) => [
@@ -50,7 +59,16 @@ class AssessmentService
                 'negated' => $s['negated'],
                 'confidence' => $s['confidence'] ?? 1.0,
             ], $symptoms),
-        ]);
+        ];
+
+        if ($interviewRisk !== null) {
+            $payload['interview_risk'] = [
+                'emergency_detected' => (bool) ($interviewRisk['emergency_detected'] ?? false),
+                'risk_level' => (string) ($interviewRisk['risk_level'] ?? 'none'),
+            ];
+        }
+
+        $response = $this->client->post('/api/assessment/run', $payload);
 
         foreach (['urgency', 'specialty', 'confidence', 'explanation'] as $key) {
             if (! isset($response[$key]) || ! is_array($response[$key])) {
