@@ -57,6 +57,13 @@ class MedicalAssistantChatIntegrationTest extends TestCase
                 'question' => 'How long have you had this headache?',
                 'next_slot' => null,
                 'symptoms' => [['text' => 'headache', 'negated' => false, 'confidence' => 0.9]],
+                // Safety layer defaults (Patch P1/P2/P3): a plain, non-emergency
+                // turn reports nothing red-flag-related, same as before this
+                // field existed anywhere in Laravel.
+                'emergency_detected' => false,
+                'risk_level' => 'none',
+                'red_flags' => [],
+                'recommended_action' => null,
             ], $overrides)),
             // Hit whenever the interview reports finished=true (MedicalAssistantService
             // then calls the separate, stateless assessment endpoint). Faked so this
@@ -169,6 +176,101 @@ class MedicalAssistantChatIntegrationTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonPath('success', true)
             ->assertJsonStructure(['text', 'question', 'detected_symptoms', 'finished']);
+    }
+
+    /**
+     * Patch P1+P2+P3: when the interview turn reports an emergency, that
+     * verdict must reach the /api/assessment/run request body as
+     * interview_risk — not be silently dropped at InterviewService before
+     * MedicalAssistantService/AssessmentService ever see it.
+     */
+    public function test_finished_interview_with_emergency_forwards_interview_risk_to_assessment(): void
+    {
+        $user = $this->patientUser();
+        $this->fakeInterviewEngine([
+            'finished' => true,
+            'question' => null,
+            'emergency_detected' => true,
+            'risk_level' => 'immediate',
+            'red_flags' => [[
+                'rule_id' => 'HEALIX_REDFLAG_0001',
+                'name_ar' => 'نمط متلازمة الشريان التاجي الحادة',
+                'name_en' => 'Acute Coronary Syndrome pattern',
+                'risk_level' => 'immediate',
+                'evidence' => 'chest pain',
+            ]],
+            'recommended_action' => 'Seek emergency care immediately.',
+        ]);
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
+            ->json('data.id');
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/messages", [
+                'message' => 'chest pain and shortness of breath',
+            ])
+            ->assertStatus(201);
+
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
+            return str_contains($request->url(), '/api/assessment/run')
+                && $request['interview_risk'] === [
+                    'emergency_detected' => true,
+                    'risk_level' => 'immediate',
+                ];
+        });
+    }
+
+    /**
+     * Backward compatibility: an interview/turn response shape without the
+     * safety fields at all (simulating an older AI service build) must still
+     * work end-to-end. InterviewService::sendMessage() defaults the missing
+     * fields to false/'none' (same defensive-parsing style already used for
+     * question/next_slot/symptoms in that method) rather than throwing, so
+     * MedicalAssistantService always has a value to forward -- the assessment
+     * request ends up with that safe default, not a crash and not an omitted
+     * key. (AssessmentService::run()'s own "omit interview_risk when the
+     * caller passes no 4th argument at all" path is covered directly at the
+     * unit level by AssessmentServiceTest::test_interview_risk_is_omitted_entirely_when_not_provided.)
+     */
+    public function test_finished_interview_with_missing_safety_fields_sends_the_safe_default(): void
+    {
+        $user = $this->patientUser();
+        Http::fake([
+            '*/api/interview/turn' => Http::response([
+                'session_id' => 'sess-legacy',
+                'finished' => true,
+                'question' => null,
+                'symptoms' => [],
+                // no emergency_detected/risk_level/red_flags/recommended_action at all
+            ]),
+            '*/api/assessment/run' => Http::response([
+                'features' => [],
+                'predictions' => ['predictions' => [], 'predictor_version' => 'fake-v1'],
+                'urgency' => ['level' => 'NON_URGENT', 'score' => 0.25, 'explanation' => 'fake'],
+                'specialty' => ['specialty' => 'General Medicine', 'confidence' => 0.5, 'explanation' => 'fake'],
+                'confidence' => ['overall_confidence' => 0.5, 'requires_human_review' => false, 'explanation' => 'fake'],
+                'explanation' => [
+                    'summary' => 'fake', 'medical_reasoning' => 'fake',
+                    'recommendation' => 'fake', 'disclaimer' => 'fake',
+                ],
+            ]),
+        ]);
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
+            ->json('data.id');
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/messages", [
+                'message' => 'no other symptoms',
+            ])
+            ->assertStatus(201);
+
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
+            return str_contains($request->url(), '/api/assessment/run')
+                && $request['interview_risk'] === ['emergency_detected' => false, 'risk_level' => 'none'];
+        });
     }
 
     public function test_a_patient_cannot_message_another_patients_conversation(): void
