@@ -9,6 +9,7 @@ use App\Http\Resources\ConversationResource;
 use App\Http\Resources\MessageResource;
 use App\Models\Conversation;
 use App\Services\ConversationService;
+use App\Services\Healix\HealixConversationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -128,11 +129,71 @@ class ConversationController extends Controller
                         : null,
                 ],
             ], 201);
-        } catch (\RuntimeException $e) { 
+        } catch (\RuntimeException $e) {
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
             ], $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500);
         }
+    }
+
+    /**
+     * One Healix AI triage turn — the same Conversation/Message storage as
+     * storeMessage() above, but a genuinely different AI backend
+     * underneath (HealixConversationService -> HealixAiService, not
+     * ConversationService -> MedicalAssistantService). A separate route
+     * and method rather than branching storeMessage() itself: that method
+     * is hardwired end to end to the interview/assessment pipeline's own
+     * contract (question/detected_symptoms/finished), which doesn't apply
+     * here. No try/catch needed here the way storeMessage() has one —
+     * HealixConversationService::sendMessage() already degrades a Python-
+     * side outage to a persisted, patient-facing "unavailable" message
+     * internally (see that method's own docstring) rather than throwing;
+     * this method has nothing left to catch.
+     *
+     * set_time_limit(120): scoped to this action only, not php.ini's
+     * global max_execution_time — a full Healix turn can legitimately
+     * make up to 5 sequential real "quality"-tier LLM calls (crisis_check,
+     * extract_symptoms, check_red_flags, assess_sufficiency, diagnose;
+     * see healix_ai's CLAUDE.md > Graph flow), and the default 30s PHP
+     * limit was observed killing the request mid-turn on a real, correctly-
+     * functioning call — not a hang, just a legitimately slow one. 120s
+     * gives real headroom over the ~15s a real diagnosis-stage turn was
+     * timed at, without chasing the fully-pathological worst case (every
+     * one of 5 calls independently exhausting healix_ai's own
+     * HEALIX_LLM_TOTAL_BUDGET_SECONDS=60 ceiling, which would be 300s and
+     * isn't a scenario a longer timeout would meaningfully help with
+     * anyway — see config/services.php's healix.timeout comment for the
+     * matching Guzzle-side value.
+     */
+    public function storeHealixMessage(
+        StoreMessageRequest $request,
+        Conversation $conversation,
+        HealixConversationService $healixConversation
+    ): JsonResponse {
+        set_time_limit(120);
+        $this->authorize('sendMessage', $conversation);
+
+        $result = $healixConversation->sendMessage(
+            $request->user(),
+            $conversation,
+            $request->validated('message')
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => __('ai.message_sent'),
+            // Flat fields for the frontend, same "flat fields + full
+            // data.* resources" shape storeMessage() above already uses.
+            'reply' => $result['reply'],
+            'stage' => $result['stage'],
+            'specialty' => $result['specialty'],
+            'reports' => $result['reports'],
+            'available' => $result['available'],
+            'data' => [
+                'patient_message' => new MessageResource($result['patient_message']),
+                'assistant_message' => new MessageResource($result['assistant_message']),
+            ],
+        ], 201);
     }
 }
