@@ -67,4 +67,9 @@ Route::middleware(['auth:sanctum', 'verified', 'role:patient'])
 
         Route::get('conversations/{conversation}/messages', [ConversationController::class, 'messages']);
         Route::post('conversations/{conversation}/messages', [ConversationController::class, 'storeMessage']);
+        // Separate route, separate AI backend (Healix's LangGraph triage
+        // service, not the interview/assessment engine storeMessage()
+        // above calls) — see ConversationController::storeHealixMessage()'s
+        // own docstring for why this isn't a branch inside storeMessage().
+        Route::post('conversations/{conversation}/healix-messages', [ConversationController::class, 'storeHealixMessage']);
     });

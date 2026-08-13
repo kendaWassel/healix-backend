@@ -33,6 +33,7 @@ return [
     'service_label_ddi' => 'Drug interaction service',
     'service_label_lab' => 'Lab analysis service',
     'service_label_clinical_guidance' => 'Clinical guidance service',
+    'service_label_healix' => 'Healix AI triage service',
 
     /*
     | Chat / conversations
@@ -41,6 +42,11 @@ return [
     'chat_started' => 'Chat session started successfully.',
     'chat_response' => 'AI response generated successfully.',
     'guidance_greeting' => 'Hello — I can help you understand your symptoms and know when to seek care. This is general guidance, not a diagnosis.',
+    // Fallback assistant message when the Healix triage service is
+    // unreachable (HealixConversationService catches AIServiceException
+    // and persists this instead of losing the turn) — same treatment as
+    // assessment_unavailable_notice below for the other AI backend.
+    'healix_unavailable_notice' => "We couldn't reach the triage assistant right now. Your message has been saved — please try again shortly, or consult a doctor directly if your symptoms feel urgent.",
     'conversation_created' => 'Conversation created successfully.',
     'conversation_deleted' => 'Conversation deleted successfully.',
     'conversation_retrieved' => 'Conversation retrieved successfully.',
