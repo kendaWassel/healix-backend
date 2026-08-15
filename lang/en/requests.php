@@ -116,6 +116,7 @@ return [
         'chronic_diseases_string' => 'Chronic diseases must be a string.',
         'previous_surgeries_string' => 'Previous surgeries must be a string.',
         'allergies_string' => 'Allergies must be a string.',
+        'other_conditions_string' => 'Other conditions must be a string.',
         'attachments_array' => 'Attachments must be an array.',
         'attachments_integer' => 'Each attachment ID must be an integer.',
         'attachments_exists' => 'Each attachment must exist.',

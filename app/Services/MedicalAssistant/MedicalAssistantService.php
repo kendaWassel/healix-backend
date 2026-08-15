@@ -3,10 +3,12 @@
 namespace App\Services\MedicalAssistant;
 
 use App\Exceptions\AI\AIServiceException;
+use App\Models\Assessment;
 use App\Models\Conversation;
 use App\Models\ConversationSymptom;
 use App\Models\Message;
 use App\Services\Interview\InterviewService;
+use App\Support\UrgencyTriageMapper;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -98,6 +100,7 @@ class MedicalAssistantService
         $this->persistSymptoms($conversation, $result['symptoms']);
 
         $assistantMessage = null;
+        $assessmentData = null;
         if (! $result['finished'] && ! empty($result['question'])) {
             $assistantMessage = Message::create([
                 'conversation_id' => $conversation->id,
@@ -107,7 +110,12 @@ class MedicalAssistantService
                 'turn_number' => $turn,
             ]);
         } elseif ($result['finished']) {
-            $assistantMessage = $this->runAssessmentAndPersist($conversation, $result['session_id'], $turn, $result);
+            ['message' => $assistantMessage, 'assessment' => $assessmentData] = $this->runAssessmentAndPersist(
+                $conversation,
+                $result['session_id'],
+                $turn,
+                $result
+            );
         }
 
         $conversation->forceFill([
@@ -120,6 +128,7 @@ class MedicalAssistantService
             'patient_message' => $patientMessage,
             'assistant_message' => $assistantMessage,
             'result' => $result,
+            'assessment' => $assessmentData,
         ];
     }
 
@@ -136,18 +145,15 @@ class MedicalAssistantService
      * it degrades to a plain Arabic notice instead (same "never drop what's
      * already computed" spirit as the Python explainer this calls into).
      *
-     * @param  array{emergency_detected?: bool, risk_level?: string}  $interviewResult  The just-finished
-     *     turn's result from InterviewService::sendMessage() (same array advanceInterview() already
-     *     has) — its emergency_detected/risk_level are forwarded to AssessmentService::run() as
-     *     interview_risk so Python reuses the verdict already computed, instead of always falling
-     *     back to re-deriving it. Purely a pass-through; no new decision made here.
+     * @param  array<string, mixed>  $interviewResult
+     * @return array{message: Message, assessment: array<string, mixed>|null}
      */
     protected function runAssessmentAndPersist(
         Conversation $conversation,
         string $sessionId,
         int $turn,
         array $interviewResult = []
-    ): Message {
+    ): array {
         $rawMessages = $conversation->messages()
             ->where('sender', Message::SENDER_PATIENT)
             ->orderBy('turn_number')
@@ -175,8 +181,22 @@ class MedicalAssistantService
             ]
             : null;
 
+        $interviewRecord = isset($interviewResult['interview_record']) && is_array($interviewResult['interview_record'])
+            ? $interviewResult['interview_record']
+            : null;
+
+        $assessmentData = null;
+
         try {
-            $assessment = $this->assessment->run($sessionId, $rawMessages, $symptoms, $interviewRisk);
+            $assessment = $this->assessment->run(
+                $sessionId,
+                $rawMessages,
+                $symptoms,
+                $interviewRisk,
+                $interviewRecord
+            );
+            $this->persistAssessment($conversation, $assessment, $symptoms, $interviewResult);
+            $assessmentData = $assessment;
             $text = $this->formatAssessmentSummary($assessment);
         } catch (AIServiceException $e) {
             Log::warning('Assessment run failed, falling back to a plain completion notice', [
@@ -187,13 +207,57 @@ class MedicalAssistantService
             $text = __('ai.assessment_unavailable_notice');
         }
 
-        return Message::create([
+        $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender' => Message::SENDER_ASSISTANT,
             'message_type' => Message::TYPE_TEXT,
             'message' => $text,
             'turn_number' => $turn,
         ]);
+
+        return [
+            'message' => $message,
+            'assessment' => $assessmentData,
+        ];
+    }
+
+    /**
+     * @param  array<int, array{text: string, negated: bool, confidence: float|null}>  $symptoms
+     * @param  array<string, mixed>  $interviewResult
+     * @param  array{
+     *     urgency: array{level: string, score: float, explanation: string},
+     *     specialty: array{specialty: string, confidence: float, explanation: string},
+     *     confidence: array{overall_confidence: float, requires_human_review: bool, explanation: string},
+     *     explanation: array{summary: string, medical_reasoning: string, recommendation: string, disclaimer: string},
+     *     predictions: array<int, array{disease: string, score: float, explanation: string}>
+     * }  $assessment
+     */
+    protected function persistAssessment(
+        Conversation $conversation,
+        array $assessment,
+        array $symptoms,
+        array $interviewResult
+    ): void {
+        $redFlags = is_array($interviewResult['red_flags'] ?? null) ? $interviewResult['red_flags'] : [];
+        $primaryRedFlag = $redFlags[0] ?? null;
+
+        Assessment::updateOrCreate(
+            ['conversation_id' => $conversation->id],
+            [
+                'triage' => UrgencyTriageMapper::toLegacy((string) ($assessment['urgency']['level'] ?? 'NON_URGENT')),
+                'recommended_specialty' => (string) ($assessment['specialty']['specialty'] ?? 'General Medicine'),
+                'possible_diseases' => array_map(static fn (array $prediction) => [
+                    'disease' => $prediction['disease'] ?? '',
+                    'score' => $prediction['score'] ?? 0.0,
+                ], $assessment['predictions'] ?? []),
+                'extracted_symptoms' => $symptoms,
+                'emergency_detected' => (bool) ($interviewResult['emergency_detected'] ?? false),
+                'emergency_type' => is_array($primaryRedFlag)
+                    ? ($primaryRedFlag['rule_id'] ?? $primaryRedFlag['name_en'] ?? null)
+                    : null,
+                'risk_reason' => (string) ($assessment['urgency']['explanation'] ?? ''),
+            ]
+        );
     }
 
     /**

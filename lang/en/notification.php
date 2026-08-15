@@ -39,6 +39,27 @@ return [
     'sms_consultation_requested' => 'New consultation requested by :name.',
     'sms_scheduled_at' => ' Scheduled at: :time',
     'sms_call_type' => ' Type: :type',
+    'time_immediately' => 'Immediately',
+
+    /*
+    | Consultation booked WhatsApp/SMS (ConsultationService — sent to doctor)
+    */
+
+    'wa_booked_message' => 'Hello :name, You have a new consultation booked.',
+    'wa_booked_short' => 'New consultation booked with :name on :time',
+    'meet_link_line' => 'Google Meet Link: :link',
+    'sms_booked_hello' => 'Hello :name',
+    'sms_booked_intro' => 'You have a new consultation booked.',
+    'sms_booked_patient_name' => 'Patient Name: :name',
+    'sms_booked_type' => 'Type: :type',
+    'sms_booked_time' => 'Time: :time',
+
+    /*
+    | Consultation reminder SMS/WhatsApp (SendConsultationReminders command)
+    */
+
+    'reminder_sms_patient' => 'Consultation Reminder: You have a consultation scheduled with Dr. :name at :time. Please be ready.',
+    'reminder_sms_doctor' => 'Consultation Reminder: You have a consultation scheduled with :name at :time. Please be ready.',
 
     /*
     | Delivery notifications
@@ -46,6 +67,30 @@ return [
 
     'delivery_task_offer' => 'A new delivery task is available near you.',
     'delivery_task_assigned' => 'Your delivery task has been assigned.',
+
+    /*
+    | Prescription notifications
+    */
+
+    'prescription_accepted_title' => 'Your prescription was accepted',
+    'prescription_accepted_body' => 'The pharmacy accepted your prescription. You can view the details.',
+
+    'prescription_rejected_title' => 'Prescription rejected',
+    'prescription_rejected_body' => 'The pharmacy rejected your prescription. Reason: :reason',
+
+    /*
+    | Medical record notifications
+    */
+
+    'medical_report_added_title' => 'New medical report',
+    'medical_report_added_body' => 'Your doctor added a new medical report to your file.',
+
+    /*
+    | Drug safety notifications
+    */
+
+    'critical_warning_title' => 'Critical drug interaction warning',
+    'critical_warning_body' => 'A prescription with a critical warning was saved — please review.',
 
     /*
     | Email verification mail

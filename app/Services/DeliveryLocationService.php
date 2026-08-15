@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Delivery;
 use App\Models\DeliveryLocation;
 use App\Models\DeliveryTask;
 use App\Models\User;
@@ -55,6 +56,20 @@ class DeliveryLocationService
                 'longitude' => $longitude,
             ]
         );
+    }
+
+    /**
+     * Persist the live position of a driver who isn't on an active task —
+     * used while idle/available so the nearest-driver search has somewhere
+     * current to read from. No delivery_locations row is written, since
+     * that table is scoped to a specific task's tracking history.
+     */
+    public function updateIdleDriverLocation(Delivery $delivery, float $latitude, float $longitude): void
+    {
+        $delivery->update([
+            'current_latitude' => $latitude,
+            'current_longitude' => $longitude,
+        ]);
     }
 
     /**

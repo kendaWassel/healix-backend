@@ -32,6 +32,30 @@ class Locale
     }
 
     /**
+     * Render a translation key in every supported locale at once.
+     *
+     * Used where stored content (e.g. notification `data` payloads) needs to
+     * carry every language up front rather than committing to whichever
+     * locale happened to be active at write time — the reader picks which
+     * key to display.
+     *
+     * @param  string  $key  Full lang key, e.g. 'notification.prescription_accepted_title'
+     * @param  array<string, mixed>  $replace
+     * @return array<string, string>  Keyed by locale, e.g. ['en' => '...', 'ar' => '...']
+     */
+    public static function translateAll(string $key, array $replace = []): array
+    {
+        $supported = (array) config('localization.supported', ['en']);
+
+        $result = [];
+        foreach ($supported as $locale) {
+            $result[$locale] = Lang::get($key, $replace, $locale);
+        }
+
+        return $result;
+    }
+
+    /**
      * Current locale, guaranteed to be one of the supported locales.
      */
     public static function current(): string

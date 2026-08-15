@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\DeliveryLocationController;
 use App\Http\Controllers\Api\DoctorController;
 use App\Http\Controllers\Api\HomeVisitController;
 use App\Http\Controllers\Api\MedicalRecordController;
+use App\Http\Controllers\Api\Patient\PrescriptionSafetyController;
 use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\SpecializationController;
@@ -30,8 +31,9 @@ Route::middleware(['auth:sanctum', 'verified', 'role:patient'])
         Route::post('/home-visits/{visit_id}/request-new-care-provider', [PatientController::class, 'requestNewCareProvider']);
 
         Route::get('/medical-record', [MedicalRecordController::class, 'getPatientMedicalRecord']);
-        // Patient self-edit: chronic diseases, allergies, previous surgeries, current medications only.
-        Route::put('/medical-record', [MedicalRecordController::class, 'updateOwnMedicalRecord']);
+        // Patient self-edit: everything except the doctor-only clinical fields
+        // (diagnosis, treatment_plan — see UpdateMedicalRecordRequest).
+        Route::match(['put', 'post'],'/medical-record', [MedicalRecordController::class, 'updateOwnMedicalRecord']);
         Route::put('/medical-record/pregnancy', [MedicalRecordController::class, 'updatePregnancyInfo']);
 
         Route::post('/consultations/{consultation_id}/rate/{doctor_id}', [RatingController::class, 'rateDoctor']);
@@ -43,6 +45,9 @@ Route::middleware(['auth:sanctum', 'verified', 'role:patient'])
 
         Route::prefix('prescriptions')->group(function () {
             Route::get('/', [PatientController::class, 'getPatientPrescriptions']);
+            // Self-check: verify a draft medication list against the patient's
+            // own allergies / pregnancy / chronic conditions (read-only).
+            Route::post('/verify', [PrescriptionSafetyController::class, 'verify']);
             Route::get('/{prescription_id}', [PatientController::class, 'getPrescriptionDetails']);
             Route::post('/upload', [PatientController::class, 'uploadPaperPrescription']);
             Route::post('/{prescription_id}/send', [PatientController::class, 'sendPrescriptionToPharmacy']);

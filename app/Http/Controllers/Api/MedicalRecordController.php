@@ -10,6 +10,7 @@ use App\Http\Requests\UpdateMedicalRecordRequest;
 use App\Http\Requests\UpdatePatientMedicalRecordRequest;
 use App\Http\Requests\UpdatePregnancyInfoRequest;
 use App\Http\Resources\MedicalRecordResource;
+use App\Notifications\MedicalReportAddedNotification;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Upload;
 
@@ -112,6 +113,13 @@ class MedicalRecordController extends Controller
             Upload::whereIn('id', $validated['attachments_id'])->update(['medical_record_id' => $medicalRecord->id]);
         }
 
+        if ($doctor) {
+            $patient->loadMissing('user');
+            if ($patient->user) {
+                $patient->user->notify(new MedicalReportAddedNotification($medicalRecord));
+            }
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => __('medical.record_updated'),
@@ -205,7 +213,7 @@ class MedicalRecordController extends Controller
                 'message' => __('messages.patient_not_found_for_user')
             ], 404);
         }
-        $record = $patient->medicalRecords()->with(['doctor.user', 'uploads'])->latest()->first();
+        $record = $patient->medicalRecords()->with(['doctor.user', 'uploads'])->latest('id')->first();
         
 
         if (!$record) {

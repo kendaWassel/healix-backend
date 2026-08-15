@@ -43,5 +43,6 @@ return [
     'too_early_to_start' => 'Cannot start session before the scheduled time.',
     'not_in_progress' => 'Visit not found or not in progress.',
     'only_cancelled_re_request' => 'Only cancelled home visits can be re-requested with a new schedule time.',
+    'time_conflict' => 'This visit time conflicts with one of your other booked visits.',
 
 ];

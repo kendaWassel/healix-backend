@@ -25,6 +25,7 @@ class CreatePrescriptionRequest extends FormRequest
             'medicines.*.boxes'         => ['required', 'integer', 'min:1'],
             'medicines.*.dosage'         => ['nullable', 'string', 'max:500'],
             'medicines.*.instructions'  => ['nullable', 'string', 'max:1000'],
+            'had_critical_warning'      => ['sometimes', 'boolean'],
         ];
     }
 

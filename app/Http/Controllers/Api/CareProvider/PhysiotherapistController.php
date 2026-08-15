@@ -51,7 +51,8 @@ class PhysiotherapistController extends Controller
                 providerType: 'physiotherapist',
                 latitude: (float) $request->latitude,
                 longitude: (float) $request->longitude,
-                perPage: (int) $request->get('per_page', 10)
+                perPage: (int) $request->get('per_page', 10),
+                careProviderId: $careProvider->id,
             );
 
             $data = $requests->getCollection()->map(function ($visit) {
@@ -122,13 +123,13 @@ class PhysiotherapistController extends Controller
     }
 
     /**
-     * Legacy alias
-     * بدل orders القديمة صار يرجع nearby requests
+     * Same nearby, conflict-filtered pending requests as nearbyRequests(),
+     * but using the provider's saved profile location instead of query
+     * params — a "my current requests" screen that doesn't need the app to
+     * resend coordinates on every load.
      */
     public function orders(Request $request)
     {
-        // return $this->nearbyRequests($request);
-        //return orders that are assigned to all physiotherapist
         $user = Auth::user();
         $careProvider = $user->careProvider;
 
@@ -140,10 +141,10 @@ class PhysiotherapistController extends Controller
         }
 
         try {
-            $visits = $this->physiotherapistService->getAllOrders($request->get('per_page', 10));
+            $visits = $this->physiotherapistService->getOrders($request->get('per_page', 10));
 
             $data = $visits->getCollection()->map(function ($visit) {
-                return $this->physiotherapistService->formatScheduleData($visit);
+                return $this->physiotherapistService->formatNearbyRequestData($visit);
             })->values();
 
             return response()->json([
@@ -290,6 +291,8 @@ class PhysiotherapistController extends Controller
                 'latitude' => $careProvider->latitude,
                 'longitude' => $careProvider->longitude,
                 'available' => (bool) $careProvider->available,
+                'is_online' => $careProvider->isOnline(),
+                'location_updated_at' => optional($careProvider->last_location_updated_at)->toIso8601String(),
                 'license_file_id' => $careProvider->license_file_id,
                 'image_id' => $careProvider->care_provider_image_id,
                 'license_file' => $careProvider->license_file_id ? asset('storage/' . ltrim($careProvider->licenseFile->file_path, '/')) : null,
@@ -349,6 +352,10 @@ class PhysiotherapistController extends Controller
 
         if ($request->has('longitude')) {
         $careProvider->longitude = $request->longitude;
+        }
+
+        if ($request->has('latitude') || $request->has('longitude')) {
+            $careProvider->last_location_updated_at = now();
         }
 
         $oldImageId = $careProvider->care_provider_image_id;

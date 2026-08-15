@@ -17,11 +17,15 @@ Route::middleware(['auth:sanctum', 'verified', 'role:delivery'])
         Route::get('/new-orders', [DeliveryController::class, 'newOrders']);
         Route::post('/new-orders/{order_id}/accept', [DeliveryController::class, 'accept']);
 
+        // Point-to-point automatic assignment: the system offers a task to
+        // one nearest driver at a time (see DeliveryAssignmentService).
+        Route::get('/offers/current', [DeliveryController::class, 'currentOffer']);
+        Route::post('/tasks/{task_id}/accept-offer', [DeliveryController::class, 'acceptOffer']);
+        Route::post('/tasks/{task_id}/reject', [DeliveryController::class, 'reject']);
+
         Route::get('/tasks', [DeliveryController::class, 'tasks']);
 
         Route::post('/tasks/{task_id}/set-delivery-fee', [DeliveryController::class, 'setDeliveryFee']);
-
-        Route::post('/tasks/{task_id}/reject', [DeliveryController::class, 'reject']);
 
         Route::put('/tasks/{task_id}/update-status', [DeliveryController::class, 'updateTaskStatus']);
 

@@ -39,6 +39,27 @@ return [
     'sms_consultation_requested' => 'طلب استشارة جديدة من قبل :name.',
     'sms_scheduled_at' => ' الموعد: :time',
     'sms_call_type' => ' النوع: :type',
+    'time_immediately' => 'فوراً',
+
+    /*
+    | واتساب/رسائل نصية لحجز استشارة (ConsultationService — ترسل للطبيب)
+    */
+
+    'wa_booked_message' => 'مرحباً :name، لديك استشارة جديدة محجوزة.',
+    'wa_booked_short' => 'تم حجز استشارة جديدة مع :name بتاريخ :time',
+    'meet_link_line' => 'رابط Google Meet: :link',
+    'sms_booked_hello' => 'مرحباً :name',
+    'sms_booked_intro' => 'لديك استشارة جديدة محجوزة.',
+    'sms_booked_patient_name' => 'اسم المريض: :name',
+    'sms_booked_type' => 'النوع: :type',
+    'sms_booked_time' => 'الوقت: :time',
+
+    /*
+    | تذكير استشارة عبر رسائل نصية/واتساب (أمر SendConsultationReminders)
+    */
+
+    'reminder_sms_patient' => 'تذكير بموعد استشارة: لديك استشارة مجدولة مع د. :name في :time. يُرجى الاستعداد.',
+    'reminder_sms_doctor' => 'تذكير بموعد استشارة: لديك استشارة مجدولة مع :name في :time. يُرجى الاستعداد.',
 
     /*
     | إشعارات التوصيل
@@ -46,6 +67,30 @@ return [
 
     'delivery_task_offer' => 'تتوفر مهمة توصيل جديدة بالقرب منك.',
     'delivery_task_assigned' => 'تم إسناد مهمة التوصيل إليك.',
+
+    /*
+    | إشعارات الوصفات
+    */
+
+    'prescription_accepted_title' => 'تم قبول وصفتك',
+    'prescription_accepted_body' => 'قبلت الصيدلية وصفتك الطبية، يمكنك متابعة التفاصيل.',
+
+    'prescription_rejected_title' => 'تم رفض الوصفة',
+    'prescription_rejected_body' => 'رفضت الصيدلية وصفتك للسبب التالي: :reason',
+
+    /*
+    | إشعارات السجل الطبي
+    */
+
+    'medical_report_added_title' => 'تقرير طبي جديد',
+    'medical_report_added_body' => 'أضاف الطبيب تقريراً طبياً جديداً لملفك.',
+
+    /*
+    | إشعارات السلامة الدوائية
+    */
+
+    'critical_warning_title' => 'تحذير: تفاعل دوائي حرج',
+    'critical_warning_body' => 'تم حفظ وصفة تحتوي تحذيراً حرجاً — يُرجى المراجعة.',
 
     /*
     | بريد التحقق من الحساب

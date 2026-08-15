@@ -55,6 +55,10 @@ return [
         'redirect_uri' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'osrm' => [
+        'url' => env('OSRM_URL', 'http://router.project-osrm.org'),
+    ],
+
     // Single unified Medical Assistant AI service (Whisper + MARBERT + Interview + LLM).
     'medical_assistant' => [
         'url' => env('MEDICAL_ASSISTANT_SERVICE_URL', 'http://127.0.0.1:8000'),
@@ -71,7 +75,7 @@ return [
     ],
 
     'lab' => [
-        'url' => env('LAB_SERVICE_URL', 'http://127.0.0.1:8000'),
+        'url' => env('LAB_SERVICE_URL', 'http://127.0.0.1:8003'),
         'timeout' => env('LAB_SERVICE_TIMEOUT', 120),
         'retries' => env('LAB_SERVICE_RETRIES', 2),
         'api_key' => env('LAB_SERVICE_API_KEY'),

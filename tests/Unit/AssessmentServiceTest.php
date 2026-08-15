@@ -105,4 +105,43 @@ class AssessmentServiceTest extends TestCase
                 && $request['symptoms'] === [['text' => 'fever', 'negated' => false, 'confidence' => 0.8]];
         });
     }
+
+    public function test_interview_record_is_sent_when_provided(): void
+    {
+        Http::fake([
+            'http://127.0.0.1:8000/api/assessment/run' => Http::response($this->fakeAssessmentResponse()),
+        ]);
+
+        $record = [
+            'chief_complaint' => 'headache',
+            'severity' => '8/10',
+            'duration' => '3 days',
+            'body_location' => 'forehead',
+            'medications' => ['paracetamol'],
+            'allergies' => [],
+            'chronic_conditions' => [],
+            'family_history' => [],
+        ];
+
+        $this->service()->run('sess-5', ['headache'], [], null, $record);
+
+        Http::assertSent(function (Request $request) use ($record) {
+            return $request->url() === 'http://127.0.0.1:8000/api/assessment/run'
+                && $request['interview_record'] === $record;
+        });
+    }
+
+    public function test_interview_record_is_omitted_when_not_provided(): void
+    {
+        Http::fake([
+            'http://127.0.0.1:8000/api/assessment/run' => Http::response($this->fakeAssessmentResponse()),
+        ]);
+
+        $this->service()->run('sess-6', ['headache'], []);
+
+        Http::assertSent(function (Request $request) {
+            return $request->url() === 'http://127.0.0.1:8000/api/assessment/run'
+                && ! array_key_exists('interview_record', $request->data());
+        });
+    }
 }

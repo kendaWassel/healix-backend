@@ -44,17 +44,21 @@ class ConsultationRequestedNotification extends Notification
     }
     public function toDatabase(object $notifiable)
     {
+        $title = \App\Support\Locale::translateAll('notification.consultation_requested_title');
+        $message = \App\Support\Locale::translateAll('notification.consultation_requested', [
+            'name' => $this->patient->full_name ?? $this->patient->name,
+        ]);
+
         return [
-            'title' => __('notification.consultation_requested_title'),
+            'title' => $title['en'] ?? null,
+            'title_ar' => $title['ar'] ?? null,
             'consultation_id' => $this->consultation->id,
             'patient_id' => $this->patient->id,
             'patient_name' => $this->patient->full_name ?? $this->patient->name,
             'call_type' => $this->consultation->type,
             'scheduled_at' => optional($this->consultation->scheduled_at)->toIso8601String(),
-            'message' => __('notification.consultation_requested', [
-                'name' => $this->patient->full_name ?? $this->patient->name,
-            ]),
-
+            'message' => $message['en'] ?? null,
+            'message_ar' => $message['ar'] ?? null,
         ];
     }
     public function toSms(object $notifiable): array{

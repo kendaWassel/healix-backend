@@ -102,6 +102,7 @@ return [
     'safety_interaction_alternative_note' => 'نفس تصنيف ATC الخاص بـ :reference_drug، ولا يوجد تداخل مسجّل مع :other_drug. يجب التأكد دائمًا من الصيدلي.',
     'safety_condition_contraindicated_note' => ':medication (:ingredient) ممنوع استخدامه لدى المرضى المصابين بـ :condition.',
     'safety_pregnancy_not_applicable' => 'المريضة غير مسجَّلة كحامل — تم تخطّي فحص الحمل.',
+    'safety_pregnancy_general_note' => 'يُرجى دائمًا استشارة الطبيب قبل تناول أي دواء أثناء الحمل.',
 
     /*
     | تحاليل المختبر

@@ -32,6 +32,8 @@ class AssessmentService
      *     simply omitted from the request body — the Python endpoint's own same-process
      *     RedFlagEngine fallback already covers that case, so this is a latency/cost
      *     optimization, not a correctness requirement. No new red-flag logic here.
+     * @param  array<string, mixed>|null  $interviewRecord  Structured record from the finished
+     *     interview turn (AssessmentRequest.interview_record). Optional accelerant only.
      * @return array{
      *     urgency: array{level: string, score: float, explanation: string},
      *     specialty: array{specialty: string, confidence: float, explanation: string},
@@ -42,13 +44,19 @@ class AssessmentService
      *
      * @throws AIServiceException
      */
-    public function run(string $sessionId, array $rawMessages, array $symptoms, ?array $interviewRisk = null): array
-    {
+    public function run(
+        string $sessionId,
+        array $rawMessages,
+        array $symptoms,
+        ?array $interviewRisk = null,
+        ?array $interviewRecord = null
+    ): array {
         Log::info('Assessment run started', [
             'session_id' => $sessionId,
             'message_count' => count($rawMessages),
             'symptom_count' => count($symptoms),
             'interview_risk_supplied' => $interviewRisk !== null,
+            'interview_record_supplied' => $interviewRecord !== null,
         ]);
 
         $payload = [
@@ -66,6 +74,10 @@ class AssessmentService
                 'emergency_detected' => (bool) ($interviewRisk['emergency_detected'] ?? false),
                 'risk_level' => (string) ($interviewRisk['risk_level'] ?? 'none'),
             ];
+        }
+
+        if ($interviewRecord !== null) {
+            $payload['interview_record'] = $interviewRecord;
         }
 
         $response = $this->client->post('/api/assessment/run', $payload);

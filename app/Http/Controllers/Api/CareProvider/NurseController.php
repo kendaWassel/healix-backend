@@ -51,7 +51,8 @@ class NurseController extends Controller
                 providerType: 'nurse',
                 latitude: (float) $request->latitude,
                 longitude: (float) $request->longitude,
-                perPage: (int) $request->get('per_page', 10)
+                perPage: (int) $request->get('per_page', 10),
+                careProviderId: $careProvider->id,
             );
 
             $data = $requests->getCollection()->map(function ($visit) {
@@ -122,13 +123,52 @@ class NurseController extends Controller
     }
 
     /**
-     * Legacy alias
-     * بدل orders القديمة صار يرجع nearby requests
+     * Same nearby, conflict-filtered pending requests as nearbyRequests(),
+     * but using the provider's saved profile location instead of query
+     * params — a "my current requests" screen that doesn't need the app to
+     * resend coordinates on every load.
      */
     public function orders(Request $request)
     {
-        return $this->nearbyRequests($request);
+        $user = Auth::user();
+        $careProvider = $user->careProvider;
+
+        if (!$careProvider || $careProvider->type !== 'nurse') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized or not a nurse.'
+            ], 403);
+        }
+
+        try {
+            $visits = $this->nurseService->getOrders($request->get('per_page', 10));
+
+            $data = $visits->getCollection()->map(function ($visit) {
+                return $this->nurseService->formatNearbyRequestData($visit);
+            })->values();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $data,
+                'meta' => [
+                    'current_page' => $visits->currentPage(),
+                    'last_page' => $visits->lastPage(),
+                    'per_page' => $visits->perPage(),
+                    'total' => $visits->total(),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $statusCode = ($e->getCode() >= 400 && $e->getCode() < 600) ? $e->getCode() : 500;
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], $statusCode);
+        }
+
     }
+        // return $this->nearbyRequests($request);
+    
 
     public function accept($id)
     {
@@ -254,6 +294,8 @@ class NurseController extends Controller
                 'latitude' => $careProvider->latitude,
                 'longitude' => $careProvider->longitude,
                 'available' => (bool) $careProvider->available,
+                'is_online' => $careProvider->isOnline(),
+                'location_updated_at' => optional($careProvider->last_location_updated_at)->toIso8601String(),
                 'license_file_id' => $careProvider->license_file_id,
                 'image_id' => $careProvider->care_provider_image_id,
                 'license_file' => $careProvider->license_file_id ? asset('storage/' . ltrim($careProvider->licenseFile->file_path, '/')) : null,
@@ -313,6 +355,10 @@ class NurseController extends Controller
 
         if ($request->has('longitude')) {
         $careProvider->longitude = $request->longitude;
+        }
+
+        if ($request->has('latitude') || $request->has('longitude')) {
+            $careProvider->last_location_updated_at = now();
         }
 
         $oldImageId = $careProvider->care_provider_image_id;

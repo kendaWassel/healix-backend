@@ -49,5 +49,6 @@ return [
     'care_provider_not_found' => 'Care provider not found.',
     'delivery_not_found' => 'Delivery not found.',
     'user_not_found' => 'User not found',
+    'location_updated' => 'Location updated successfully.',
 
 ];

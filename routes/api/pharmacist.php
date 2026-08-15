@@ -35,7 +35,7 @@ Route::middleware(['auth:sanctum', 'verified', 'role:pharmacist'])
     });
 
 Route::middleware(['auth:sanctum', 'role:patient'])
-    ->prefix('pharmacist')
+    ->prefix('patient')
     ->group(function () {
 
         Route::get('/pharmacies', [PharmacyController::class, 'getPharmacies']);

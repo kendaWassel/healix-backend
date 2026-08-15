@@ -21,7 +21,11 @@ class DeliveryLocationController extends Controller
     /**
      * POST /api/delivery/location/update
      *
-     * Driver app sends GPS coordinates every few seconds while actively delivering.
+     * Driver app sends GPS coordinates every few seconds. While idle/
+     * available (no task_id, or no active task), this just keeps the
+     * driver's current position current for the nearest-driver search.
+     * While on an active task, it also records a per-task tracking point
+     * the patient can poll.
      */
     public function updateLocation(DeliveryLocationUpdateRequest $request): JsonResponse
     {
@@ -34,13 +38,22 @@ class DeliveryLocationController extends Controller
             ], 403);
         }
 
-        $task = $this->service->getDeliveryTaskForDelivery($request->task_id, $delivery->id);
+        $task = $request->filled('task_id')
+            ? $this->service->getDeliveryTaskForDelivery((int) $request->task_id, $delivery->id)
+            : null;
 
         if (!$task) {
+            $this->service->updateIdleDriverLocation(
+                $delivery,
+                (float) $request->latitude,
+                (float) $request->longitude
+            );
+
             return response()->json([
-                'status' => 'error',
-                'message' => __('delivery.task_not_assigned'),
-            ], 404);
+                'status' => 'success',
+                'message' => __('delivery.location_updated'),
+                'data' => null,
+            ]);
         }
 
         if (!$this->service->taskAllowsLocationUpdates($task)) {

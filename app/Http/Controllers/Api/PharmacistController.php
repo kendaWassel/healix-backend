@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Models\PrescriptionMedication;
 use App\Models\User;
+use App\Notifications\PrescriptionAcceptedNotification;
+use App\Notifications\PrescriptionRejectedNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class PharmacistController extends Controller
@@ -254,6 +256,11 @@ class PharmacistController extends Controller
             }
 
             DB::commit();
+
+            $prescription->loadMissing('patient.user');
+            if ($prescription->patient?->user) {
+                $prescription->patient->user->notify(new PrescriptionAcceptedNotification($prescription));
+            }
 
             return response()->json([
                 'status' => 'success',
@@ -581,6 +588,13 @@ class PharmacistController extends Controller
             }
 
             DB::commit();
+
+            $prescription->loadMissing('patient.user');
+            if ($prescription->patient?->user) {
+                $prescription->patient->user->notify(
+                    new PrescriptionRejectedNotification($prescription, $validated['reason'])
+                );
+            }
 
             return response()->json([
                 'status' => 'success',

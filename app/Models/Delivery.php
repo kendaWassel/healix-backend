@@ -16,7 +16,9 @@ class Delivery extends Model
         'plate_number',
         'driving_license_id',
         'gender',
-        'rating_avg'
+        'rating_avg',
+        'current_latitude',
+        'current_longitude',
     ];
     public function user()
     {

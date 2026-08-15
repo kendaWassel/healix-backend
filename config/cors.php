@@ -24,7 +24,9 @@ return [
     'allowed_origins' => array_filter(array_map(
         'trim',
         explode(',', env('FRONTEND_URLS', 'http://localhost:5173'))
-    )),
+    ), function($origin) {
+        return $origin === 'https://healix-admin-kappa.vercel.app';
+    }),
 
     'allowed_origins_patterns' => [],
 

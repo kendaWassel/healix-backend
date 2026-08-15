@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\CareProvider\CareProviderLocationController;
 use App\Http\Controllers\Api\CareProvider\NurseController;
 use App\Http\Controllers\Api\CareProvider\PhysiotherapistController;
 use App\Http\Controllers\Api\HomeVisitController;
@@ -40,5 +41,8 @@ Route::middleware(['auth:sanctum', 'verified', 'role:care_provider'])
 
         });
 
-        Route::post('/home-visits/{visit_id}/follow-up', [HomeVisitController::class, 'createFollowUpHomeVisit']);        
+        Route::post('/home-visits/{visit_id}/follow-up', [HomeVisitController::class, 'createFollowUpHomeVisit']);
+
+        // Lightweight live-location ping — shared across nurse/physiotherapist.
+        Route::post('/provider/location/update', [CareProviderLocationController::class, 'updateLocation']);
     });

@@ -5,8 +5,10 @@ use App\Http\Controllers\{FaqController, FirstAidController};
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\Auth\{RegisterController, VerifyEmailController, LoginController, PasswordResetController};
 use App\Http\Controllers\Api\ConsultationController;
+use App\Http\Controllers\Api\Lab\LabAnalysisController;
 use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\PrescriptionController;
 use App\Http\Controllers\Api\SpecializationController;
 use App\Http\Controllers\Payment\StripeController;
 use Illuminate\Support\Facades\Route;
@@ -96,9 +98,22 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::put('/{patient_id}/medical-record/update', [MedicalRecordController::class, 'updateMedicalRecord']);
     });
 
+    // Lab analyses, doctor/nurse/physiotherapist view of a specific patient's reports.
+    Route::middleware(['role:doctor,care_provider'])
+        ->prefix('patients/{patient_id}/lab/analyses')
+        ->group(function () {
+            Route::get('/', [LabAnalysisController::class, 'indexForPatient']);
+            Route::get('/{id}', [LabAnalysisController::class, 'showForPatient']);
+            Route::get('/{id}/pdf', [LabAnalysisController::class, 'downloadPdfForPatient']);
+            Route::get('/{id}/patient-pdf', [LabAnalysisController::class, 'downloadPatientPdfForPatient']);
+        });
+
     // Consultation (Doctor or Patient)
     Route::prefix('consultations')->group(function () {
         Route::post('/{id}/call', [ConsultationController::class, 'startConsultation']);
         Route::post('/{id}/end', [ConsultationController::class, 'endConsultation']);
     });
+
+    // Prescriptions (cross-role: patient/doctor/pharmacist/admin — ownership enforced by PrescriptionPolicy::view)
+    Route::get('/prescriptions/{id}/fhir', [PrescriptionController::class, 'exportFhir']);
 });

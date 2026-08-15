@@ -14,6 +14,7 @@ use App\Models\Specialization;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Models\PrescriptionMedication;
+use App\Notifications\CriticalDrugWarningNotification;
 use Illuminate\Support\Facades\Storage;
 
 class DoctorService
@@ -325,6 +326,13 @@ class DoctorService
                 'boxes' => $med['boxes'],
                 'instructions' => $med['instructions'] ?? null,
             ]);
+        }
+
+        if (!empty($validated['had_critical_warning'])) {
+            $doctor->loadMissing('user');
+            if ($doctor->user) {
+                $doctor->user->notify(new CriticalDrugWarningNotification($prescription));
+            }
         }
 
         return $prescription;

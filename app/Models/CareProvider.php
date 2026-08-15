@@ -32,6 +32,20 @@ protected $casts = [
     'last_location_updated_at' => 'datetime',
 ];
 
+    /** Seconds since the last location update before a provider is considered offline. */
+    public const ONLINE_THRESHOLD_SECONDS = 300;
+
+    public function isOnline(): bool
+    {
+        if (!$this->last_location_updated_at) {
+            return false;
+        }
+
+        return $this->last_location_updated_at->greaterThanOrEqualTo(
+            now()->subSeconds(self::ONLINE_THRESHOLD_SECONDS)
+        );
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

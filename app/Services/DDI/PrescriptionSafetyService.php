@@ -7,6 +7,7 @@ use App\Models\Patient;
 use App\Models\Prescription;
 use App\Services\AI\ConditionCheckService;
 use App\Support\Locale;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -20,6 +21,10 @@ use Illuminate\Support\Facades\Log;
 class PrescriptionSafetyService
 {
     /** Pregnancy categories serious enough to warn a pharmacist about. */
+
+
+
+    
     protected const PREGNANCY_WARNING_CATEGORIES = ['X', 'D', 'D*', 'C'];
 
     public function __construct(
@@ -68,13 +73,18 @@ class PrescriptionSafetyService
 
         $drugInteractions = $this->drugInteractions($medications);
         $allergyWarnings = $this->allergyWarnings($medications, $patient);
-        [$pregnancyApplicable, $pregnancyWarnings, $pregnancyNote] = $this->pregnancyWarnings($medications, $patient);
+        [$pregnancyApplicable, $pregnancyResults, $pregnancyNote] = $this->pregnancyWarnings($medications, $patient);
         $condition = $this->conditionCheck->check($medications, $this->patientConditions($patient));
         $conditionWarnings = $this->conditionWarnings($condition['warnings']);
 
+        // pregnancy_warnings now lists every checked medication's category —
+        // including the safe ones (A/B) — so `safe` only looks at the risky
+        // subset, not at whether the list itself is empty.
+        $pregnancyRisks = array_values(array_filter($pregnancyResults, fn (array $r) => $r['is_risk']));
+
         $safe = $drugInteractions === []
             && $allergyWarnings === []
-            && $pregnancyWarnings === []
+            && $pregnancyRisks === []
             && $conditionWarnings === [];
 
         return [
@@ -83,7 +93,7 @@ class PrescriptionSafetyService
             'drug_interactions' => $drugInteractions,
             'allergy_warnings' => $allergyWarnings,
             'pregnancy_applicable' => $pregnancyApplicable,
-            'pregnancy_warnings' => $pregnancyWarnings,
+            'pregnancy_warnings' => $pregnancyResults,
             'pregnancy_note' => $pregnancyNote,
             'condition_warnings' => $conditionWarnings,
             'condition_check_available' => $condition['available'],
@@ -396,6 +406,12 @@ class PrescriptionSafetyService
     /**
      * Per-drug pregnancy safety, only when the patient is recorded as pregnant.
      *
+     * Returns EVERY checked medication, including the safe categories (A/B) —
+     * not just the risky ones — so the frontend can show a full pregnancy
+     * safety picture per drug. Each entry carries `is_risk`; verifyDraft()
+     * uses that (not array emptiness) to decide whether pregnancy affects the
+     * overall `safe` flag.
+     *
      * @param  array<int, string>  $medications
      * @return array{0: bool, 1: array<int, array<string, mixed>>, 2: string|null}
      */
@@ -409,7 +425,7 @@ class PrescriptionSafetyService
             return [true, [], null];
         }
 
-        $warnings = [];
+        $results = [];
 
         foreach ($medications as $med) {
             try {
@@ -423,19 +439,32 @@ class PrescriptionSafetyService
             }
 
             $category = $result['category'] ?? 'Unknown';
+            $ingredient = $result['ingredient'] ?? null;
+            $rawWarning = $result['warning'] ?? null;
 
-            if (in_array($category, self::PREGNANCY_WARNING_CATEGORIES, true)) {
-                $warnings[] = [
-                    'medication' => $med,
-                    'category' => $category,
-                    'category_label' => Locale::label('ddi_pregnancy_category', $category),
-                    'warning' => $result['warning'] ?? null,
-                    'pllr_note' => $result['pllr_note'] ?? null,
-                ];
-            }
+            // Only a curated subset of ingredients has a hand-translated
+            // warning; everything else falls back to the DDI service's raw
+            // (English) text. warning_translated tells the frontend which case
+            // it got — checked against the dictionary directly (not by
+            // comparing text) so it stays correct even in English, where a
+            // curated entry can legitimately read identical to the raw text.
+            $ingredientKey = is_string($ingredient) ? mb_strtolower($ingredient) : null;
+            $isCurated = $ingredientKey !== null && Lang::has("enums.ddi_pregnancy_warning.{$ingredientKey}");
+
+            $results[] = [
+                'medication' => $med,
+                'ingredient' => $ingredient,
+                'category' => $category,
+                'category_label' => Locale::label('ddi_pregnancy_category', $category),
+                'is_risk' => in_array($category, self::PREGNANCY_WARNING_CATEGORIES, true),
+                'warning' => $rawWarning,
+                'warning_label' => Locale::label('ddi_pregnancy_warning', $ingredientKey, $rawWarning),
+                'warning_translated' => $isCurated,
+                'pllr_note' => $result['pllr_note'] ?? null,
+            ];
         }
 
-        return [true, $warnings, null];
+        return [true, $results, __('ai.safety_pregnancy_general_note')];
     }
 
     /**
