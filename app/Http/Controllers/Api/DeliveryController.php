@@ -9,9 +9,152 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Services\DeliveryAssignmentService;
+use App\Services\OSRMService;
 
 class DeliveryController extends Controller
 {
+    public function __construct(
+        protected DeliveryAssignmentService $deliveryAssignmentService,
+        protected OSRMService $osrmService
+    ) {}
+
+    /**
+     * The delivery driver's currently pending task offer, if any.
+     * GET /api/delivery/offers/current
+     */
+    public function currentOffer(Request $request)
+    {
+        $delivery = Auth::user()->delivery;
+
+        if (!$delivery) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $candidate = \App\Models\DeliveryTaskCandidate::where('delivery_id', $delivery->id)
+            ->where('status', 'pending')
+            ->latest('id')
+            ->first();
+
+        if (!$candidate) {
+            return response()->json([
+                'status' => 'success',
+                'data' => null,
+            ]);
+        }
+
+        $task = $candidate->task()->with('order.pharmacist', 'order.patient')->first();
+
+        // The candidate may have gone stale since it was created — expire and
+        // reassign before answering, so a driver never sees an offer that's
+        // already moved on to someone else.
+        $this->deliveryAssignmentService->expireStaleCandidateAndReassign($task);
+        $candidate->refresh();
+
+        if ($candidate->status !== 'pending') {
+            return response()->json([
+                'status' => 'success',
+                'data' => null,
+            ]);
+        }
+
+        $pharmacy = $task->order->pharmacist;
+        $route = ($pharmacy && $pharmacy->latitude && $pharmacy->longitude)
+            ? $this->osrmService->getRoute(
+                (float) $delivery->current_latitude,
+                (float) $delivery->current_longitude,
+                (float) $pharmacy->latitude,
+                (float) $pharmacy->longitude
+            )
+            : null;
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'task_id' => $task->id,
+                'order_id' => $task->order->id,
+                'pharmacy' => [
+                    'name' => $pharmacy->pharmacy_name ?? null,
+                    'address' => $pharmacy->address ?? null,
+                ],
+                'patient_address' => $task->order->patient->address ?? null,
+                'eta_minutes' => $route['duration_minutes'] ?? null,
+                'distance_km' => $route['distance_km'] ?? null,
+                'sent_at' => $candidate->sent_at?->toDateTimeString(),
+            ],
+        ]);
+    }
+
+    /**
+     * Accept the currently offered task.
+     * POST /api/delivery/tasks/{task_id}/accept-offer
+     */
+    public function acceptOffer($task_id)
+    {
+        $delivery = Auth::user()->delivery;
+
+        if (!$delivery) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $task = DeliveryTask::find($task_id);
+
+        if (!$task) {
+            return response()->json(['message' => 'Task not found'], 404);
+        }
+
+        $this->deliveryAssignmentService->expireStaleCandidateAndReassign($task);
+
+        $result = $this->deliveryAssignmentService->acceptTask($task, $delivery);
+
+        if (!$result) {
+            return response()->json(['message' => 'This offer is no longer available'], 409);
+        }
+
+        if (isset($result['conflict'])) {
+            return response()->json(['message' => 'This task was already assigned to another driver'], 409);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'task_id' => $result['task']->id,
+                'status' => $result['task']->status,
+                'route' => $result['route'],
+            ],
+        ]);
+    }
+
+    /**
+     * Reject the currently offered task; the system immediately offers it to
+     * the next-nearest available driver.
+     * POST /api/delivery/tasks/{task_id}/reject
+     */
+    public function reject($task_id)
+    {
+        $delivery = Auth::user()->delivery;
+
+        if (!$delivery) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $task = DeliveryTask::find($task_id);
+
+        if (!$task) {
+            return response()->json(['message' => 'Task not found'], 404);
+        }
+
+        $rejected = $this->deliveryAssignmentService->rejectCandidate($task, $delivery);
+
+        if (!$rejected) {
+            return response()->json(['message' => 'No pending offer found for this task'], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Offer rejected',
+        ]);
+    }
 
     /**
      * الطلبات الجاهزة للتوصيل وغير محجوزة

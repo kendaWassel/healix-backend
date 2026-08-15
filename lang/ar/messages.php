@@ -45,5 +45,6 @@ return [
     'care_provider_not_found' => 'مقدم الرعاية غير موجود.',
     'delivery_not_found' => 'مندوب التوصيل غير موجود.',
     'user_not_found' => 'المستخدم غير موجود',
+    'location_updated' => 'تم تحديث الموقع بنجاح.',
 
 ];

@@ -141,6 +141,12 @@ class MedicalAssistantChatIntegrationTest extends TestCase
             ->assertJsonPath('question', fn (?string $question) => $question !== null
                 && str_contains($question, 'Fake assessment summary')
                 && str_contains($question, 'Fake recommendation'));
+
+        $this->assertDatabaseHas('assessments', [
+            'conversation_id' => $conversationId,
+            'triage' => 'High',
+            'recommended_specialty' => 'Neurology',
+        ]);
     }
 
     public function test_voice_message_response_shape_matches_the_text_message_shape(): void

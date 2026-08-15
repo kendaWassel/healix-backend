@@ -17,7 +17,10 @@ class DeliveryLocationUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'task_id' => ['required', 'integer', 'exists:delivery_tasks,id'],
+            // Optional: omitted while the driver is idle/available (not on an
+            // active task) and just reporting their live position so the
+            // nearest-driver search can find them.
+            'task_id' => ['sometimes', 'integer', 'exists:delivery_tasks,id'],
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
         ];

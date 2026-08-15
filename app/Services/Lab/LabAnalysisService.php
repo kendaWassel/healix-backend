@@ -325,22 +325,26 @@ class LabAnalysisService
     }
 
     /**
-     * The patient's chronic diseases (from their medical record), translated
-     * to the AI service's own condition names via CONDITION_ALIASES.
-     * Patients never choose these directly — they are always pulled from the
-     * saved record, and only entries the service can recognize (in either
-     * Arabic or English) are sent, as the service's own canonical English
-     * name — which is what its condition matching expects back.
+     * The patient's chronic diseases (from their medical record's
+     * chronic_diseases picker — a JSON array of condition names, see
+     * MedicalRecord::$casts), translated to the AI service's own condition
+     * names via CONDITION_ALIASES. Patients never choose these directly for
+     * an analysis — they are always pulled from the saved record, and only
+     * entries the service can recognize (in either Arabic or English) are
+     * sent, as the service's own canonical English name — which is what its
+     * condition matching expects back.
+     *
+     * other_conditions (free text) is deliberately excluded, consistent with
+     * how ConditionCheckService also only feeds structured chronic_diseases
+     * into automatic condition matching, not free text.
      */
     protected function recognizedPreExistingConditions(Patient $patient): string
     {
-        $chronic = $patient->medicalRecords()->latest()->value('chronic_diseases');
+        // ->first() (not ->value()) so the model's array cast on
+        // chronic_diseases applies instead of reading the raw JSON string.
+        $record = $patient->medicalRecords()->latest('id')->first();
 
-        if (! is_string($chronic) || trim($chronic) === '') {
-            return '';
-        }
-
-        $declared = array_filter(array_map('trim', explode(',', $chronic)));
+        $declared = array_filter(array_map('trim', (array) $record?->chronic_diseases));
 
         if (empty($declared)) {
             return '';

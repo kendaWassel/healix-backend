@@ -25,7 +25,7 @@ class HomeVisitController extends Controller
             'patient_id' => 'required|exists:patients,id',
             'service_type' => 'required|in:nurse,physiotherapist',
             'reason' => 'nullable|string|max:255',
-            'scheduled_at' => 'required|date_format:H:i',
+            'scheduled_at' => 'required|date_format:Y-m-d H:i|after:now',
         ]);
 
         $doctor = Auth::user()->doctor;
@@ -49,7 +49,7 @@ class HomeVisitController extends Controller
             'patient_id' => $validated['patient_id'],
             'doctor_id' => $doctor->id,
             'service_type' => $validated['service_type'],
-            'reason' => $validated['reason'],
+            'reason' => $validated['reason'] ?? null,
             'scheduled_at' => $validated['scheduled_at'],
             'status' => 'pending'
         ]);

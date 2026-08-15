@@ -6,9 +6,12 @@ use App\Events\ConsultationBooked;
 use App\Notifications\ConsultationRequestedNotification;
 use App\Services\UltraMsgService;
 use App\Models\User;
+use Illuminate\Support\Traits\Localizable;
 
 class SendConsultationNotification
 {
+    use Localizable;
+
     /**
      * Create the event listener.
      */
@@ -24,14 +27,21 @@ class SendConsultationNotification
     {
         // Get patient name
         $patientName = $this->getPatientName($event->patient);
-        $scheduledAt = $event->consultation->scheduled_at 
-            ? $event->consultation->scheduled_at->format('Y-m-d H:i') 
-            : 'now';
-        
-        $message = "New consultation booked with {$patientName} on {$scheduledAt}";
-        
+        $scheduledAt = $event->consultation->scheduled_at
+            ? $event->consultation->scheduled_at->format('Y-m-d H:i')
+            : __('notification.time_now');
+
         // Get doctor user (event->doctor is already a User model in ConsultationBooked)
         $doctorUser = $event->doctor;
+
+        // Rendered in the doctor's own preferred_locale (see ConsultationService
+        // for the same mechanism, applied to the other WhatsApp/SMS send site).
+        $message = ($doctorUser instanceof User)
+            ? $this->withLocale($doctorUser->preferredLocale(), fn () => __('notification.wa_booked_short', [
+                'name' => $patientName,
+                'time' => $scheduledAt,
+            ]))
+            : __('notification.wa_booked_short', ['name' => $patientName, 'time' => $scheduledAt]);
         
         if ($doctorUser && $doctorUser instanceof User && $doctorUser->phone) {
             try {

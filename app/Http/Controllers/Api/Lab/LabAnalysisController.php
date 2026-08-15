@@ -107,6 +107,70 @@ class LabAnalysisController extends Controller
     }
 
     /**
+     * Doctor/Nurse/Physiotherapist: list a specific patient's lab analyses
+     * (newest first). Same audience as MedicalRecordController::viewDetails.
+     */
+    public function indexForPatient(Request $request, int $patientId): JsonResponse
+    {
+        if (! Patient::where('id', $patientId)->exists()) {
+            return $this->patientNotFound();
+        }
+
+        $analyses = LabAnalysis::where('patient_id', $patientId)
+            ->latest()
+            ->paginate($request->integer('per_page', 15));
+
+        return response()->json([
+            'success' => true,
+            'message' => __('ai.lab_analyses_retrieved'),
+            'data' => LabAnalysisResource::collection($analyses->items()),
+            'meta' => [
+                'current_page' => $analyses->currentPage(),
+                'last_page' => $analyses->lastPage(),
+                'per_page' => $analyses->perPage(),
+                'total' => $analyses->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Doctor/Nurse/Physiotherapist: view one of a patient's lab analyses
+     * in full detail.
+     */
+    public function showForPatient(int $patientId, int $id): JsonResponse
+    {
+        $analysis = $this->findAnalysisForPatient($patientId, $id);
+
+        if ($analysis instanceof JsonResponse) {
+            return $analysis;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => __('ai.lab_analysis_retrieved'),
+            'data' => new LabAnalysisResource($analysis->load('upload')),
+        ]);
+    }
+
+    /**
+     * Doctor/Nurse/Physiotherapist: download the detailed (doctor) PDF
+     * report for one of a patient's lab analyses.
+     */
+    public function downloadPdfForPatient(int $patientId, int $id): BinaryFileResponse|JsonResponse
+    {
+        return $this->downloadReportForPatient($patientId, $id, patientVersion: false);
+    }
+
+    /**
+     * Doctor/Nurse/Physiotherapist: download the simplified patient PDF
+     * for one of a patient's lab analyses.
+     */
+    public function downloadPatientPdfForPatient(int $patientId, int $id): BinaryFileResponse|JsonResponse
+    {
+        return $this->downloadReportForPatient($patientId, $id, patientVersion: true);
+    }
+
+    /**
      * Health/status of the LabInsight AI microservice.
      */
     public function health(): JsonResponse
@@ -129,10 +193,40 @@ class LabAnalysisController extends Controller
     {
         return $this->handle('Reference ranges retrieved successfully.', fn () => $this->labService->referenceRanges());
     }
-
+    
     protected function downloadReport(Request $request, int $id, bool $patientVersion): BinaryFileResponse|JsonResponse
     {
         $analysis = $this->findOwnedAnalysis($request, $id);
+
+        if ($analysis instanceof JsonResponse) {
+            return $analysis;
+        }
+
+        try {
+            $path = $this->labService->pdfPath($analysis, $patientVersion);
+        } catch (AIServiceException $e) {
+            Log::error('Lab report PDF download failed', [
+                'lab_analysis_id' => $analysis->id,
+                'patient_version' => $patientVersion,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => __('ai.lab_pdf_unavailable'),
+            ], 404);
+        }
+
+        $filename = $patientVersion
+            ? "LabInsight_Patient_Summary_{$analysis->report_id}.pdf"
+            : "LabInsight_Report_{$analysis->report_id}.pdf";
+
+        return response()->download($path, $filename, ['Content-Type' => 'application/pdf']);
+    }
+
+    protected function downloadReportForPatient(int $patientId, int $id, bool $patientVersion): BinaryFileResponse|JsonResponse
+    {
+        $analysis = $this->findAnalysisForPatient($patientId, $id);
 
         if ($analysis instanceof JsonResponse) {
             return $analysis;
@@ -185,6 +279,30 @@ class LabAnalysisController extends Controller
         return $analysis;
     }
 
+    /**
+     * Load an analysis and make sure it belongs to the given patient
+     * (doctor/care-provider access — not the authenticated user's own).
+     */
+    protected function findAnalysisForPatient(int $patientId, int $id): LabAnalysis|JsonResponse
+    {
+        if (! Patient::where('id', $patientId)->exists()) {
+            return $this->patientNotFound();
+        }
+
+        $analysis = LabAnalysis::where('id', $id)
+            ->where('patient_id', $patientId)
+            ->first();
+
+        if (! $analysis) {
+            return response()->json([
+                'success' => false,
+                'message' => __('ai.lab_analysis_not_found'),
+            ], 404);
+        }
+
+        return $analysis;
+    }
+
     protected function resolvePatient(Request $request): ?Patient
     {
         return $request->user()?->patient;
@@ -196,6 +314,14 @@ class LabAnalysisController extends Controller
             'success' => false,
             'message' => __('ai.lab_patients_only'),
         ], 403);
+    }
+
+    protected function patientNotFound(): JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'message' => __('messages.patient_not_found'),
+        ], 404);
     }
 
     /**

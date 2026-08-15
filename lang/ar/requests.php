@@ -114,6 +114,7 @@ return [
         'chronic_diseases_string' => 'يجب أن تكون الأمراض المزمنة نصًا.',
         'previous_surgeries_string' => 'يجب أن تكون العمليات الجراحية السابقة نصًا.',
         'allergies_string' => 'يجب أن تكون الحساسية نصًا.',
+        'other_conditions_string' => 'يجب أن تكون الحالات الأخرى نصًا.',
         'attachments_array' => 'يجب أن تكون المرفقات على شكل قائمة.',
         'attachments_integer' => 'يجب أن يكون كل معرّف مرفق رقمًا صحيحًا.',
         'attachments_exists' => 'يجب أن يكون كل مرفق موجودًا.',

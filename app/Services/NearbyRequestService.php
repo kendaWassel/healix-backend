@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\CareProvider;
 use App\Models\HomeVisit;
+use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class NearbyRequestService
@@ -10,13 +12,19 @@ class NearbyRequestService
     /**
      * Get pending home visit requests sorted by distance from provider location.
      * Nearby requests come first, farther requests come later.
+     *
+     * When $careProviderId is given, requests whose scheduled_at would
+     * conflict with that provider's own already-booked visits (see
+     * hasSchedulingConflict()) are excluded entirely — a provider should
+     * never be offered a slot they can't actually take.
      */
     public function getNearbyPendingRequests(
         string $providerType,
         float $latitude,
         float $longitude,
         int $perPage = 10,
-        ?float $maxDistanceKm = 15
+        ?float $maxDistanceKm = 15,
+        ?int $careProviderId = null,
     ): LengthAwarePaginator {
         $distanceFormula = $this->buildHaversineFormula($latitude, $longitude);
 
@@ -34,6 +42,21 @@ class NearbyRequestService
                 'doctor.user',
             ]);
 
+        if ($careProviderId !== null) {
+            $bufferMinutes = (int) config('home_visit.conflict_buffer_minutes', 60);
+
+            $query->whereNotExists(function ($sub) use ($careProviderId, $bufferMinutes) {
+                $sub->selectRaw('1')
+                    ->from('home_visits as existing_visits')
+                    ->where('existing_visits.care_provider_id', $careProviderId)
+                    ->whereIn('existing_visits.status', ['accepted', 'in_progress'])
+                    ->whereRaw(
+                        'ABS(TIMESTAMPDIFF(MINUTE, existing_visits.scheduled_at, home_visits.scheduled_at)) <= ?',
+                        [$bufferMinutes]
+                    );
+            });
+        }
+
         // خلي القريب أول والبعيد آخر
         if (!is_null($maxDistanceKm)) {
             $query->orderByRaw("
@@ -48,6 +71,26 @@ class NearbyRequestService
         $query->orderBy('distance_km', 'asc');
 
         return $query->paginate($perPage);
+    }
+
+    /**
+     * Whether accepting a visit at $scheduledAt would conflict with a visit
+     * this provider already has accepted/in progress. Used as a hard check
+     * at acceptance time — getNearbyPendingRequests() already filters these
+     * out of the listing, but a request could still have gone stale between
+     * when the provider fetched the list and when they tap accept.
+     */
+    public function hasSchedulingConflict(CareProvider $careProvider, Carbon $scheduledAt): bool
+    {
+        $bufferMinutes = (int) config('home_visit.conflict_buffer_minutes', 60);
+
+        return HomeVisit::where('care_provider_id', $careProvider->id)
+            ->whereIn('status', ['accepted', 'in_progress'])
+            ->whereBetween('scheduled_at', [
+                $scheduledAt->copy()->subMinutes($bufferMinutes),
+                $scheduledAt->copy()->addMinutes($bufferMinutes),
+            ])
+            ->exists();
     }
 
     /**

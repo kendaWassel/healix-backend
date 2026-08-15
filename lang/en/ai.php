@@ -107,6 +107,7 @@ return [
     'safety_interaction_alternative_note' => 'Same ATC class as :reference_drug, no recorded interaction with :other_drug. Always verify with a pharmacist.',
     'safety_condition_contraindicated_note' => ':medication (:ingredient) is contraindicated in patients with :condition.',
     'safety_pregnancy_not_applicable' => 'Patient is not recorded as pregnant — pregnancy check skipped.',
+    'safety_pregnancy_general_note' => 'Always consult a physician before taking any medication during pregnancy.',
 
     /*
     | Lab analysis

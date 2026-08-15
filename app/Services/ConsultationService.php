@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\ConsultationBooked;
 use App\Models\Consultation;
 use App\Models\Doctor;
 use App\Notifications\ConsultationRequestedNotification;
@@ -12,9 +13,12 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Traits\Localizable;
 
 class ConsultationService
 {
+    use Localizable;
+
     protected GoogleMeetService $googleMeetService;
 
     public function __construct(GoogleMeetService $googleMeetService)
@@ -150,11 +154,35 @@ class ConsultationService
                 new ConsultationRequestedNotification($consultation, $patientUser, $doctor->user)
             );
 
-            $meetLinkText = $consultation->google_meet_link ? "\nGoogle Meet Link: {$consultation->google_meet_link}" : '';
+            $patientName = $patientUser->full_name ?? $patientUser->name ?? 'Unknown Patient';
+            $consultationTypeLabel = \App\Support\Locale::label('consultation_type', $consultation->type);
+            $scheduledTime = $consultation->scheduled_at
+                ? $consultation->scheduled_at->format('Y-m-d H:i')
+                : null;
+            $meetLink = $consultation->google_meet_link;
+
+            // Rendered in the doctor's own preferred_locale, same mechanism
+            // Laravel's notification layer already uses (HasLocalePreference)
+            // — see app/Notifications/* for the equivalent pattern.
+            [$whatsAppMessage, $smsMessage] = $this->withLocale($doctor->user->preferredLocale(), function () use ($doctor, $patientName, $consultationTypeLabel, $scheduledTime, $meetLink) {
+                $meetLinkText = $meetLink
+                    ? "\n" . __('notification.meet_link_line', ['link' => $meetLink])
+                    : '';
+
+                $whatsApp = __('notification.wa_booked_message', ['name' => $doctor->user->full_name]) . $meetLinkText;
+
+                $sms = __('notification.sms_booked_hello', ['name' => $doctor->user->full_name]) . "\n"
+                    . __('notification.sms_booked_intro') . "\n"
+                    . __('notification.sms_booked_patient_name', ['name' => $patientName]) . "\n"
+                    . __('notification.sms_booked_type', ['type' => $consultationTypeLabel]) . "\n"
+                    . __('notification.sms_booked_time', ['time' => $scheduledTime ?? __('notification.time_immediately')])
+                    . $meetLinkText;
+
+                return [$whatsApp, $sms];
+            });
 
             // Send WhatsApp message to doctor
             $ultraMsgService = new UltraMsgService();
-            $whatsAppMessage = "Hello {$doctor->user->full_name}, You have a new consultation booked.{$meetLinkText}";
             $result = $ultraMsgService->sendWhatsAppMessage($doctor->user->phone, $whatsAppMessage);
             if (!$result) {
                 Log::warning('Failed to send WhatsApp notification', [
@@ -162,18 +190,10 @@ class ConsultationService
                     'phone' => $doctor->user->phone,
                 ]);
             }
-            
+
             // Send SMS message to doctor
             if ($doctor->user && $doctor->user->phone) {
                 try {
-                    $patientName = $patientUser->full_name ?? $patientUser->name ?? 'Unknown Patient';
-                    $consultationType = $consultation->type === 'call_now' ? 'Call Now' : 'Scheduled';
-                    $scheduledTime = $consultation->scheduled_at 
-                        ? $consultation->scheduled_at->format('Y-m-d H:i') 
-                        : 'Immediately';    
-
-                    $smsMessage = "Hello {$doctor->user->full_name}\nYou have a new consultation booked.\nPatient Name: {$patientName}\nType: {$consultationType}\nTime: {$scheduledTime}{$meetLinkText}";
-
                     $traccarSmsService = new TraccarSmsService();
                     $result = $traccarSmsService->sendSms($doctor->user->phone, $smsMessage);
                     

@@ -42,4 +42,9 @@ class Conversation extends Model
     {
         return $this->belongsTo(Patient::class);
     }
+
+    public function assessment(): HasOne
+    {
+        return $this->hasOne(Assessment::class);
+    }
 }

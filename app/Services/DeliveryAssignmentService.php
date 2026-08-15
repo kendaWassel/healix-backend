@@ -2,13 +2,20 @@
 
 namespace App\Services;
 
-use App\Jobs\ExpandDeliverySearchJob;
 use App\Models\Delivery;
 use App\Models\DeliveryTask;
 use App\Models\DeliveryTaskCandidate;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Point-to-point delivery assignment: at any time a task has at most one
+ * pending candidate. If that candidate rejects or their response window
+ * expires, the task is offered to the next-nearest available driver who
+ * hasn't already been tried. The search radius only escalates when a step
+ * finds nobody at all within it — it never fans a task out to multiple
+ * drivers at once.
+ */
 class DeliveryAssignmentService
 {
     protected OSRMService $osrmService;
@@ -19,95 +26,93 @@ class DeliveryAssignmentService
     }
 
     /**
-     * Broadcast a pending task to nearby drivers at the first configured radius.
+     * Offer the task to the single nearest available driver who hasn't
+     * already been tried for it, escalating the search radius as needed.
+     * Returns the new candidate, or null if nobody could be found at all.
      */
-    public function broadcastTask(DeliveryTask $task): array
+    public function assignNearestDriver(DeliveryTask $task): ?DeliveryTaskCandidate
     {
-        $radiusIndex = 0;
-        $radiusKm = $this->radiusAtIndex($radiusIndex);
-        $candidatesCreated = $this->broadcastAtRadius($task, $radiusKm);
+        return DB::transaction(function () use ($task) {
+            $task = DeliveryTask::where('id', $task->id)->lockForUpdate()->first();
 
-        $this->scheduleRadiusExpansion($task, $radiusIndex);
+            if (!$task || $task->status !== 'pending' || $task->delivery_id) {
+                return null;
+            }
 
-        return [
-            'task_id' => $task->id,
-            'radius_km' => $radiusKm,
-            'candidates_count' => $candidatesCreated,
-        ];
+            $task->loadMissing('order.pharmacist');
+            $pharmacy = $task->order->pharmacist;
+
+            if (!$pharmacy || !$pharmacy->latitude || !$pharmacy->longitude) {
+                return null;
+            }
+
+            $alreadyTriedIds = DeliveryTaskCandidate::where('task_id', $task->id)
+                ->pluck('delivery_id')
+                ->all();
+
+            $nearest = $this->findNearestUntried(
+                (float) $pharmacy->latitude,
+                (float) $pharmacy->longitude,
+                $alreadyTriedIds
+            );
+
+            if (!$nearest) {
+                return null;
+            }
+
+            return DeliveryTaskCandidate::create([
+                'task_id' => $task->id,
+                'delivery_id' => $nearest->id,
+                'status' => 'pending',
+                'sent_at' => now(),
+            ]);
+        });
     }
 
     /**
-     * Invite nearby drivers who have never received this task before.
+     * Search progressively wider radii (config('delivery.radius_expansion'))
+     * for the single nearest available driver not already in $excludeIds,
+     * stopping at the first radius that finds anyone.
      */
-    public function broadcastAtRadius(DeliveryTask $task, float $radiusKm): int
+    protected function findNearestUntried(float $lat, float $lng, array $excludeIds): ?Delivery
     {
-        $task->loadMissing('order.pharmacist');
+        foreach (config('delivery.radius_expansion', []) as $radiusKm) {
+            $drivers = $this->findNearbyAvailableDrivers($lat, $lng, (float) $radiusKm, $excludeIds);
 
-        $pharmacy = $task->order->pharmacist;
-        if (!$pharmacy || !$pharmacy->latitude || !$pharmacy->longitude) {
-            return 0;
+            if ($drivers->isNotEmpty()) {
+                return $this->sortDriversByEta($drivers, $lat, $lng)->first();
+            }
         }
 
-        $alreadyInvitedIds = DeliveryTaskCandidate::where('task_id', $task->id)
-            ->pluck('delivery_id')
-            ->all();
-
-        $drivers = $this->findNearbyAvailableDrivers(
-            (float) $pharmacy->latitude,
-            (float) $pharmacy->longitude,
-            $radiusKm,
-            $alreadyInvitedIds
-        );
-
-        if ($drivers->isEmpty()) {
-            return 0;
-        }
-
-        $sortedDrivers = $this->sortDriversByEta(
-            $drivers,
-            (float) $pharmacy->latitude,
-            (float) $pharmacy->longitude
-        );
-
-        return $this->createCandidates($task, $sortedDrivers);
+        return null;
     }
 
-    public function expirePendingCandidates(DeliveryTask $task): int
+    /**
+     * If the task's current candidate has been pending longer than the
+     * configured response timeout, expire it and move on to the next
+     * nearest driver. Called opportunistically from the endpoints that
+     * touch a task, since no queue worker runs in this deployment.
+     */
+    public function expireStaleCandidateAndReassign(DeliveryTask $task): void
     {
-        return DeliveryTaskCandidate::where('task_id', $task->id)
+        if ($task->status !== 'pending' || $task->delivery_id) {
+            return;
+        }
+
+        $timeoutSeconds = (int) config('delivery.broadcast_timeout_seconds', 30);
+
+        $stale = DeliveryTaskCandidate::where('task_id', $task->id)
             ->where('status', 'pending')
-            ->update([
-                'status' => 'expired',
-                'responded_at' => now(),
-            ]);
-    }
+            ->where('sent_at', '<=', now()->subSeconds($timeoutSeconds))
+            ->first();
 
-    public function expandSearch(DeliveryTask $task, int $currentRadiusIndex): ?array
-    {
-        if ($task->delivery_id || $task->status !== 'pending') {
-            return null;
+        if (!$stale) {
+            return;
         }
 
-        $this->expirePendingCandidates($task);
+        $stale->update(['status' => 'expired', 'responded_at' => now()]);
 
-        $nextRadiusIndex = $currentRadiusIndex + 1;
-        $nextRadiusKm = $this->radiusAtIndex($nextRadiusIndex);
-
-        if ($nextRadiusKm === null) {
-            return null;
-        }
-
-        $candidatesCreated = $this->broadcastAtRadius($task, $nextRadiusKm);
-
-        if ($this->radiusAtIndex($nextRadiusIndex + 1) !== null) {
-            $this->scheduleRadiusExpansion($task, $nextRadiusIndex);
-        }
-
-        return [
-            'task_id' => $task->id,
-            'radius_km' => $nextRadiusKm,
-            'candidates_count' => $candidatesCreated,
-        ];
+        $this->assignNearestDriver($task);
     }
 
     /**
@@ -162,13 +167,6 @@ class DeliveryAssignmentService
                 'responded_at' => $now,
             ]);
 
-            DeliveryTaskCandidate::where('task_id', $task->id)
-                ->where('status', 'pending')
-                ->update([
-                    'status' => 'expired',
-                    'responded_at' => $now,
-                ]);
-
             $task->order->update(['status' => 'out_for_delivery']);
 
             return [
@@ -178,9 +176,13 @@ class DeliveryAssignmentService
         });
     }
 
+    /**
+     * Reject the current offer and immediately move on to the next nearest
+     * driver, so the patient doesn't wait out the full response timeout.
+     */
     public function rejectCandidate(DeliveryTask $task, Delivery $delivery): bool
     {
-        return DB::transaction(function () use ($task, $delivery) {
+        $rejected = DB::transaction(function () use ($task, $delivery) {
             $candidate = DeliveryTaskCandidate::where('task_id', $task->id)
                 ->where('delivery_id', $delivery->id)
                 ->where('status', 'pending')
@@ -198,6 +200,12 @@ class DeliveryAssignmentService
 
             return true;
         });
+
+        if ($rejected) {
+            $this->assignNearestDriver($task);
+        }
+
+        return $rejected;
     }
 
     public function getBusyDeliveryIds(): array
@@ -265,50 +273,5 @@ class DeliveryAssignmentService
             })
             ->sortBy('eta_seconds')
             ->values();
-    }
-
-    protected function createCandidates(DeliveryTask $task, Collection $drivers): int
-    {
-        if ($drivers->isEmpty()) {
-            return 0;
-        }
-
-        $now = now();
-        $records = $drivers->map(fn (Delivery $driver) => [
-            'task_id' => $task->id,
-            'delivery_id' => $driver->id,
-            'status' => 'pending',
-            'sent_at' => $now,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ])->all();
-
-        DeliveryTaskCandidate::insert($records);
-
-        return count($records);
-    }
-
-    protected function scheduleRadiusExpansion(DeliveryTask $task, int $currentRadiusIndex): void
-    {
-        if ($this->radiusAtIndex($currentRadiusIndex + 1) === null) {
-            return;
-        }
-
-        ExpandDeliverySearchJob::dispatch($task->id, $currentRadiusIndex)
-            ->delay(now()->addSeconds((int) config('delivery.broadcast_expansion_delay_seconds')));
-    }
-
-    protected function radiusAtIndex(int $index): ?float
-    {
-        $radii = config('delivery.radius_expansion', []);
-        $maxRadius = (float) config('delivery.max_radius_km');
-
-        if (!isset($radii[$index])) {
-            return null;
-        }
-
-        $radius = (float) $radii[$index];
-
-        return $radius <= $maxRadius ? $radius : null;
     }
 }

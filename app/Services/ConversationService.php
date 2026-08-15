@@ -55,7 +55,16 @@ class ConversationService
      * patient message, the AI question, extracted symptoms, the session id and
      * interview status.
      *
-     * @return array{patient_message: \App\Models\Message, assistant_message: \App\Models\Message|null, finished: bool}
+     * @return array{
+     *     patient_message: \App\Models\Message,
+     *     assistant_message: \App\Models\Message|null,
+     *     finished: bool,
+     *     emergency_detected: bool,
+     *     risk_level: string,
+     *     red_flags: array<int, array<string, mixed>>,
+     *     recommended_action: ?string,
+     *     assessment: array<string, mixed>|null
+     * }
      */
     public function sendMessage(User $user, Conversation $conversation, string $messageText): array
     {
@@ -65,6 +74,13 @@ class ConversationService
             'patient_message' => $turn['patient_message'],
             'assistant_message' => $turn['assistant_message'],
             'finished' => $turn['result']['finished'],
+            'emergency_detected' => (bool) ($turn['result']['emergency_detected'] ?? false),
+            'risk_level' => (string) ($turn['result']['risk_level'] ?? 'none'),
+            'red_flags' => is_array($turn['result']['red_flags'] ?? null) ? $turn['result']['red_flags'] : [],
+            'recommended_action' => isset($turn['result']['recommended_action']) && is_string($turn['result']['recommended_action'])
+                ? $turn['result']['recommended_action']
+                : null,
+            'assessment' => $turn['assessment'] ?? null,
         ];
     }
 

@@ -25,7 +25,18 @@ class InterviewService
     /**
      * Send one patient message and return the assistant's turn decision.
      *
-     * @return array{session_id: string, finished: bool, question: ?string, next_slot: ?string, symptoms: array<int, array{text: string, negated: bool}>, emergency_detected: bool, risk_level: string, red_flags: array<int, array<string, mixed>>, recommended_action: ?string}
+     * @return array{
+     *     session_id: string,
+     *     finished: bool,
+     *     question: ?string,
+     *     next_slot: ?string,
+     *     symptoms: array<int, array{text: string, negated: bool, confidence: float|null}>,
+     *     emergency_detected: bool,
+     *     risk_level: string,
+     *     red_flags: array<int, array<string, mixed>>,
+     *     recommended_action: ?string,
+     *     interview_record: array<string, mixed>|null
+     * }
      *
      * @throws AIServiceException
      */
@@ -71,6 +82,8 @@ class InterviewService
             'emergency_detected' => $response['emergency_detected'] ?? false,
         ]);
 
+        $interviewRecord = self::extractInterviewRecord($response);
+
         return [
             'session_id' => $returnedSessionId,
             'finished' => $response['finished'],
@@ -97,6 +110,57 @@ class InterviewService
             'recommended_action' => isset($response['recommended_action']) && is_string($response['recommended_action'])
                 ? $response['recommended_action']
                 : null,
+            'interview_record' => $interviewRecord,
         ];
+    }
+
+    /**
+     * Build AssessmentRequest.interview_record from /api/interview/turn fields.
+     * Returns null when the response carries no structured record yet.
+     *
+     * @param  array<string, mixed>  $response
+     * @return array<string, mixed>|null
+     */
+    protected static function extractInterviewRecord(array $response): ?array
+    {
+        $record = [
+            'chief_complaint' => self::optionalString($response['chief_complaint'] ?? null),
+            'severity' => self::optionalString($response['severity'] ?? null),
+            'duration' => self::optionalString($response['duration'] ?? null),
+            'body_location' => self::optionalString($response['body_location'] ?? null),
+            'medications' => self::stringList($response['medications'] ?? []),
+            'allergies' => self::stringList($response['allergies'] ?? []),
+            'chronic_conditions' => self::stringList($response['chronic_conditions'] ?? []),
+            'family_history' => self::stringList($response['family_history'] ?? []),
+        ];
+
+        $hasScalar = collect($record)
+            ->only(['chief_complaint', 'severity', 'duration', 'body_location'])
+            ->contains(fn ($value) => $value !== null);
+        $hasLists = collect($record)
+            ->only(['medications', 'allergies', 'chronic_conditions', 'family_history'])
+            ->contains(fn ($value) => $value !== []);
+
+        return ($hasScalar || $hasLists) ? $record : null;
+    }
+
+    protected static function optionalString(mixed $value): ?string
+    {
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected static function stringList(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_map(static fn ($item) => is_string($item) && $item !== '' ? $item : null, $value),
+            static fn ($item) => $item !== null
+        ));
     }
 }

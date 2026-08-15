@@ -15,6 +15,7 @@ Schedule::command('telescope:prune --hours=48')
 
 // Schedule consultation reminder notifications to run every minute
 // Sends reminders 15 minutes before consultation starts
+//php artisan consultations:send-reminders --minutes=15 --window=1
 Schedule::command('consultations:send-reminders --minutes=15 --window=1')
     ->everyMinute()
     ->withoutOverlapping()

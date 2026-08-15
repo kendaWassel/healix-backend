@@ -122,6 +122,11 @@ class ConversationController extends Controller
                 'question' => $result['assistant_message']?->message,
                 'detected_symptoms' => $result['patient_message']->detected_symptoms,
                 'finished' => $result['finished'],
+                'emergency_detected' => $result['emergency_detected'],
+                'risk_level' => $result['risk_level'],
+                'red_flags' => $result['red_flags'],
+                'recommended_action' => $result['recommended_action'],
+                'assessment' => $result['assessment'],
                 'data' => [
                     'patient_message' => new MessageResource($result['patient_message']),
                     'assistant_message' => $result['assistant_message']

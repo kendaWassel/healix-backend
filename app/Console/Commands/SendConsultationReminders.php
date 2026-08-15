@@ -11,9 +11,13 @@ use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Traits\Localizable;
 
 class SendConsultationReminders extends Command
 {
+    use Localizable;
+
+
     /**
      * The name and signature of the console command.
      *
@@ -120,8 +124,7 @@ class SendConsultationReminders extends Command
                     // Send SMS to patient
                     if ($patientUser->phone) {
                         $this->sendSmsReminder(
-                            $patientUser->phone,
-                            $patientUser->full_name ?? 'Patient',
+                            $patientUser,
                             $doctor->user->full_name ?? 'Doctor',
                             $scheduledTime,
                             'patient'
@@ -131,8 +134,7 @@ class SendConsultationReminders extends Command
                     // Send WhatsApp to patient
                     if ($patientUser->phone) {
                         $this->whatsappReminder(
-                            $patientUser->phone,
-                            $patientUser->full_name ?? 'Patient',
+                            $patientUser,
                             $doctor->user->full_name ?? 'Doctor',
                             $scheduledTime,
                             'patient'
@@ -145,12 +147,11 @@ class SendConsultationReminders extends Command
                     $doctor->user->notify(
                         new ConsultationReminderNotification($consultation, 'doctor', $patientUser)
                     );
-                    
+
                     // Send SMS to doctor
                     if ($doctor->user->phone) {
                         $this->sendSmsReminder(
-                            $doctor->user->phone,
-                            $doctor->user->full_name ?? 'Doctor',
+                            $doctor->user,
                             $patientUser->full_name ?? 'Patient',
                             $scheduledTime,
                             'doctor'
@@ -159,8 +160,7 @@ class SendConsultationReminders extends Command
                     // Send WhatsApp to doctor
                     if ($doctor->user->phone) {
                         $this->whatsappReminder(
-                            $doctor->user->phone,
-                            $doctor->user->full_name ?? 'Doctor',
+                            $doctor->user,
                             $patientUser->full_name ?? 'Patient',
                             $scheduledTime,
                             'doctor'
@@ -183,21 +183,35 @@ class SendConsultationReminders extends Command
     }
 
     /**
+     * Build the reminder text in the recipient's own preferred_locale — same
+     * mechanism as Laravel's notification layer (HasLocalePreference), applied
+     * here since this is a manually-sent SMS/WhatsApp string, not a Notification.
+     */
+    private function reminderMessage(User $recipientUser, string $otherPartyName, string $scheduledTime, string $recipientType): string
+    {
+        return $this->withLocale($recipientUser->preferredLocale(), function () use ($otherPartyName, $scheduledTime, $recipientType) {
+            $key = $recipientType === 'patient'
+                ? 'notification.reminder_sms_patient'
+                : 'notification.reminder_sms_doctor';
+
+            return __($key, ['name' => $otherPartyName, 'time' => $scheduledTime]);
+        });
+    }
+
+    /**
      * Send SMS reminder message
      */
-    private function sendSmsReminder(string $phone, string $recipientName, string $otherPartyName, string $scheduledTime, string $recipientType): void
+    private function sendSmsReminder(User $recipientUser, string $otherPartyName, string $scheduledTime, string $recipientType): void
     {
+        $phone = $recipientUser->phone;
+        $recipientName = $recipientUser->full_name ?? ($recipientType === 'patient' ? 'Patient' : 'Doctor');
+
         try {
             $traccarSmsService = new TraccarSmsService();
-            
-            if ($recipientType === 'patient') {
-                $message = "Consultation Reminder: You have a consultation scheduled with Dr. {$otherPartyName} at {$scheduledTime}. Please be ready.";
-            } else {
-                $message = "Consultation Reminder: You have a consultation scheduled with {$otherPartyName} at {$scheduledTime}. Please be ready.";
-            }
+            $message = $this->reminderMessage($recipientUser, $otherPartyName, $scheduledTime, $recipientType);
 
             $result = $traccarSmsService->sendSms($phone, $message);
-            
+
             if ($result) {
                 $this->info("SMS reminder sent to {$recipientName} ({$phone})");
             } else {
@@ -216,19 +230,18 @@ class SendConsultationReminders extends Command
             ]);
         }
     }
-    public function whatsappReminder(string $phone, string $recipientName, string $otherPartyName, string $scheduledTime, string $recipientType): void
+
+    public function whatsappReminder(User $recipientUser, string $otherPartyName, string $scheduledTime, string $recipientType): void
     {
+        $phone = $recipientUser->phone;
+        $recipientName = $recipientUser->full_name ?? ($recipientType === 'patient' ? 'Patient' : 'Doctor');
+
         try {
             $ultramsgService = new UltraMsgService();
-            
-            if ($recipientType === 'patient') {
-                $message = "Consultation Reminder: You have a consultation scheduled with Dr. {$otherPartyName} at {$scheduledTime}. Please be ready.";
-            } else {
-                $message = "Consultation Reminder: You have a consultation scheduled with {$otherPartyName} at {$scheduledTime}. Please be ready.";
-            }
+            $message = $this->reminderMessage($recipientUser, $otherPartyName, $scheduledTime, $recipientType);
 
             $result = $ultramsgService->sendWhatsAppMessage($phone, $message);
-            
+
             if ($result) {
                 $this->info("WhatsApp reminder sent to {$recipientName} ({$phone})");
             } else {
@@ -246,8 +259,6 @@ class SendConsultationReminders extends Command
                 'error' => $e->getMessage()
             ]);
         }
-        
     }
-    
 }
 

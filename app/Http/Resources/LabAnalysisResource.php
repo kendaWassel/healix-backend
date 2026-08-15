@@ -31,7 +31,7 @@ class LabAnalysisResource extends JsonResource
             'test_results' => $this->test_results,
             'conditions' => $this->conditions,
             'disclaimer' => $this->disclaimer,
-            'original_file_url' => $this->whenLoaded('upload', fn () => $this->upload?->url()),
+            'original_file_url' => $this->upload?->getOriginalFileUrl(),
             'pdf_url' => $request->getSchemeAndHttpHost() . "/api/lab/analyses/{$this->id}/pdf",
             'patient_pdf_url' => $request->getSchemeAndHttpHost() . "/api/lab/analyses/{$this->id}/patient-pdf",
             'analyzed_at' => $this->analyzed_at?->toIso8601String(),

@@ -63,7 +63,7 @@ class UserController extends Controller
             'phone' => 'sometimes|string|max:20',
             'address' => 'sometimes|string|max:500',
             'birth_date' => 'sometimes|nullable|date|before:today',
-            'gender' => 'sometimes|nullable|in:male,female',
+            'gender' => 'sometimes|nullable|string|max:255',
             'preferred_locale' => 'sometimes|string|in:' . implode(',', config('localization.supported')),
         ]);
 

@@ -28,8 +28,14 @@ class Upload extends Model
         return $this->belongsTo(MedicalRecord::class, 'medical_record_id');
     }
     
-    public function url(){
-        return asset('/storage/'.$this->file_path);
+    public function url(): string
+    {
+        return asset('/storage/' . ltrim($this->file_path, '/'));
+    }
+
+    public function getOriginalFileUrl(): string
+    {
+        return $this->url();
     }
     
 }
