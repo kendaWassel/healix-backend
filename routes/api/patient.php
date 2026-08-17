@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\AI\HealixSpeechController;
+use App\Http\Controllers\Api\AssessmentController;
 use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\DeliveryLocationController;
@@ -26,6 +28,10 @@ Route::middleware(['auth:sanctum', 'verified', 'role:patient'])
         Route::get('/doctors/{id}/available-slots', [DoctorController::class, 'getAvailableSlots']);
 
         Route::post('/consultations/book', [ConsultationController::class, 'bookConsultation']);
+
+        // Unified post-assessment booking screen data (result + specialty +
+        // available doctors + slots) — one call for the AssessmentResultScreen.
+        Route::get('/assessments/{id}/booking', [AssessmentController::class, 'bookingOptions']);
 
         Route::post('/home-visits/{visit_id}/re-request', [HomeVisitController::class, 'reRequestHomeVisit']);
         Route::post('/home-visits/{visit_id}/request-new-care-provider', [PatientController::class, 'requestNewCareProvider']);
@@ -77,4 +83,10 @@ Route::middleware(['auth:sanctum', 'verified', 'role:patient'])
         // above calls) — see ConversationController::storeHealixMessage()'s
         // own docstring for why this isn't a branch inside storeMessage().
         Route::post('conversations/{conversation}/healix-messages', [ConversationController::class, 'storeHealixMessage']);
+        // Healix's own speech I/O (api/main.py's /speech/transcribe,
+        // /speech/synthesize) — see HealixSpeechController's own docstring
+        // for why transcribe is conversation-scoped (same 'sendMessage'
+        // authorization as healix-messages above) and synthesize is not.
+        Route::post('conversations/{conversation}/healix-speech/transcribe', [HealixSpeechController::class, 'transcribe']);
+        Route::post('healix-speech/synthesize', [HealixSpeechController::class, 'synthesize']);
     });

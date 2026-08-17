@@ -100,6 +100,38 @@ class HealixAiClient extends FastApiClient
     }
 
     /**
+     * POST /speech/transcribe — speech-to-text only, does not itself talk
+     * to the graph (api/main.py's own module docstring: "A voice turn is
+     * therefore always two calls... never a single combined 'voice chat'
+     * endpoint"). The multipart field name sent to Python is 'file' — that
+     * service's own `File(...)` parameter name — decoupled on purpose from
+     * whatever field name Laravel's own incoming request uses (see
+     * HealixSpeechController, which accepts 'audio' to match this
+     * project's existing speech-upload convention).
+     *
+     * @return array{text: string}
+     *
+     * @throws \App\Exceptions\AI\AIServiceException
+     */
+    public function transcribe(string $fileContents, string $fileName): array
+    {
+        return $this->postMultipart('/speech/transcribe', 'file', $fileContents, $fileName);
+    }
+
+    /**
+     * POST /speech/synthesize — text-to-speech only. Returns raw MP3 bytes
+     * (audio/mpeg), not JSON — api/main.py's own route returns a
+     * Response(content=audio_bytes, media_type="audio/mpeg"), never a
+     * JSON-wrapped payload, so this uses postBinary() rather than post().
+     *
+     * @throws \App\Exceptions\AI\AIServiceException
+     */
+    public function synthesize(string $text): string
+    {
+        return $this->postBinary('/speech/synthesize', ['text' => $text]);
+    }
+
+    /**
      * GET /health — deliberately NOT /api/health: unlike the Lab service
      * (LabAnalysisService::health() calls '/api/health'), the Healix AI
      * service's own FastAPI app (api/main.py) mounts its routes at the

@@ -53,6 +53,10 @@ class HealixConversationService
      *     assistant_message: Message,
      *     reply: string,
      *     stage: ?string,
+     *     is_crisis: bool,
+     *     severity: ?string,
+     *     red_flags: array,
+     *     diagnosis: ?array,
      *     specialty: ?string,
      *     reports: ?array,
      *     available: bool
@@ -109,6 +113,19 @@ class HealixConversationService
                     'assistant_message' => $assistantMessage,
                     'reply' => $assistantMessage->message,
                     'stage' => null,
+                    // Neutral, not-triggered defaults — same status as
+                    // stage/specialty/reports above. Laravel has no basis
+                    // to judge crisis/severity/red flags itself (that
+                    // judgment lives entirely in the Python service's own
+                    // rule-based + LLM layers); it did NOT run this turn,
+                    // it did not come back "clear". `available: false`
+                    // below is the field a caller must check first — never
+                    // read is_crisis/severity/red_flags as a real safety
+                    // verdict on a turn where available is false.
+                    'is_crisis' => false,
+                    'severity' => null,
+                    'red_flags' => [],
+                    'diagnosis' => null,
                     'specialty' => null,
                     'reports' => null,
                     'available' => false,
@@ -130,6 +147,19 @@ class HealixConversationService
                 'assistant_message' => $assistantMessage,
                 'reply' => $replyText,
                 'stage' => $result['stage'] ?? null,
+                // Safety-critical fields (CLAUDE.md's own non-negotiable
+                // safety rules on the Python side) — previously received
+                // from $result but silently dropped here, never reaching
+                // the frontend at all. is_crisis in particular duplicates
+                // stage === "crisis" by the Python contract's own design
+                // (api.contracts.ChatResponse's own docstring), kept as
+                // its own field for the same reason that contract keeps
+                // it: a boolean a caller can check directly without
+                // parsing/comparing a string.
+                'is_crisis' => (bool) ($result['is_crisis'] ?? false),
+                'severity' => $result['severity'] ?? null,
+                'red_flags' => $result['red_flags'] ?? [],
+                'diagnosis' => $result['diagnosis'] ?? null,
                 'specialty' => $result['specialty'] ?? null,
                 'reports' => $result['reports'] ?? null,
                 'available' => true,

@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Events\ConsultationBooked;
+use App\Models\Assessment;
 use App\Models\Consultation;
 use App\Models\Doctor;
+use App\Models\DoctorSummary;
 use App\Notifications\ConsultationRequestedNotification;
 use App\Services\GoogleMeetService;
 use App\Services\TraccarSmsService;
@@ -102,6 +104,10 @@ class ConsultationService
             $consultation = Consultation::create([
                 'patient_id' => $patient->id,
                 'doctor_id' => $doctor->id,
+                // Optional AI-assessment origin — null for the plain direct
+                // booking flow (unchanged behaviour when omitted).
+                'conversation_id' => $validated['conversation_id'] ?? null,
+                'assessment_id' => $validated['assessment_id'] ?? null,
                 'type' => $validated['call_type'],
                 'status' => 'pending',
                 'start_time' => $validated['call_type'] === 'call_now' ? Carbon::now() : null,
@@ -110,6 +116,10 @@ class ConsultationService
                     ? Carbon::now()
                     : (!empty($validated['scheduled_at']) ? Carbon::parse($validated['scheduled_at']) : null),
             ]);
+
+            if (!empty($validated['assessment_id'])) {
+                $this->linkAssessmentToBooking((int) $validated['assessment_id'], $doctor->id);
+            }
             // Generate Google Meet link for the consultation
             $doctor->loadMissing('user');
             if ($doctor->user && !empty($doctor->user->email)) {
@@ -217,6 +227,19 @@ class ConsultationService
             DB::rollBack();
             throw $e;
         }
+    }
+
+    /**
+     * When a booking originates from the AI assessment result screen, mark
+     * the assessment "booked" (Assessment::STATUS_BOOKED) and attach the
+     * chosen doctor to its (previously doctor-less) medical report, so the
+     * doctor sees it against their own patient list.
+     */
+    protected function linkAssessmentToBooking(int $assessmentId, int $doctorId): void
+    {
+        Assessment::where('id', $assessmentId)->update(['status' => Assessment::STATUS_BOOKED]);
+
+        DoctorSummary::where('assessment_id', $assessmentId)->update(['doctor_id' => $doctorId]);
     }
 
     public function startConsultation(int $id, ?string $role = null): array

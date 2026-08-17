@@ -57,6 +57,15 @@ return [
     'conversation_not_found' => 'Conversation not found.',
 
     /*
+    | Healix speech relay (POST /speech/transcribe, POST /speech/synthesize
+    | on the Healix AI service — distinct from the "Speech to text" block
+    | below, which belongs to the OTHER AI backend's own interview flow)
+    */
+
+    'healix_speech_transcribed' => 'Speech transcribed successfully.',
+    'healix_speech_synthesized' => 'Speech synthesized successfully.',
+
+    /*
     | Speech to text
     */
 
@@ -142,6 +151,7 @@ return [
     'assessment_summary_title' => 'Preliminary Assessment Summary',
     'assessment_urgency_line' => 'Urgency level: :level',
     'assessment_specialty_line' => 'Suggested specialty: :specialty',
+    'assessment_not_found' => 'Assessment not found.',
 
     'urgency_level_emergency' => 'Emergency',
     'urgency_level_urgent' => 'Urgent',

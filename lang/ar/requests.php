@@ -59,6 +59,8 @@ return [
         'call_type_required' => 'نوع المكالمة مطلوب.',
         'call_type_in' => 'يجب أن يكون نوع المكالمة call_now أو schedule.',
         'scheduled_at_date' => 'يجب أن يكون الموعد المحدد بصيغة تاريخ ووقت صحيحة.',
+        'conversation_id_exists' => 'المحادثة المحددة غير موجودة.',
+        'assessment_id_exists' => 'التقييم المحدد غير موجود.',
     ],
 
     'create_prescription' => [
@@ -105,6 +107,12 @@ return [
         'audio_max' => 'يجب ألا يتجاوز حجم الملف الصوتي 10 ميغابايت.',
         'audio_mimes' => 'يجب أن يكون الملف الصوتي بأحد الصيغ: m4a، mp3، wav، ogg، webm.',
         'audio_mimetypes' => 'يجب أن يكون الملف الصوتي بصيغة مدعومة.',
+    ],
+
+    'synthesize' => [
+        'text_required' => 'النص مطلوب.',
+        'text_string' => 'يجب أن يكون النص نصياً.',
+        'text_max' => 'يجب ألا يتجاوز النص 5000 حرف.',
     ],
 
     'medical_record' => [

@@ -21,6 +21,7 @@ class Specialization extends Model
     protected $fillable = [
         'name',
         'name_ar',
+        'code',
     ];
 
     public function doctors() {

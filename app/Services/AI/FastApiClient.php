@@ -235,6 +235,78 @@ class FastApiClient
     }
 
     /**
+     * Send a JSON POST and return the raw response body bytes, not parsed
+     * JSON — for an endpoint whose success response isn't JSON at all
+     * (e.g. Healix's POST /speech/synthesize, which returns audio/mpeg
+     * bytes directly). Same retry/timeout/logging transport as post()
+     * and downloadBinary() above; downloadBinary() itself can't be reused
+     * here since it's GET-only with no request body.
+     *
+     * @throws AIServiceException
+     */
+    public function postBinary(string $endpoint, array $payload): string
+    {
+        $url = $this->baseUrl . '/' . ltrim($endpoint, '/');
+
+        Log::info("{$this->serviceLabel} binary POST request", ['url' => $url]);
+
+        $attempt = 0;
+        $lastException = null;
+
+        while ($attempt < $this->retries) {
+            $attempt++;
+
+            try {
+                $response = $this->buildRequest()->asJson()->post($url, $payload);
+
+                Log::info("{$this->serviceLabel} binary POST response", [
+                    'url' => $url,
+                    'status' => $response->status(),
+                ]);
+
+                if ($response->successful()) {
+                    return $response->body();
+                }
+
+                if ($response->status() >= 500 && $attempt < $this->retries) {
+                    Log::warning("{$this->serviceLabel} server error, retrying", [
+                        'url' => $url,
+                        'attempt' => $attempt,
+                        'status' => $response->status(),
+                    ]);
+                    continue;
+                }
+
+                $detail = $response->json('detail');
+
+                throw new AIServiceException(
+                    is_string($detail) && $detail !== ''
+                        ? $detail
+                        : __('ai.service_request_failed', ['service' => $this->serviceName(), 'status' => $response->status()]),
+                    $response->status() >= 400 && $response->status() < 600 ? $response->status() : 502
+                );
+            } catch (ConnectionException $e) {
+                $lastException = $e;
+                Log::warning("{$this->serviceLabel} connection error, retrying", [
+                    'url' => $url,
+                    'attempt' => $attempt,
+                    'error' => $e->getMessage(),
+                ]);
+
+                if ($attempt >= $this->retries) {
+                    throw new AIServiceUnavailableException(__('ai.service_connection_failed', ['service' => $this->serviceName()]));
+                }
+            } catch (AIServiceException $e) {
+                throw $e;
+            }
+        }
+
+        throw new AIServiceUnavailableException(
+            $lastException?->getMessage() ?? __('ai.service_unavailable_named', ['service' => $this->serviceName()])
+        );
+    }
+
+    /**
      * @param  'get'|'post'  $method  Payload is sent as query string for GET, JSON body for POST.
      *
      * @throws AIServiceException

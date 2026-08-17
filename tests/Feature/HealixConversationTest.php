@@ -77,6 +77,10 @@ class HealixConversationTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('available', true)
             ->assertJsonPath('stage', 'diagnosis')
+            ->assertJsonPath('is_crisis', false)
+            ->assertJsonPath('severity', null)
+            ->assertJsonPath('red_flags', [])
+            ->assertJsonPath('diagnosis.status', 'differential')
             ->assertJsonPath('specialty', 'عصبية')
             ->assertJsonPath('reply', 'بناءً على الأعراض يلي ذكرتها، في احتمال أولي واحد بس مش تشخيص نهائي.')
             ->assertJsonPath('reports.patient', 'fake patient report')
@@ -181,6 +185,16 @@ class HealixConversationTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('available', false)
             ->assertJsonPath('stage', null)
+            // Neutral defaults, not a real safety verdict — the turn never
+            // reached Python at all (HealixConversationService's own
+            // comment on this branch). A frontend must check 'available'
+            // before trusting these, which is exactly what this pins down:
+            // false/null/[] here, not something that looks like a
+            // completed, clear screening.
+            ->assertJsonPath('is_crisis', false)
+            ->assertJsonPath('severity', null)
+            ->assertJsonPath('red_flags', [])
+            ->assertJsonPath('diagnosis', null)
             ->assertJsonPath('specialty', null)
             ->assertJsonPath('reply', __('ai.healix_unavailable_notice'))
             ->assertJsonPath('data.assistant_message.message', __('ai.healix_unavailable_notice'));

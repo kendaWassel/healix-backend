@@ -13,6 +13,8 @@ class Consultation extends Model
     protected $fillable = [
         'patient_id',
         'doctor_id',
+        'conversation_id',
+        'assessment_id',
         'type',
         'status',
         'payment_status',
@@ -52,5 +54,15 @@ class Consultation extends Model
     public function payments()
     {
         return $this->morphMany(Payment::class, 'payable');
+    }
+
+    public function conversation(): BelongsTo
+    {
+        return $this->belongsTo(Conversation::class);
+    }
+
+    public function assessment(): BelongsTo
+    {
+        return $this->belongsTo(Assessment::class);
     }
 }

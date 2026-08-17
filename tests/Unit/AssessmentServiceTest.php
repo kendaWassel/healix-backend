@@ -144,4 +144,39 @@ class AssessmentServiceTest extends TestCase
                 && ! array_key_exists('interview_record', $request->data());
         });
     }
+
+    public function test_patient_summary_and_medical_report_are_passed_through_when_present(): void
+    {
+        $payload = $this->fakeAssessmentResponse();
+        $payload['patient_summary'] = [
+            'summary_ar' => 's', 'possible_condition' => ['name' => 'X', 'confidence' => 50.0],
+            'urgency' => ['level' => 'EMERGENCY', 'label_ar' => 'طارئ'],
+            'specialty' => ['code' => 'cardiology', 'name_ar' => 'أمراض القلب'],
+            'symptoms' => [], 'disclaimer_ar' => 'd',
+        ];
+        $payload['medical_report'] = ['content' => 'تقرير', 'missing_fields' => ['age']];
+
+        Http::fake(['http://127.0.0.1:8000/api/assessment/run' => Http::response($payload)]);
+
+        $result = $this->service()->run('sess-7', ['x'], []);
+
+        // assertEquals, not assertSame: the payload round-trips through real
+        // JSON encode/decode via Http::fake(), where a whole-number float
+        // (50.0) and an int (50) are indistinguishable on the wire -- that's
+        // expected JSON transport behaviour, not a bug in run().
+        $this->assertEquals($payload['patient_summary'], $result['patient_summary']);
+        $this->assertEquals($payload['medical_report'], $result['medical_report']);
+    }
+
+    public function test_patient_summary_and_medical_report_are_null_when_absent(): void
+    {
+        Http::fake([
+            'http://127.0.0.1:8000/api/assessment/run' => Http::response($this->fakeAssessmentResponse()),
+        ]);
+
+        $result = $this->service()->run('sess-8', ['x'], []);
+
+        $this->assertNull($result['patient_summary']);
+        $this->assertNull($result['medical_report']);
+    }
 }

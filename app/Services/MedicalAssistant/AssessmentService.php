@@ -39,7 +39,9 @@ class AssessmentService
      *     specialty: array{specialty: string, confidence: float, explanation: string},
      *     confidence: array{overall_confidence: float, requires_human_review: bool, explanation: string},
      *     explanation: array{summary: string, medical_reasoning: string, recommendation: string, disclaimer: string},
-     *     predictions: array<int, array{disease: string, score: float, explanation: string}>
+     *     predictions: array<int, array{disease: string, score: float, explanation: string}>,
+     *     patient_summary: array{summary_ar: string, possible_condition: array{name: string, confidence: float}|null, urgency: array{level: string, label_ar: string}, specialty: array{code: string, name_ar: string}, symptoms: array<int, string>, disclaimer_ar: string}|null,
+     *     medical_report: array{content: string, missing_fields: array<int, string>}|null
      * }
      *
      * @throws AIServiceException
@@ -99,6 +101,11 @@ class AssessmentService
             'confidence' => $response['confidence'],
             'explanation' => $response['explanation'],
             'predictions' => $response['predictions']['predictions'] ?? [],
+            // Additive (Python schema fields added alongside the existing
+            // response shape, not replacing it) -- tolerated as absent so an
+            // older AI service version doesn't break this call.
+            'patient_summary' => $response['patient_summary'] ?? null,
+            'medical_report' => $response['medical_report'] ?? null,
         ];
     }
 }

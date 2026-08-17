@@ -192,6 +192,14 @@ class ConversationController extends Controller
             // data.* resources" shape storeMessage() above already uses.
             'reply' => $result['reply'],
             'stage' => $result['stage'],
+            // Safety-critical — check 'available' first: when it's false
+            // (the Python service was unreachable this turn), these are
+            // neutral not-triggered defaults, not a real safety verdict —
+            // see HealixConversationService::sendMessage()'s own comment.
+            'is_crisis' => $result['is_crisis'],
+            'severity' => $result['severity'],
+            'red_flags' => $result['red_flags'],
+            'diagnosis' => $result['diagnosis'],
             'specialty' => $result['specialty'],
             'reports' => $result['reports'],
             'available' => $result['available'],

@@ -52,6 +52,15 @@ return [
     'conversation_not_found' => 'المحادثة غير موجودة.',
 
     /*
+    | ربط خدمة الصوت الخاصة بهيلكس (POST /speech/transcribe و
+    | POST /speech/synthesize على خدمة هيلكس — مختلفة عن قسم "تحويل الكلام
+    | إلى نص" أدناه الخاص بخدمة الذكاء الاصطناعي الأخرى ومسار المقابلة)
+    */
+
+    'healix_speech_transcribed' => 'تم تحويل الكلام إلى نص بنجاح.',
+    'healix_speech_synthesized' => 'تم توليد الصوت بنجاح.',
+
+    /*
     | تحويل الكلام إلى نص
     */
 
@@ -137,6 +146,7 @@ return [
     'assessment_summary_title' => 'ملخّص التقييم الأولي',
     'assessment_urgency_line' => 'درجة الاستعجال: :level',
     'assessment_specialty_line' => 'التخصّص المقترح: :specialty',
+    'assessment_not_found' => 'التقييم غير موجود.',
 
     'urgency_level_emergency' => 'طارئة',
     'urgency_level_urgent' => 'عاجلة',
