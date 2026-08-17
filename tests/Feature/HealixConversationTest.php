@@ -76,6 +76,10 @@ class HealixConversationTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('available', true)
             ->assertJsonPath('stage', 'diagnosis')
+            ->assertJsonPath('is_crisis', false)
+            ->assertJsonPath('severity', null)
+            ->assertJsonPath('red_flags', [])
+            ->assertJsonPath('diagnosis.status', 'differential')
             ->assertJsonPath('specialty', 'عصبية')
             ->assertJsonPath('reply', 'بناءً على الأعراض يلي ذكرتها، في احتمال أولي واحد بس مش تشخيص نهائي.')
             ->assertJsonPath('reports.patient', 'fake patient report')
@@ -101,6 +105,80 @@ class HealixConversationTest extends TestCase
             return str_contains($request->url(), '/chat')
                 && $request['thread_id'] === (string) $conversationId;
         });
+    }
+
+    /**
+     * is_crisis/severity/red_flags/diagnosis were received from the Python
+     * response but silently dropped before reaching the frontend — this
+     * pins down that they now actually surface, specifically on the
+     * crisis path (the one CLAUDE.md on the Python side calls out as
+     * safety-critical: "duplicates what stage == 'crisis' already
+     * implies... deserves a signal Laravel can check directly").
+     */
+    public function test_a_crisis_turn_surfaces_is_crisis_and_severity_to_the_frontend(): void
+    {
+        $user = $this->patientUser();
+        $this->fakeHealixChat([
+            'stage' => 'crisis',
+            'reply' => 'فهمتك، وهاد الشي خارج قدرتي — بس في ناس فعلاً بيقدروا يساعدوك هلق.',
+            'is_crisis' => true,
+            'severity' => null,
+            'red_flags' => [],
+            'diagnosis' => null,
+            'specialty' => null,
+            'reports' => null,
+        ]);
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Crisis Check'])
+            ->json('data.id');
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
+                'message' => 'بدي موت، ما في فايدة',
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('available', true)
+            ->assertJsonPath('stage', 'crisis')
+            ->assertJsonPath('is_crisis', true)
+            ->assertJsonPath('specialty', null)
+            ->assertJsonPath('diagnosis', null);
+    }
+
+    /**
+     * A red-flag (emergency) turn, not crisis — the other safety-terminal
+     * path, and the one that actually carries structured red_flags/severity
+     * content worth asserting on.
+     */
+    public function test_an_emergency_turn_surfaces_severity_and_red_flags_to_the_frontend(): void
+    {
+        $user = $this->patientUser();
+        $this->fakeHealixChat([
+            'stage' => 'emergency',
+            'reply' => 'الأعراض يلي ذكرتها بتستدعي تدخل طبي إسعافي فورًا.',
+            'is_crisis' => false,
+            'severity' => 'emergency',
+            'red_flags' => ['acs_chest_pain', 'llm'],
+            'diagnosis' => null,
+            'specialty' => null,
+            'reports' => null,
+        ]);
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Emergency Check'])
+            ->json('data.id');
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
+                'message' => 'عندي ألم شديد بصدري وضيق تنفس',
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('stage', 'emergency')
+            ->assertJsonPath('is_crisis', false)
+            ->assertJsonPath('severity', 'emergency')
+            ->assertJsonPath('red_flags', ['acs_chest_pain', 'llm']);
     }
 
     public function test_healix_service_unavailable_degrades_gracefully_not_a_raw_exception(): void
@@ -131,6 +209,16 @@ class HealixConversationTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('available', false)
             ->assertJsonPath('stage', null)
+            // Neutral defaults, not a real safety verdict — the turn never
+            // reached Python at all (HealixConversationService's own
+            // comment on this branch). A frontend must check 'available'
+            // before trusting these, which is exactly what this pins down:
+            // false/null/[] here, not something that looks like a
+            // completed, clear screening.
+            ->assertJsonPath('is_crisis', false)
+            ->assertJsonPath('severity', null)
+            ->assertJsonPath('red_flags', [])
+            ->assertJsonPath('diagnosis', null)
             ->assertJsonPath('specialty', null)
             ->assertJsonPath('reply', __('ai.healix_unavailable_notice'))
             ->assertJsonPath('data.assistant_message.message', __('ai.healix_unavailable_notice'));

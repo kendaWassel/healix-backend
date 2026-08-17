@@ -61,6 +61,8 @@ return [
         'call_type_required' => 'Call type is required.',
         'call_type_in' => 'Call type must be either call_now or schedule.',
         'scheduled_at_date' => 'Scheduled at must be a valid date and time format.',
+        'conversation_id_exists' => 'Selected conversation does not exist.',
+        'assessment_id_exists' => 'Selected assessment does not exist.',
     ],
 
     'create_prescription' => [
@@ -107,6 +109,12 @@ return [
         'audio_max' => 'Audio file size must not exceed 10MB.',
         'audio_mimes' => 'Audio must be one of: m4a, mp3, wav, ogg, webm.',
         'audio_mimetypes' => 'Audio must be a supported audio format.',
+    ],
+
+    'synthesize' => [
+        'text_required' => 'Text is required.',
+        'text_string' => 'Text must be a string.',
+        'text_max' => 'Text must not exceed 5000 characters.',
     ],
 
     'medical_record' => [

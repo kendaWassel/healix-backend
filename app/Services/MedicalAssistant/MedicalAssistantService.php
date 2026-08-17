@@ -6,8 +6,10 @@ use App\Exceptions\AI\AIServiceException;
 use App\Models\Assessment;
 use App\Models\Conversation;
 use App\Models\ConversationSymptom;
+use App\Models\DoctorSummary;
 use App\Models\Message;
 use App\Services\Interview\InterviewService;
+use App\Services\SpecializationResolver;
 use App\Support\UrgencyTriageMapper;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -31,7 +33,8 @@ class MedicalAssistantService
 {
     public function __construct(
         protected InterviewService $interview,
-        protected AssessmentService $assessment
+        protected AssessmentService $assessment,
+        protected SpecializationResolver $specializationResolver
     ) {}
 
     /**
@@ -241,11 +244,24 @@ class MedicalAssistantService
         $redFlags = is_array($interviewResult['red_flags'] ?? null) ? $interviewResult['red_flags'] : [];
         $primaryRedFlag = $redFlags[0] ?? null;
 
-        Assessment::updateOrCreate(
+        $recommendedSpecialty = (string) ($assessment['specialty']['specialty'] ?? 'General Medicine');
+
+        // AI-service-provided code/name_ar (patient_summary.specialty) is the
+        // preferred source -- it's the same resolution the Python side did
+        // to build patient_summary. Falls back to a local name match when an
+        // older AI service version doesn't send patient_summary yet.
+        $specialtyLabel = $assessment['patient_summary']['specialty'] ?? null;
+        $specialization = $this->specializationResolver->resolve($recommendedSpecialty);
+
+        $model = Assessment::updateOrCreate(
             ['conversation_id' => $conversation->id],
             [
+                'status' => Assessment::STATUS_COMPLETED,
                 'triage' => UrgencyTriageMapper::toLegacy((string) ($assessment['urgency']['level'] ?? 'NON_URGENT')),
-                'recommended_specialty' => (string) ($assessment['specialty']['specialty'] ?? 'General Medicine'),
+                'recommended_specialty' => $recommendedSpecialty,
+                'specialty_id' => $specialization?->id,
+                'specialty_code' => $specialtyLabel['code'] ?? $specialization?->code,
+                'specialty_name_ar' => $specialtyLabel['name_ar'] ?? $specialization?->name_ar,
                 'possible_diseases' => array_map(static fn (array $prediction) => [
                     'disease' => $prediction['disease'] ?? '',
                     'score' => $prediction['score'] ?? 0.0,
@@ -256,6 +272,37 @@ class MedicalAssistantService
                     ? ($primaryRedFlag['rule_id'] ?? $primaryRedFlag['name_en'] ?? null)
                     : null,
                 'risk_reason' => (string) ($assessment['urgency']['explanation'] ?? ''),
+            ]
+        );
+
+        $this->persistDoctorSummary($conversation, $model, $assessment);
+    }
+
+    /**
+     * Turns the (previously unused) doctor_summaries table into the actual
+     * short medical report for the doctor -- filled from the AI service's
+     * deterministic medical_report.content (no LLM invention on either side
+     * of this call). doctor_id stays null until the patient books a
+     * consultation (ConsultationService::bookConsultation() fills it in).
+     */
+    protected function persistDoctorSummary(Conversation $conversation, Assessment $assessment, array $result): void
+    {
+        $report = $result['medical_report'] ?? null;
+        if (! is_array($report) || empty($report['content'])) {
+            Log::warning('Assessment finished without a medical_report from the AI service', [
+                'conversation_id' => $conversation->id,
+                'assessment_id' => $assessment->id,
+            ]);
+            return;
+        }
+
+        DoctorSummary::updateOrCreate(
+            ['conversation_id' => $conversation->id],
+            [
+                'assessment_id' => $assessment->id,
+                'patient_id' => $conversation->patient_id,
+                'summary' => $report['content'],
+                'status' => DoctorSummary::STATUS_DRAFT,
             ]
         );
     }
