@@ -30,6 +30,40 @@ class HealixAiClient extends FastApiClient
     protected string $apiKeyHeader = 'X-Healix-Internal-Token';
 
     /**
+     * Keep only thread_id — drop `message` (the patient's raw Arabic
+     * complaint, verbatim) and `medical_record_summary` (still patient-
+     * derived, even filtered) before this request payload is logged.
+     * `patient_sex` is dropped too rather than special-cased in: this
+     * service's own CLAUDE.md treats every request/response field here as
+     * patient data unless demonstrably not (see that project's "Audit
+     * logs and patient data" section), and thread_id alone is already
+     * enough to correlate this log line with the conversation.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function redactPayloadForLogging(array $payload): array
+    {
+        return ['thread_id' => $payload['thread_id'] ?? null];
+    }
+
+    /**
+     * Keep only thread_id — drop `reply` (patient-facing triage text),
+     * `diagnosis`, and `reports` (full doctor + patient report bodies,
+     * CLAUDE.md's own "Audit logs and patient data" section) before a
+     * /chat response is logged. status/latency are logged as separate,
+     * already-safe top-level keys by FastApiClient::send() itself, not
+     * part of this body.
+     *
+     * @param  array<string, mixed>|string|null  $body
+     * @return array<string, mixed>|string|null
+     */
+    protected function redactResponseBodyForLogging($body)
+    {
+        return is_array($body) ? ['thread_id' => $body['thread_id'] ?? null] : null;
+    }
+
+    /**
      * POST /chat — one triage turn. Field names match api/contracts.py's
      * ChatRequest exactly (thread_id, message, patient_sex,
      * medical_record_summary) — this method does not rename or restructure

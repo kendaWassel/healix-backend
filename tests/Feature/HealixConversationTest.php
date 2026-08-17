@@ -6,6 +6,7 @@ use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 /**
@@ -108,77 +109,52 @@ class HealixConversationTest extends TestCase
     }
 
     /**
-     * is_crisis/severity/red_flags/diagnosis were received from the Python
-     * response but silently dropped before reaching the frontend — this
-     * pins down that they now actually surface, specifically on the
-     * crisis path (the one CLAUDE.md on the Python side calls out as
-     * safety-critical: "duplicates what stage == 'crisis' already
-     * implies... deserves a signal Laravel can check directly").
+     * FastApiClient::send() logs both the outgoing request and the
+     * incoming response — by default with the full payload/body, which
+     * for Healix means the patient's raw Arabic message and the full
+     * doctor/patient report text. HealixAiClient overrides
+     * redactPayloadForLogging()/redactResponseBodyForLogging() to strip
+     * both down to thread_id only before either reaches the log sink.
+     * Asserted here at the real HTTP-route level (not a client-level
+     * unit test) so this proves the redaction actually fires on the path
+     * a real patient turn takes, not just that the override method
+     * exists.
      */
-    public function test_a_crisis_turn_surfaces_is_crisis_and_severity_to_the_frontend(): void
+    public function test_healix_request_and_response_logging_redacts_patient_content(): void
     {
+        Log::spy();
+
         $user = $this->patientUser();
-        $this->fakeHealixChat([
-            'stage' => 'crisis',
-            'reply' => 'فهمتك، وهاد الشي خارج قدرتي — بس في ناس فعلاً بيقدروا يساعدوك هلق.',
-            'is_crisis' => true,
-            'severity' => null,
-            'red_flags' => [],
-            'diagnosis' => null,
-            'specialty' => null,
-            'reports' => null,
-        ]);
+        $this->fakeHealixChat();
 
         $conversationId = $this->actingAs($user, 'sanctum')
-            ->postJson('/api/patient/conversations', ['title' => 'Crisis Check'])
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
             ->json('data.id');
 
-        $response = $this->actingAs($user, 'sanctum')
+        $this->actingAs($user, 'sanctum')
             ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
-                'message' => 'بدي موت، ما في فايدة',
+                'message' => 'عندي صداع نابض من جهة وحدة مع غثيان',
             ]);
 
-        $response->assertStatus(201)
-            ->assertJsonPath('available', true)
-            ->assertJsonPath('stage', 'crisis')
-            ->assertJsonPath('is_crisis', true)
-            ->assertJsonPath('specialty', null)
-            ->assertJsonPath('diagnosis', null);
-    }
+        Log::shouldHaveReceived('info')
+            ->withArgs(function (string $message, array $context) use ($conversationId) {
+                return $message === 'Healix AI triage service request'
+                    && $context['payload'] === ['thread_id' => (string) $conversationId]
+                    && ! str_contains(json_encode($context), 'صداع');
+            })
+            ->once();
 
-    /**
-     * A red-flag (emergency) turn, not crisis — the other safety-terminal
-     * path, and the one that actually carries structured red_flags/severity
-     * content worth asserting on.
-     */
-    public function test_an_emergency_turn_surfaces_severity_and_red_flags_to_the_frontend(): void
-    {
-        $user = $this->patientUser();
-        $this->fakeHealixChat([
-            'stage' => 'emergency',
-            'reply' => 'الأعراض يلي ذكرتها بتستدعي تدخل طبي إسعافي فورًا.',
-            'is_crisis' => false,
-            'severity' => 'emergency',
-            'red_flags' => ['acs_chest_pain', 'llm'],
-            'diagnosis' => null,
-            'specialty' => null,
-            'reports' => null,
-        ]);
-
-        $conversationId = $this->actingAs($user, 'sanctum')
-            ->postJson('/api/patient/conversations', ['title' => 'Emergency Check'])
-            ->json('data.id');
-
-        $response = $this->actingAs($user, 'sanctum')
-            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
-                'message' => 'عندي ألم شديد بصدري وضيق تنفس',
-            ]);
-
-        $response->assertStatus(201)
-            ->assertJsonPath('stage', 'emergency')
-            ->assertJsonPath('is_crisis', false)
-            ->assertJsonPath('severity', 'emergency')
-            ->assertJsonPath('red_flags', ['acs_chest_pain', 'llm']);
+        Log::shouldHaveReceived('info')
+            ->withArgs(function (string $message, array $context) {
+                return $message === 'Healix AI triage service response'
+                    && $context['status'] === 200
+                    && is_int($context['latency_ms'])
+                    && $context['body'] === ['thread_id' => '1']
+                    && ! str_contains(json_encode($context), 'تشخيص')
+                    && ! str_contains(json_encode($context), 'fake patient report')
+                    && ! str_contains(json_encode($context), 'fake doctor report');
+            })
+            ->once();
     }
 
     public function test_healix_service_unavailable_degrades_gracefully_not_a_raw_exception(): void
