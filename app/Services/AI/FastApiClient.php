@@ -37,6 +37,39 @@ class FastApiClient
     /** Header name used to transmit the shared secret. Matches the FastAPI's expected key. */
     protected string $apiKeyHeader = 'X-API-KEY';
 
+    /**
+     * Redact a request payload before it reaches the log sink. No-op by
+     * default — every existing integration (Lab, DDI, ClinicalGuidance,
+     * MedicalAssistant) keeps logging its full payload unchanged. Override
+     * in a subclass whose payload carries raw patient/clinical free text
+     * (see HealixAiClient) so that text never lands in storage/logs/*.log,
+     * which — unlike the FastAPI side's own audit log (see that project's
+     * CLAUDE.md > Audit logs and patient data) — has no dedicated handler,
+     * retention policy, or access restriction of its own; it is whatever
+     * general-purpose channel LOG_CHANNEL points at.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function redactPayloadForLogging(array $payload): array
+    {
+        return $payload;
+    }
+
+    /**
+     * Redact a response body before it reaches the log sink. Same
+     * reasoning as redactPayloadForLogging() above, the response-side
+     * counterpart — a Healix /chat response body carries the patient-
+     * facing reply text and full doctor/patient report bodies.
+     *
+     * @param  array<string, mixed>|string|null  $body
+     * @return array<string, mixed>|string|null
+     */
+    protected function redactResponseBodyForLogging($body)
+    {
+        return $body;
+    }
+
     public function __construct()
     {
         $this->baseUrl = rtrim(config("services.{$this->configKey}.url"), '/');
@@ -213,11 +246,12 @@ class FastApiClient
         Log::info("{$this->serviceLabel} request", [
             'url' => $url,
             'method' => $method,
-            'payload' => $payload,
+            'payload' => $this->redactPayloadForLogging($payload),
         ]);
 
         $attempt = 0;
         $lastException = null;
+        $startedAt = microtime(true);
 
         while ($attempt < $this->retries) {
             $attempt++;
@@ -232,7 +266,8 @@ class FastApiClient
                 Log::info("{$this->serviceLabel} response", [
                     'url' => $url,
                     'status' => $response->status(),
-                    'body' => $response->json() ?? $response->body(),
+                    'latency_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                    'body' => $this->redactResponseBodyForLogging($response->json() ?? $response->body()),
                 ]);
 
                 if ($response->successful()) {

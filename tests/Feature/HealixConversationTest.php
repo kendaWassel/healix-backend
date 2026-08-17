@@ -6,6 +6,7 @@ use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 /**
@@ -101,6 +102,55 @@ class HealixConversationTest extends TestCase
             return str_contains($request->url(), '/chat')
                 && $request['thread_id'] === (string) $conversationId;
         });
+    }
+
+    /**
+     * FastApiClient::send() logs both the outgoing request and the
+     * incoming response — by default with the full payload/body, which
+     * for Healix means the patient's raw Arabic message and the full
+     * doctor/patient report text. HealixAiClient overrides
+     * redactPayloadForLogging()/redactResponseBodyForLogging() to strip
+     * both down to thread_id only before either reaches the log sink.
+     * Asserted here at the real HTTP-route level (not a client-level
+     * unit test) so this proves the redaction actually fires on the path
+     * a real patient turn takes, not just that the override method
+     * exists.
+     */
+    public function test_healix_request_and_response_logging_redacts_patient_content(): void
+    {
+        Log::spy();
+
+        $user = $this->patientUser();
+        $this->fakeHealixChat();
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
+            ->json('data.id');
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
+                'message' => 'عندي صداع نابض من جهة وحدة مع غثيان',
+            ]);
+
+        Log::shouldHaveReceived('info')
+            ->withArgs(function (string $message, array $context) use ($conversationId) {
+                return $message === 'Healix AI triage service request'
+                    && $context['payload'] === ['thread_id' => (string) $conversationId]
+                    && ! str_contains(json_encode($context), 'صداع');
+            })
+            ->once();
+
+        Log::shouldHaveReceived('info')
+            ->withArgs(function (string $message, array $context) {
+                return $message === 'Healix AI triage service response'
+                    && $context['status'] === 200
+                    && is_int($context['latency_ms'])
+                    && $context['body'] === ['thread_id' => '1']
+                    && ! str_contains(json_encode($context), 'تشخيص')
+                    && ! str_contains(json_encode($context), 'fake patient report')
+                    && ! str_contains(json_encode($context), 'fake doctor report');
+            })
+            ->once();
     }
 
     public function test_healix_service_unavailable_degrades_gracefully_not_a_raw_exception(): void
