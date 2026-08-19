@@ -120,11 +120,13 @@ class AdminController extends Controller
 
         // Map to response format
         $data = $paginated->map(function ($r) {
-            $serviceName = 'Consultation';
+            $serviceName = __('admin.service_names.consultation');
             if ($r->service_type === 'home_visit') {
-                $serviceName = 'Home Visit - ' . (isset($r->provider_type) && $r->provider_type === 'nurse' ? 'Nurse' : 'Physiotherapist');
+                $serviceName = (isset($r->provider_type) && $r->provider_type === 'nurse')
+                    ? __('admin.service_names.home_visit_nurse')
+                    : __('admin.service_names.home_visit_physiotherapist');
             } elseif ($r->service_type === 'delivery') {
-                $serviceName = 'Medication Delivery';
+                $serviceName = __('admin.service_names.medication_delivery');
             }
 
             return [
@@ -195,7 +197,7 @@ class AdminController extends Controller
 			->map(function ($d) {
 				return [
 					'id' => $d->id,
-					'name' => optional($d->user)->full_name ?? 'N/A',
+					'name' => optional($d->user)->full_name ?? __('admin.not_available'),
 					'total_consultations' => $d->consultations_count,
 				];
 			})->values();

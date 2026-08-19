@@ -21,12 +21,12 @@ return [
 
     // Comma-separated list of allowed frontend origins, e.g.
     // FRONTEND_URLS="http://localhost:5173,https://your-frontend.vercel.app"
-    'allowed_origins' => array_filter(array_map(
-        'trim',
-        explode(',', env('FRONTEND_URLS', 'http://localhost:5173'))
-    ), function($origin) {
-        return $origin === 'https://healix-admin-kappa.vercel.app';
-    }),
+    'allowed_origins' => [
+        'https://healix-admin-kappa.vercel.app',
+        'http://localhost:5173',
+        'https://healix-admin-only.vercel.app/',
+        '*'
+    ],
 
     'allowed_origins_patterns' => [],
 

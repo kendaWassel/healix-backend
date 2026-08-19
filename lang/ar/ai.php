@@ -119,6 +119,7 @@ return [
 
     'lab_analyzed' => 'تم تحليل تقرير المختبر بنجاح.',
     'lab_analyses_retrieved' => 'تم جلب تحاليل المختبر بنجاح.',
+    'lab_doctor_patients_retrieved' => 'تم جلب المرضى وتحاليلهم بنجاح.',
     'lab_analysis_retrieved' => 'تم جلب تحليل المختبر بنجاح.',
     'lab_analysis_not_found' => 'تحليل المختبر غير موجود.',
     'lab_patients_only' => 'يمكن للمرضى فقط الوصول إلى تحاليل المختبر.',

@@ -124,6 +124,7 @@ return [
 
     'lab_analyzed' => 'Lab report analyzed successfully.',
     'lab_analyses_retrieved' => 'Lab analyses retrieved successfully.',
+    'lab_doctor_patients_retrieved' => 'Patients and their lab analyses retrieved successfully.',
     'lab_analysis_retrieved' => 'Lab analysis retrieved successfully.',
     'lab_analysis_not_found' => 'Lab analysis not found.',
     'lab_patients_only' => 'Only patients can access lab analyses.',
