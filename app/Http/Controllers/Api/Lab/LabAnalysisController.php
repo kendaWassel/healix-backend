@@ -6,6 +6,7 @@ use App\Exceptions\AI\AIServiceException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Lab\AnalyzeLabReportRequest;
 use App\Http\Resources\LabAnalysisResource;
+use App\Models\Consultation;
 use App\Models\LabAnalysis;
 use App\Models\Patient;
 use App\Services\Lab\LabAnalysisService;
@@ -56,6 +57,7 @@ class LabAnalysisController extends Controller
         }
 
         $analyses = LabAnalysis::where('patient_id', $patient->id)
+            ->with('upload')
             ->latest()
             ->paginate($request->integer('per_page', 15));
 
@@ -107,6 +109,46 @@ class LabAnalysisController extends Controller
     }
 
     /**
+     * Doctor: list every patient who has had a consultation with them, each
+     * with their full lab analyses (test_results + conditions) embedded.
+     *
+     * "My patients" is scoped via Consultation (doctor_id/patient_id) — the
+     * established doctor-patient relationship in this app — not the open
+     * any-patient access that view-details/indexForPatient use.
+     */
+    public function myPatientsLabAnalyses(Request $request): JsonResponse
+    {
+        $doctor = $request->user()->doctor;
+
+        $patientIds = Consultation::where('doctor_id', $doctor->id)
+            ->distinct()
+            ->pluck('patient_id');
+
+        $patients = Patient::whereIn('id', $patientIds)
+            ->with(['user', 'labAnalyses' => fn ($query) => $query->latest()])
+            ->paginate($request->integer('per_page', 15));
+
+        $data = collect($patients->items())->map(fn (Patient $patient) => [
+            'patient_id' => $patient->id,
+            'patient_name' => $patient->user?->full_name,
+            'gender' => $patient->gender,
+            'lab_analyses' => LabAnalysisResource::collection($patient->labAnalyses),
+        ])->values();
+
+        return response()->json([
+            'success' => true,
+            'message' => __('ai.lab_doctor_patients_retrieved'),
+            'data' => $data,
+            'meta' => [
+                'current_page' => $patients->currentPage(),
+                'last_page' => $patients->lastPage(),
+                'per_page' => $patients->perPage(),
+                'total' => $patients->total(),
+            ],
+        ]);
+    }
+
+    /**
      * Doctor/Nurse/Physiotherapist: list a specific patient's lab analyses
      * (newest first). Same audience as MedicalRecordController::viewDetails.
      */
@@ -117,6 +159,7 @@ class LabAnalysisController extends Controller
         }
 
         $analyses = LabAnalysis::where('patient_id', $patientId)
+            ->with('upload')
             ->latest()
             ->paginate($request->integer('per_page', 15));
 

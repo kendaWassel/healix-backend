@@ -50,6 +50,11 @@ class Patient extends Model
         return $this->hasMany(  Consultation::class);
     }
 
+    public function labAnalyses()
+    {
+        return $this->hasMany(LabAnalysis::class);
+    }
+
     public function conversations()
     {
         return $this->hasMany(Conversation::class);
