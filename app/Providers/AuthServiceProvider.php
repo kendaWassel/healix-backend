@@ -7,6 +7,7 @@ use App\Models\CareProvider;
 use App\Models\Delivery;
 use App\Models\DeliveryTask;
 use App\Models\Doctor;
+use App\Models\DoctorSummary;
 use App\Models\Faq;
 use App\Models\FirstAid;
 use App\Models\HomeVisit;
@@ -25,6 +26,7 @@ use App\Policies\ConsultationPolicy;
 use App\Policies\DeliveryPolicy;
 use App\Policies\DeliveryTaskPolicy;
 use App\Policies\DoctorPolicy;
+use App\Policies\DoctorSummaryPolicy;
 use App\Policies\FaqPolicy;
 use App\Policies\FirstAidPolicy;
 use App\Policies\HomeVisitPolicy;
@@ -56,6 +58,7 @@ class AuthServiceProvider extends ServiceProvider
         HomeVisit::class => HomeVisitPolicy::class,
         Delivery::class => DeliveryPolicy::class,
         Doctor::class => DoctorPolicy::class,
+        DoctorSummary::class => DoctorSummaryPolicy::class,
         CareProvider::class => CareProviderPolicy::class,       
         Upload::class => UploadPolicy::class,
         Medication::class => MedicationPolicy::class,

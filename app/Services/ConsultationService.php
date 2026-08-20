@@ -45,6 +45,26 @@ class ConsultationService
             throw new \Exception(__('messages.patient_profile_not_found'), 404);
         }
 
+        // Reject a booking whose chosen doctor doesn't match the AI-recommended
+        // specialty for this assessment -- discovered as an open gap: a patient
+        // could previously book any doctor regardless of the recommendation.
+        // Only checked when both sides of the comparison are real: assessment_id
+        // is optional (the plain direct-booking flow, with no AI involved, omits
+        // it entirely -- see BookConsultationRequest's own comment), and
+        // specialty_id can be null even on an AI-linked assessment (an
+        // unresolved specialty, or a "طب عام" general-practice recommendation
+        // that has no matching Laravel specialty by design -- CLAUDE.md's own
+        // Known limitations, Python repo). Neither case has a real target to
+        // validate against, so booking proceeds unchecked rather than blocking
+        // on a comparison that isn't meaningful.
+        if (!empty($validated['assessment_id'])) {
+            $assessment = Assessment::find($validated['assessment_id']);
+            if ($assessment && $assessment->specialty_id !== null
+                && $assessment->specialty_id !== $doctor->specialization_id) {
+                throw new \Exception(__('consultation.specialty_mismatch'), 422);
+            }
+        }
+
         if ($validated['call_type'] === 'schedule' && empty($validated['scheduled_at'])) {
             throw new \Exception(__('consultation.scheduled_at_required'), 422);
         }

@@ -44,6 +44,7 @@ return [
     'not_found_or_unauthorized' => 'Consultation not found or not authorized.',
     'not_in_progress' => 'Consultation is not in progress.',
     'not_found_for_doctor' => 'Consultation not found for this doctor.',
+    'specialty_mismatch' => 'This doctor\'s specialization does not match the specialty recommended for this assessment. Please choose a doctor from the recommended specialty list.',
 
     /*
     | Doctor schedule generation (DoctorService)

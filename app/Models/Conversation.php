@@ -16,11 +16,16 @@ class Conversation extends Model
         'title',
         'started_at',
         'ended_at',
+        'is_crisis',
+        'severity',
+        'red_flags',
     ];
 
     protected $casts = [
         'started_at' => 'datetime',
         'ended_at' => 'datetime',
+        'is_crisis' => 'boolean',
+        'red_flags' => 'array',
     ];
 
     public function messages(): HasMany
