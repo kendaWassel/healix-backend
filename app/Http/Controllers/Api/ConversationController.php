@@ -203,6 +203,7 @@ class ConversationController extends Controller
             'specialty' => $result['specialty'],
             'reports' => $result['reports'],
             'available' => $result['available'],
+            'assessment_id' => $result['assessment_id'] ?? null,
             'data' => [
                 'patient_message' => new MessageResource($result['patient_message']),
                 'assistant_message' => new MessageResource($result['assistant_message']),

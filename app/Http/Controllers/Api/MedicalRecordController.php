@@ -25,7 +25,7 @@ class MedicalRecordController extends Controller
      */
     public function viewDetails($patientId)
     {
-        $patient = Patient::with(['user', 'medicalRecords.doctor.user'])->find($patientId);
+        $patient = Patient::with(['user', 'medicalRecords.doctor.user', 'medicalRecords.careProvider.user'])->find($patientId);
         if (!$patient) {
             return response()->json([
                 'status' => 'error',
@@ -263,7 +263,7 @@ class MedicalRecordController extends Controller
                 'message' => __('messages.patient_not_found_for_user')
             ], 404);
         }
-        $record = $patient->medicalRecords()->with(['doctor.user', 'uploads'])->latest('id')->first();
+        $record = $patient->medicalRecords()->with(['doctor.user', 'careProvider.user', 'uploads'])->latest('id')->first();
         
 
         if (!$record) {

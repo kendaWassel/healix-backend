@@ -39,6 +39,10 @@ class MedicalRecordResource extends JsonResource
                 'doctor_name' => $this->doctor?->user
                     ? __('enums.title.doctor_prefix') . ' ' . $this->doctor->user->full_name
                     : null,
+                'care_provider_id' => $this->care_provider_id,
+                'care_provider_name' => $this->careProvider?->user?->full_name,
+                'care_provider_type' => $this->careProvider?->type,
+                'care_provider_type_label' => \App\Support\Locale::label('service_type', $this->careProvider?->type),
                 'diagnosis' => $this->diagnosis,
                 'treatment_plan' => $this->treatment_plan,
                 'chronic_diseases' => $this->chronic_diseases,
