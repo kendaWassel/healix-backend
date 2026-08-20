@@ -175,7 +175,7 @@ class PhysiotherapistController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Home visit accepted successfully',
+                'message' => __('homevisit.accepted'),
                 'data' => [
                     'id' => $visit->id,
                     'scheduled_at' => $visit->scheduled_at->toIso8601String(),

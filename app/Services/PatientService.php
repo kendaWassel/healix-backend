@@ -10,6 +10,7 @@ use App\Models\Pharmacist;
 use App\Models\CareProvider;
 use App\Models\Consultation;
 use App\Models\Prescription;
+use App\Support\Locale;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -63,6 +64,7 @@ class PatientService
             'specialization' => $doctor && $doctor->specialization ? $doctor->specialization->name : null,
             'consultation_fee' => $doctor ? $doctor->consultation_fee : null,
             'status' => $consultation->status,
+            'status_label' => Locale::label('consultation_status', $consultation->status),
         ];
     }
 
@@ -118,8 +120,10 @@ class PatientService
             'doctor_name' => $doctorName,
             'diagnosis' => $prescription->diagnosis,
             'status' => $prescription->status,
+            'status_label' => Locale::label('prescription_status', $prescription->status),
             'issued_at' => $prescription->created_at?->toIso8601String(),
             'source' => $prescription->source,
+            'source_label' => Locale::label('prescription_source', $prescription->source),
             'image_url' => $prescriptionImage ? asset('storage/' . $prescriptionImage->file_path) : null,
         ];
 
@@ -158,6 +162,8 @@ class PatientService
         if ($prescription->source === 'patient_uploaded') {
             return [
                 'id' => $prescription->id,
+                'source' => $prescription->source,
+                'source_label' => Locale::label('prescription_source', $prescription->source),
                 'prescription_image_url' => $prescription->prescriptionImage ? asset('storage/' . $prescription->prescriptionImage->file_path) : null,
             ];
         }
@@ -180,6 +186,9 @@ class PatientService
             'diagnosis' => $prescription->diagnosis,
             'notes' => $prescription->notes,
             'status' => $prescription->status,
+            'status_label' => Locale::label('prescription_status', $prescription->status),
+            'source' => $prescription->source,
+            'source_label' => Locale::label('prescription_source', $prescription->source),
             'medicines' => $medicines,
         ];
     }
@@ -388,7 +397,9 @@ class PatientService
                 'order_id' => $order->id,
                 'order_status' => $order->status,
                 'status' => $prescription->status,
+                'status_label' => Locale::label('prescription_status', $prescription->status),
                 'source' => $prescription->source === 'patient_uploaded' ? 'paper' : 'electronic',
+                'source_label' => Locale::label('prescription_source', $prescription->source),
                 'pharmacy' => $pharmacy,
                 'rejection_reason' => $order->rejection_reason,
                 'rejected_at' => $order->updated_at->toIso8601String(),
@@ -420,7 +431,9 @@ class PatientService
             'delivery_id' => $order->deliveryTask && $order->deliveryTask->delivery_id ? $order->deliveryTask->delivery_id : null,
             'order_status' => $order->status,
             'prescription_status' => $prescription->status,
+            'prescription_status_label' => Locale::label('prescription_status', $prescription->status),
             'source' => $prescription->source === 'patient_uploaded' ? 'patient uploaded' : 'doctor',
+            'source_label' => Locale::label('prescription_source', $prescription->source),
             'pharmacy' => $pharmacy,
             'items' => $items,
             'total_quantity' => $totalQuantity,

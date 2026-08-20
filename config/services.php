@@ -97,7 +97,9 @@ return [
     // rejects requests with a missing/wrong header, unlike the other
     // services above which use FastApiClient's default X-API-KEY or none).
     'healix' => [
-        'url' => env('HEALIX_SERVICE_URL', 'http://127.0.0.1:8004'),
+        // 'url' => env('HEALIX_SERVICE_URL', 'http://127.0.0.1:8004'),   ← هاد كان لازم يضل فعّال
+        'url' => env('HEALIX_SERVICE_URL', 'http://healix-ai-medical-assistant-production.up.railway.app'), 
+        // 'url' => env('HEALIX_SERVICE_URL', 'http://127.0.0.1:8004'),
         // Must stay ABOVE ConversationController::storeHealixMessage()'s
         // set_time_limit(120) — a Guzzle timeout shorter than the PHP
         // script's own execution ceiling can fire early on a legitimately
@@ -110,7 +112,6 @@ return [
         // worst case (up to 5 sequential LLM calls x healix_ai's own
         // HEALIX_LLM_TOTAL_BUDGET_SECONDS=60 each = 300s) isn't the
         // target this is sized against.
-        // 'url' => env('HEALIX_BASE_URL', 'http://healix-ai-medical-assistant-production.up.railway.app'),
         'internal_token' => env('HEALIX_INTERNAL_TOKEN'),
         'timeout' => env('HEALIX_SERVICE_TIMEOUT', 130),
         'retries' => env('HEALIX_SERVICE_RETRIES', 3),

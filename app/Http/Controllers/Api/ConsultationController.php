@@ -6,6 +6,7 @@ use App\Http\Requests\BookConsultationRequest;
 use App\Models\Doctor;
 use App\Http\Controllers\Controller;
 use App\Services\ConsultationService;
+use App\Support\Locale;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
@@ -40,6 +41,7 @@ class ConsultationController extends Controller
                     'call_type' => $consultation->type,
                     'scheduled_at' => $consultation->scheduled_at ? $consultation->scheduled_at->toIso8601String() : null,
                     'status' => $consultation->status,
+                    'status_label' => Locale::label('consultation_status', $consultation->status),
                     'google_meet_link' => $consultation->google_meet_link, // إرجاع رابط جوجل ميت المولد تلقائياً
                 ],
             ];
@@ -73,6 +75,7 @@ class ConsultationController extends Controller
                         'consultation_id' => $consultation->id,
                         'role' => $result['role'],
                         'status' => $consultation->status,
+                        'status_label' => Locale::label('consultation_status', $consultation->status),
                         'google_meet_link' => $consultation->google_meet_link, // تزويد الفرونت بالرابط للانضمام
                     ]
                 ]);
@@ -85,6 +88,7 @@ class ConsultationController extends Controller
                     'consultation_id' => $consultation->id,
                     'role' => $result['role'],
                     'status' => 'in_progress',
+                    'status_label' => Locale::label('consultation_status', 'in_progress'),
                     'google_meet_link' => $consultation->google_meet_link, // تزويد الفرونت بالرابط للبدء
                 ]
             ]);
@@ -122,6 +126,7 @@ class ConsultationController extends Controller
                     'consultation_id' => $consultation->id,
                     'ended_by' => $result['ended_by'],
                     'status' => $consultation->status,
+                    'status_label' => Locale::label('consultation_status', $consultation->status),
                     // 'doctor_notes' => $consultation->doctor_notes
                 ]
             ]);

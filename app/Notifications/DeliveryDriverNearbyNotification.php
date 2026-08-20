@@ -2,15 +2,15 @@
 
 namespace App\Notifications;
 
-use App\Models\MedicalRecord;
+use App\Models\DeliveryTask;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
-class MedicalReportAddedNotification extends Notification
+class DeliveryDriverNearbyNotification extends Notification
 {
     use Queueable;
 
-    public function __construct(protected MedicalRecord $medicalRecord) {}
+    public function __construct(protected DeliveryTask $task) {}
 
     public function via(object $notifiable): array
     {
@@ -19,17 +19,17 @@ class MedicalReportAddedNotification extends Notification
 
     public function toDatabase(object $notifiable): array
     {
-        $title = \App\Support\Locale::translateAll('notification.medical_report_edit_title');
-        $message = \App\Support\Locale::translateAll('notification.medical_report_edit_body');
+        $title = \App\Support\Locale::translateAll('notification.delivery_driver_nearby_title');
+        $message = \App\Support\Locale::translateAll('notification.delivery_driver_nearby_body');
 
         return [
-            'type' => 'medical_report_edit',
+            'type' => 'delivery_driver_nearby',
             'title' => $title['en'] ?? null,
             'title_ar' => $title['ar'] ?? null,
             'message' => $message['en'] ?? null,
             'message_ar' => $message['ar'] ?? null,
-            'medical_record_id' => $this->medicalRecord->id,
-            'patient_id' => $this->medicalRecord->patient_id,
+            'delivery_task_id' => $this->task->id,
+            'order_id' => $this->task->order_id,
         ];
     }
 }

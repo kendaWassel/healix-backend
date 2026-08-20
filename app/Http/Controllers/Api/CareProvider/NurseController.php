@@ -177,7 +177,7 @@ class NurseController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Home visit accepted successfully',
+                'message' => __('homevisit.accepted'),
                 'data' => [
                     'id' => $visit->id,
                     'patient_id' => $visit->patient_id,

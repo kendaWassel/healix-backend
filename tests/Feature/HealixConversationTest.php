@@ -223,6 +223,115 @@ class HealixConversationTest extends TestCase
         ]);
     }
 
+    /**
+     * Previously, diagnosis/specialty/reports/is_crisis/severity were only
+     * ever present in the live POST response — never persisted, so
+     * GET .../messages (reopening a finished conversation later) always
+     * came back with none of it. This locks in that the assistant Message
+     * row itself now carries these fields, and that MessageResource
+     * actually serializes them on the read path, not just at creation.
+     */
+    public function test_diagnosis_fields_are_persisted_and_readable_from_conversation_history(): void
+    {
+        $user = $this->patientUser();
+        $this->fakeHealixChat();
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
+            ->json('data.id');
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
+                'message' => 'عندي صداع نابض من جهة وحدة مع غثيان',
+            ])
+            ->assertStatus(201);
+
+        $this->assertDatabaseHas('messages', [
+            'conversation_id' => $conversationId,
+            'sender' => 'assistant',
+            'is_crisis' => false,
+            'severity' => null,
+            'specialty' => 'عصبية',
+        ]);
+
+        // The read path — a fresh request, as if the patient closed the
+        // app and reopened this conversation later.
+        $messages = $this->actingAs($user, 'sanctum')
+            ->getJson("/api/patient/conversations/{$conversationId}/messages")
+            ->assertStatus(200)
+            ->json('data.data');
+
+        $assistantMessage = collect($messages)->firstWhere('sender', 'assistant');
+        $this->assertNotNull($assistantMessage, 'assistant message missing from history');
+        $this->assertSame('عصبية', $assistantMessage['specialty']);
+        $this->assertSame('differential', $assistantMessage['diagnosis']['status']);
+        $this->assertSame('fake patient report', $assistantMessage['reports']['patient']);
+        $this->assertFalse($assistantMessage['is_crisis']);
+    }
+
+    /**
+     * Mirrors the frontend's own "finished" condition (stage === 'diagnosis'
+     * || isEmergency) so a reopened conversation's ended_at agrees with
+     * what the patient saw live — previously ended_at was only ever set by
+     * the OTHER assistant's service, never by this one, so it stayed null
+     * forever for every Healix conversation regardless of outcome.
+     */
+    public function test_reaching_diagnosis_stage_marks_the_conversation_ended(): void
+    {
+        $user = $this->patientUser();
+        $this->fakeHealixChat(['stage' => 'diagnosis']);
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
+            ->json('data.id');
+
+        $this->assertDatabaseHas('conversations', ['id' => $conversationId, 'ended_at' => null]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
+                'message' => 'عندي صداع نابض من جهة وحدة مع غثيان',
+            ])
+            ->assertStatus(201);
+
+        $this->assertDatabaseMissing('conversations', ['id' => $conversationId, 'ended_at' => null]);
+    }
+
+    public function test_a_crisis_turn_also_marks_the_conversation_ended_even_without_a_diagnosis_stage(): void
+    {
+        $user = $this->patientUser();
+        $this->fakeHealixChat(['stage' => 'crisis', 'is_crisis' => true, 'diagnosis' => null, 'specialty' => null]);
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
+            ->json('data.id');
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
+                'message' => 'بدي أموت نفسي',
+            ])
+            ->assertStatus(201);
+
+        $this->assertDatabaseMissing('conversations', ['id' => $conversationId, 'ended_at' => null]);
+    }
+
+    public function test_a_non_terminal_turn_leaves_the_conversation_open(): void
+    {
+        $user = $this->patientUser();
+        $this->fakeHealixChat(['stage' => 'gathering_history', 'diagnosis' => null, 'specialty' => null]);
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
+            ->json('data.id');
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
+                'message' => 'عندي صداع',
+            ])
+            ->assertStatus(201);
+
+        $this->assertDatabaseHas('conversations', ['id' => $conversationId, 'ended_at' => null]);
+    }
+
     public function test_a_patient_cannot_send_a_healix_message_on_another_patients_conversation(): void
     {
         $owner = $this->patientUser();

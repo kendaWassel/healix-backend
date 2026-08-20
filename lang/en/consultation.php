@@ -55,5 +55,11 @@ return [
     'schedule_parse_failed' => 'Failed to build the schedule for the given date: :error',
     'invalid_schedule_order' => 'Invalid schedule: the start time must be before the end time',
     'no_slots_generated' => 'No time slots could be generated. Please check the working hours and interval.',
+    'status' => [
+        'scheduled' => 'Scheduled',
+        'in_progress' => 'In Progress',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled',
+    ],
 
 ];

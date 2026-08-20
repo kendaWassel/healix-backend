@@ -63,7 +63,8 @@ class HealixConversationService
      *     diagnosis: ?array,
      *     specialty: ?string,
      *     reports: ?array,
-     *     available: bool
+     *     available: bool,
+     *     assessment_id: ?int
      * }
      */
     public function sendMessage(User $user, Conversation $conversation, string $text): array
@@ -110,6 +111,15 @@ class HealixConversationService
                     'message_type' => Message::TYPE_TEXT,
                     'message' => __('ai.healix_unavailable_notice'),
                     'turn_number' => $turn,
+                    // Explicit, not just relying on the column defaults —
+                    // this turn genuinely produced none of these (Python
+                    // never ran), same "available: false means neutral
+                    // defaults, not a real verdict" reasoning as below.
+                    'is_crisis' => false,
+                    'severity' => null,
+                    'diagnosis' => null,
+                    'specialty' => null,
+                    'reports' => null,
                 ]);
 
                 return [
@@ -133,10 +143,13 @@ class HealixConversationService
                     'specialty' => null,
                     'reports' => null,
                     'available' => false,
+                    'assessment_id' => null,
                 ];
             }
 
             $replyText = (string) ($result['reply'] ?? '');
+            $stage = $result['stage'] ?? null;
+            $isCrisis = (bool) ($result['is_crisis'] ?? false);
 
             $assistantMessage = Message::create([
                 'conversation_id' => $conversation->id,
@@ -144,15 +157,51 @@ class HealixConversationService
                 'message_type' => Message::TYPE_TEXT,
                 'message' => $replyText,
                 'turn_number' => $turn,
+                // Persisted so GET .../messages (reopening this
+                // conversation later) still has the diagnosis card,
+                // specialty, and reports — previously only ever returned
+                // in this one POST response, then lost (see
+                // MessageResource's own doc comment).
+                'is_crisis' => $isCrisis,
+                'severity' => $result['severity'] ?? null,
+                'diagnosis' => $result['diagnosis'] ?? null,
+                'specialty' => $result['specialty'] ?? null,
+                'reports' => $result['reports'] ?? null,
             ]);
 
-            $this->persistTriageOutcome($conversation, $result);
+            // Same "finished" condition the frontend already applies
+            // client-side (stage === 'diagnosis' || isEmergency) — mirrored
+            // here so ended_at (and therefore isFinished on a later
+            // reopen) agrees with what the patient saw live, instead of
+            // silently staying null forever for every Healix conversation
+            // (MedicalAssistantService is the only thing that ever set
+            // this column before).
+            if (($stage === 'diagnosis' || $isCrisis) && $conversation->ended_at === null) {
+                $conversation->forceFill(['ended_at' => now()])->save();
+            }
+
+            // The actual write that turns a finished differential into the
+            // Assessment/DoctorSummary rows AssessmentController::bookingOptions()
+            // and DoctorSummaryController::forPatient() read from — this
+            // method already existed (persistTriageOutcome/persistDiagnosisOutcome,
+            // both fully implemented) but was never called from here, so
+            // booking/doctor-report never actually fired for a real Healix
+            // turn despite the rest of that flow being built. $result is the
+            // raw Python response (is_crisis/severity/red_flags/stage/
+            // diagnosis/reports) — the same object read a few lines above,
+            // not the method's own return array below.
+            $assessment = $this->persistTriageOutcome($conversation, $result);
 
             return [
                 'patient_message' => $patientMessage,
                 'assistant_message' => $assistantMessage,
                 'reply' => $replyText,
                 'stage' => $result['stage'] ?? null,
+                // Null on every non-diagnosis turn (nothing to book yet).
+                // The frontend's booking screen needs this id to call
+                // GET /patient/assessments/{id}/booking — there was
+                // previously no way for a client to learn it at all.
+                'assessment_id' => $assessment?->id,
                 // Safety-critical fields (CLAUDE.md's own non-negotiable
                 // safety rules on the Python side) — previously received
                 // from $result but silently dropped here, never reaching
@@ -194,8 +243,12 @@ class HealixConversationService
      * conversation's last real snapshot with those defaults just because
      * this turn's call failed would silently erase a genuine prior
      * crisis/emergency state.
+     *
+     * Returns the Assessment this turn produced (or updated), or null on
+     * any turn that didn't reach a real differential — the frontend's
+     * booking screen needs that id, see sendMessage()'s own return array.
      */
-    protected function persistTriageOutcome(Conversation $conversation, array $result): void
+    protected function persistTriageOutcome(Conversation $conversation, array $result): ?Assessment
     {
         $conversation->forceFill([
             'is_crisis' => (bool) ($result['is_crisis'] ?? false),
@@ -204,8 +257,10 @@ class HealixConversationService
         ])->save();
 
         if (($result['stage'] ?? null) === 'diagnosis' && !empty($result['diagnosis'])) {
-            $this->persistDiagnosisOutcome($conversation, $result);
+            return $this->persistDiagnosisOutcome($conversation, $result);
         }
+
+        return null;
     }
 
     /**
@@ -225,7 +280,7 @@ class HealixConversationService
      * emergency_type/risk_reason are set to false/null/null
      * unconditionally below, not defensively guessed.
      */
-    protected function persistDiagnosisOutcome(Conversation $conversation, array $result): void
+    protected function persistDiagnosisOutcome(Conversation $conversation, array $result): Assessment
     {
         $diagnosis = $result['diagnosis'];
         $differential = is_array($diagnosis['differential'] ?? null) ? $diagnosis['differential'] : [];
@@ -282,7 +337,7 @@ class HealixConversationService
                 'conversation_id' => $conversation->id,
                 'assessment_id' => $assessment->id,
             ]);
-            return;
+            return $assessment;
         }
 
         DoctorSummary::updateOrCreate(
@@ -300,5 +355,7 @@ class HealixConversationService
                 'status' => DoctorSummary::STATUS_DRAFT,
             ]
         );
+
+        return $assessment;
     }
 }

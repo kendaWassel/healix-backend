@@ -86,6 +86,13 @@ return [
     'medical_report_added_body' => 'Your doctor added a new medical report to your file.',
 
     /*
+    | Delivery notifications
+    */
+
+    'delivery_driver_nearby_title' => 'Driver is nearby',
+    'delivery_driver_nearby_body' => 'Your delivery driver is close to your location.',
+
+    /*
     | Drug safety notifications
     */
 

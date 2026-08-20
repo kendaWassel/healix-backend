@@ -25,7 +25,7 @@ class HomeVisitController extends Controller
             'patient_id' => 'required|exists:patients,id',
             'service_type' => 'required|in:nurse,physiotherapist',
             'reason' => 'nullable|string|max:255',
-            'scheduled_at' => 'required|date_format:Y-m-d H:i|after:now',
+            'scheduled_at' => 'required|date_format:H:i',
         ]);
 
         $doctor = Auth::user()->doctor;

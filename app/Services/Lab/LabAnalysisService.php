@@ -46,52 +46,37 @@ class LabAnalysisService
     }
 
     /**
-     * Arabic/English aliases for every condition the LabInsight AI service
-     * recognizes (knowledge/disease_patterns.py), keyed by the exact
-     * condition_name the service expects back in pre_existing_conditions.
+     * Exact map from the frontend's fixed PRE_EXISTING_CONDITIONS picker
+     * (the `value` field — the only strings the medical record's dedicated
+     * pre_existing_conditions column should ever contain) to the AI
+     * service's own condition_name(s).
      *
-     * Patients record chronic diseases as free text in either language
-     * (e.g. "سكري" or "diabetes"), which rarely matches the service's
-     * English condition names verbatim — this table is the translation
-     * layer between the two. Kept as a static list (not fetched from the
-     * AI service) so this matching never depends on that service being up.
+     * An exact match against this known, closed vocabulary is used instead
+     * of substring/fuzzy matching — several of these don't substring-match
+     * their target at all (e.g. "Disease of liver" vs "Liver Disease
+     * (Possible)": same words, different order).
+     *
+     * "Anemia" is generic (the picker has no anemia subtype), so it maps to
+     * every anemia-type condition the service knows — if the service flags
+     * any of them, it's reasonable to treat it as already known.
+     *
+     * "Hypertensive disorder" has no entry: the AI service's knowledge base
+     * (knowledge/disease_patterns.py) has no hypertension pattern at all, so
+     * there is nothing to map it to.
      *
      * @var array<string, array<int, string>>
      */
-    protected const CONDITION_ALIASES = [
-        'Allergic Reaction / Parasitic Infection (Possible)' => ['allergy', 'allergic reaction', 'parasite', 'parasitic infection', 'حساسية', 'تحسس', 'عدوى طفيلية', 'طفيليات'],
-        'Anemia of Chronic Disease' => ['anemia', 'أنيميا', 'فقر دم', 'فقر الدم'],
-        'Bacterial Infection (Possible)' => ['bacterial infection', 'infection', 'عدوى بكتيرية', 'التهاب بكتيري', 'ميكروب'],
-        'Cardiac Arrhythmia Risk' => ['arrhythmia', 'irregular heartbeat', 'اضطراب نظم القلب', 'عدم انتظام ضربات القلب'],
-        'Cholestasis (Bile Duct Obstruction)' => ['cholestasis', 'bile duct obstruction', 'ركود صفراوي', 'انسداد القناة الصفراوية'],
-        'Chronic Inflammation' => ['chronic inflammation', 'inflammation', 'التهاب مزمن'],
-        'Chronic Kidney Disease (Possible)' => ['kidney disease', 'ckd', 'chronic kidney disease', 'renal failure', 'فشل كلوي', 'مرض الكلى المزمن', 'قصور كلوي', 'الكلى'],
-        'Coagulation Disorder (Possible)' => ['coagulation disorder', 'bleeding disorder', 'اضطراب تخثر الدم', 'مشكلة تخثر'],
-        'Coronary Artery Disease Risk' => ['coronary artery disease', 'heart disease', 'مرض الشريان التاجي', 'مرض القلب التاجي', 'انسداد شرايين'],
-        'Dehydration' => ['dehydration', 'جفاف'],
-        'Diabetes Mellitus (Possible)' => ['diabetes', 'diabetic', 'diabetes mellitus', 'سكري', 'السكري', 'مرض السكر', 'داء السكري', 'السكر'],
-        'Folate Deficiency Anemia' => ['folate deficiency', 'folic acid deficiency', 'نقص حمض الفوليك', 'نقص الفولات'],
-        'Gout Risk (Hyperuricemia)' => ['gout', 'hyperuricemia', 'نقرس', 'ارتفاع حمض اليوريك'],
-        'Heart Failure Indicators' => ['heart failure', 'قصور القلب', 'فشل القلب'],
-        'Hyperkalemia (High Potassium)' => ['hyperkalemia', 'high potassium', 'فرط بوتاسيوم الدم', 'ارتفاع البوتاسيوم'],
-        'Hyperlipidemia (High Cholesterol)' => ['hyperlipidemia', 'high cholesterol', 'cholesterol', 'ارتفاع الكوليسترول', 'فرط شحميات الدم', 'الكوليسترول'],
-        'Hypernatremia (High Sodium)' => ['hypernatremia', 'high sodium', 'فرط صوديوم الدم', 'ارتفاع الصوديوم'],
-        'Hyperthyroidism' => ['hyperthyroidism', 'overactive thyroid', 'فرط نشاط الغدة الدرقية', 'فرط الدرقية'],
-        'Hypertriglyceridemia' => ['hypertriglyceridemia', 'high triglycerides', 'ارتفاع الدهون الثلاثية', 'فرط ثلاثي الغليسريد'],
-        'Hypocalcemia (Low Calcium)' => ['hypocalcemia', 'low calcium', 'نقص كالسيوم الدم', 'انخفاض الكالسيوم'],
-        'Hypoglycemia' => ['hypoglycemia', 'low blood sugar', 'هبوط سكر الدم', 'نقص سكر الدم'],
-        'Hypokalemia (Low Potassium)' => ['hypokalemia', 'low potassium', 'نقص بوتاسيوم الدم', 'انخفاض البوتاسيوم'],
-        'Hyponatremia (Low Sodium)' => ['hyponatremia', 'low sodium', 'نقص صوديوم الدم', 'انخفاض الصوديوم'],
-        'Hypothyroidism' => ['hypothyroidism', 'underactive thyroid', 'قصور الغدة الدرقية', 'قصور الدرقية', 'كسل الغدة الدرقية'],
-        'Iron Deficiency Anemia' => ['iron deficiency anemia', 'فقر دم بعوز الحديد', 'نقص الحديد'],
-        'Leukopenia' => ['leukopenia', 'low white blood cells', 'نقص كريات الدم البيضاء', 'قلة الكريات البيض'],
-        'Liver Disease (Possible)' => ['liver disease', 'hepatic disease', 'مرض الكبد', 'أمراض الكبد', 'التهاب الكبد'],
-        'Polycythemia' => ['polycythemia', 'high red blood cells', 'كثرة الحمر', 'احمرار الدم'],
-        'Thrombocytopenia' => ['thrombocytopenia', 'low platelets', 'نقص الصفائح الدموية', 'قلة الصفيحات'],
-        'Thrombocytosis' => ['thrombocytosis', 'high platelets', 'زيادة الصفائح الدموية', 'كثرة الصفيحات'],
-        'Viral Infection (Possible)' => ['viral infection', 'virus', 'عدوى فيروسية', 'التهاب فيروسي', 'فيروس'],
-        'Vitamin B12 Deficiency Anemia' => ['vitamin b12 deficiency', 'b12 deficiency', 'نقص فيتامين ب12', 'نقص فيتامين b12'],
-        'Vitamin D Deficiency' => ['vitamin d deficiency', 'نقص فيتامين د', 'نقص فيتامين d'],
+    protected const PICKER_CONDITION_MAP = [
+        'Diabetes mellitus' => ['Diabetes Mellitus (Possible)'],
+        'Chronic kidney disease' => ['Chronic Kidney Disease (Possible)'],
+        'Anemia' => ['Anemia of Chronic Disease', 'Iron Deficiency Anemia', 'Folate Deficiency Anemia', 'Vitamin B12 Deficiency Anemia'],
+        'Hypothyroidism' => ['Hypothyroidism'],
+        'Hyperthyroidism' => ['Hyperthyroidism'],
+        'Disease of liver' => ['Liver Disease (Possible)'],
+        'Disorder of coronary artery' => ['Coronary Artery Disease Risk'],
+        'Chronic heart failure' => ['Heart Failure Indicators'],
+        'Cardiac arrhythmia' => ['Cardiac Arrhythmia Risk'],
+        'Hyperlipidemia' => ['Hyperlipidemia (High Cholesterol)'],
     ];
 
     /**
@@ -325,44 +310,40 @@ class LabAnalysisService
     }
 
     /**
-     * The patient's chronic diseases (from their medical record's
-     * chronic_diseases picker — a JSON array of condition names, see
-     * MedicalRecord::$casts), translated to the AI service's own condition
-     * names via CONDITION_ALIASES. Patients never choose these directly for
-     * an analysis — they are always pulled from the saved record, and only
-     * entries the service can recognize (in either Arabic or English) are
-     * sent, as the service's own canonical English name — which is what its
-     * condition matching expects back.
+     * The patient's pre-existing conditions (from their medical record's
+     * dedicated pre_existing_conditions column — a JSON array of values
+     * from the frontend's fixed picker, see MedicalRecord::$casts),
+     * translated to the AI service's own condition_name(s) via
+     * PICKER_CONDITION_MAP. Patients never choose these directly for an
+     * analysis — they are always pulled from the saved record, and only
+     * entries the service can recognize are sent, as its own canonical
+     * English name(s) — which is what its condition matching expects back.
      *
-     * other_conditions (free text) is deliberately excluded, consistent with
-     * how ConditionCheckService also only feeds structured chronic_diseases
-     * into automatic condition matching, not free text.
+     * Separate from chronic_diseases, which feeds the DDI condition-check
+     * elsewhere and is not used here.
      */
     protected function recognizedPreExistingConditions(Patient $patient): string
     {
         // ->first() (not ->value()) so the model's array cast on
-        // chronic_diseases applies instead of reading the raw JSON string.
+        // pre_existing_conditions applies instead of reading the raw JSON string.
         $record = $patient->medicalRecords()->latest('id')->first();
 
-        $declared = array_filter(array_map('trim', (array) $record?->chronic_diseases));
+        $declared = array_filter(array_map('trim', (array) $record?->pre_existing_conditions));
 
         if (empty($declared)) {
             return '';
         }
 
+        $pickerMapLower = array_change_key_case(self::PICKER_CONDITION_MAP, CASE_LOWER);
+
         $matched = [];
 
-        foreach ($declared as $disease) {
-            $diseaseLower = mb_strtolower($disease);
+        foreach ($declared as $condition) {
+            $conditionLower = mb_strtolower($condition);
 
-            foreach (self::CONDITION_ALIASES as $conditionName => $aliases) {
-                foreach ($aliases as $alias) {
-                    $aliasLower = mb_strtolower($alias);
-
-                    if (str_contains($diseaseLower, $aliasLower) || str_contains($aliasLower, $diseaseLower)) {
-                        $matched[$conditionName] = true;
-                        continue 2;
-                    }
+            if (isset($pickerMapLower[$conditionLower])) {
+                foreach ($pickerMapLower[$conditionLower] as $conditionName) {
+                    $matched[$conditionName] = true;
                 }
             }
         }
