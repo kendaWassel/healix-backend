@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\DoctorController;
 use App\Http\Controllers\Api\HomeVisitController;
 use App\Http\Controllers\Api\ConsultationController;
+use App\Http\Controllers\Api\AI\DoctorSummaryController;
 use App\Http\Controllers\Api\Doctor\PrescriptionSafetyController;
 use App\Http\Controllers\Api\Lab\LabAnalysisController;
 
@@ -18,6 +19,11 @@ Route::middleware(['auth:sanctum', 'verified', 'role:doctor'])
 
         // My patients (via Consultation), each with their lab analyses embedded.
         Route::get('/patients/lab-analyses', [LabAnalysisController::class, 'myPatientsLabAnalyses']);
+
+        // The Healix/AI-generated report for one patient this doctor has a
+        // real Consultation with — authorized per-request via
+        // DoctorSummaryPolicy::view, not just this route's own role gate.
+        Route::get('/patients/{patient_id}/doctor-summaries', [DoctorSummaryController::class, 'forPatient']);
 
         Route::post('/home-visit/request', [HomeVisitController::class, 'requestHomeVisit']);
 

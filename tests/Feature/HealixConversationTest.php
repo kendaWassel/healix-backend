@@ -2,7 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Assessment;
+use App\Models\Conversation;
+use App\Models\DoctorSummary;
 use App\Models\Patient;
+use App\Models\Specialization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -343,5 +347,219 @@ class HealixConversationTest extends TestCase
             ->assertStatus(403);
 
         $this->assertDatabaseMissing('messages', ['conversation_id' => $conversationId]);
+    }
+
+    /**
+     * stage=="diagnosis" is the one outcome that must persist an Assessment
+     * + DoctorSummary — HealixConversationService::persistDiagnosisOutcome,
+     * the direct replacement for the retired legacy pipeline's own
+     * MedicalAssistantService::persistAssessment/persistDoctorSummary.
+     */
+    public function test_a_diagnosis_stage_turn_persists_assessment_and_doctor_summary(): void
+    {
+        $user = $this->patientUser();
+        Specialization::create(['name' => 'Neurology', 'name_ar' => 'الأمراض العصبية', 'code' => 'neurology']);
+
+        $this->fakeHealixChat([
+            'specialty' => 'الأمراض العصبية',
+            'diagnosis' => [
+                'status' => 'differential',
+                'differential' => [
+                    [
+                        'name' => 'Migraine',
+                        'name_ar' => 'الشقيقة',
+                        'match_score' => 1.0,
+                        'certainty' => 'high',
+                        'specialties' => ['عصبية'],
+                    ],
+                ],
+                'reasoning' => 'تطابق تام',
+            ],
+            'reports' => ['patient' => 'fake patient report', 'doctor' => 'ملخص طبي للدكتور'],
+        ]);
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
+            ->json('data.id');
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
+                'message' => 'عندي صداع نابض من جهة وحدة مع غثيان',
+            ])
+            ->assertStatus(201);
+
+        $assessment = Assessment::where('conversation_id', $conversationId)->first();
+        $this->assertNotNull($assessment);
+        $this->assertSame(Assessment::STATUS_COMPLETED, $assessment->status);
+        // Severity grading for the normal, non-emergency path is
+        // unimplemented on the Python side — deliberately null, not guessed.
+        $this->assertNull($assessment->triage);
+        $this->assertSame('الأمراض العصبية', $assessment->recommended_specialty);
+        $this->assertNotNull($assessment->specialty_id);
+        $this->assertSame('neurology', $assessment->specialty_code);
+        $this->assertSame('الأمراض العصبية', $assessment->specialty_name_ar);
+        // assertEquals, not assertSame: match_score round-trips through
+        // JSON (HTTP fake -> Assessment's array cast -> MySQL JSON column
+        // -> read back), and a whole-number float loses its float-ness
+        // through that path (1.0 decodes back as int 1) -- semantically
+        // identical, not a real int/float distinction worth failing on.
+        $this->assertEquals([['disease' => 'الشقيقة', 'score' => 1.0]], $assessment->possible_diseases);
+        // Not part of api/contracts.py's ChatResponse today — left empty.
+        $this->assertSame([], $assessment->extracted_symptoms);
+        // Structurally guaranteed: check_red_flags runs before diagnose and
+        // routes straight to emergency_node on any match, so a
+        // stage=="diagnosis" turn provably had no red flags this turn.
+        $this->assertFalse($assessment->emergency_detected);
+        $this->assertNull($assessment->emergency_type);
+        $this->assertNull($assessment->risk_reason);
+
+        $this->assertDatabaseHas('doctor_summaries', [
+            'conversation_id' => $conversationId,
+            'assessment_id' => $assessment->id,
+            'summary' => 'ملخص طبي للدكتور',
+            'status' => DoctorSummary::STATUS_DRAFT,
+            'doctor_id' => null,
+        ]);
+
+        $conversation = Conversation::find($conversationId);
+        $this->assertFalse($conversation->is_crisis);
+        $this->assertNull($conversation->severity);
+        $this->assertSame([], $conversation->red_flags);
+    }
+
+    /**
+     * A crisis turn updates the new conversation safety columns, but must
+     * NOT create a booking-eligible Assessment — the terminal-outcome
+     * gating in persistTriageOutcome (stage=="diagnosis" only).
+     */
+    public function test_a_crisis_stage_turn_updates_conversation_safety_fields_without_creating_an_assessment(): void
+    {
+        $user = $this->patientUser();
+
+        $this->fakeHealixChat([
+            'stage' => 'crisis',
+            'is_crisis' => true,
+            'severity' => null,
+            'red_flags' => [],
+            'diagnosis' => null,
+            'specialty' => null,
+            'reports' => null,
+            'reply' => 'ردة فعل الأزمة',
+        ]);
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
+            ->json('data.id');
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
+                'message' => 'بدي موت',
+            ])
+            ->assertStatus(201);
+
+        $this->assertTrue(Conversation::find($conversationId)->is_crisis);
+
+        $this->assertDatabaseMissing('assessments', ['conversation_id' => $conversationId]);
+        $this->assertDatabaseMissing('doctor_summaries', ['conversation_id' => $conversationId]);
+    }
+
+    /**
+     * Same terminal-outcome gating, exercised for the emergency/red-flags
+     * path specifically (a real, non-empty red_flags payload — not just
+     * is_crisis) — and confirms it's actually written to the new json
+     * column correctly, not just left at its boolean/null defaults.
+     */
+    public function test_an_emergency_stage_turn_persists_red_flags_and_severity_without_creating_an_assessment(): void
+    {
+        $user = $this->patientUser();
+
+        $this->fakeHealixChat([
+            'stage' => 'emergency',
+            'is_crisis' => false,
+            'severity' => 'emergency',
+            'red_flags' => [['id' => 'acs_chest_pain', 'reason' => 'ألم صدر مترافق مع ضيق تنفس']],
+            'diagnosis' => null,
+            'specialty' => null,
+            'reports' => null,
+        ]);
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
+            ->json('data.id');
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
+                'message' => 'عندي الم صدر شديد وضيق تنفس',
+            ])
+            ->assertStatus(201);
+
+        $conversation = Conversation::find($conversationId);
+        $this->assertFalse($conversation->is_crisis);
+        $this->assertSame('emergency', $conversation->severity);
+        $this->assertSame(
+            [['id' => 'acs_chest_pain', 'reason' => 'ألم صدر مترافق مع ضيق تنفس']],
+            $conversation->red_flags
+        );
+
+        $this->assertDatabaseMissing('assessments', ['conversation_id' => $conversationId]);
+    }
+
+    /**
+     * The AIServiceException fallback branch's neutral defaults
+     * (is_crisis=false, severity=null, red_flags=[]) are NOT a real safety
+     * verdict — persistTriageOutcome must never run for that branch, or an
+     * outage turn would silently erase a genuine prior crisis/emergency
+     * snapshot.
+     */
+    public function test_an_unavailable_healix_turn_does_not_overwrite_a_previous_crisis_flag(): void
+    {
+        $user = $this->patientUser();
+
+        // A single Http::fake() with a two-step sequence — a second,
+        // separate Http::fake() call partway through the test does NOT
+        // reliably override the first call's rule for this Laravel
+        // version's resolution order (verified directly: it did not take
+        // effect when tried), so this is the correct tool, not a style
+        // preference.
+        Http::fake([
+            '*/chat' => Http::sequence()
+                ->push([
+                    'thread_id' => '1',
+                    'reply' => 'ردة فعل الأزمة',
+                    'stage' => 'crisis',
+                    'is_crisis' => true,
+                    'severity' => null,
+                    'red_flags' => [],
+                    'diagnosis' => null,
+                    'specialty' => null,
+                    'reports' => null,
+                ])
+                // Not a second ->push(): FastApiClient retries on 5xx, so
+                // the failing turn consumes more than one sequence item —
+                // whenEmpty() keeps returning 500 for every retry attempt,
+                // not just the first.
+                ->whenEmpty(Http::response(['detail' => 'internal server error'], 500)),
+        ]);
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
+            ->json('data.id');
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", ['message' => 'بدي موت'])
+            ->assertStatus(201);
+
+        $this->assertTrue(Conversation::find($conversationId)->is_crisis);
+
+        // The AI service is now down for this second turn on the same
+        // thread (the sequence's second, 500-status push).
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", ['message' => 'مرحبا'])
+            ->assertStatus(201)
+            ->assertJsonPath('available', false);
+
+        // available=false is not a real "all clear" -- the last REAL
+        // snapshot must survive an outage turn untouched.
+        $this->assertTrue(Conversation::find($conversationId)->is_crisis);
     }
 }

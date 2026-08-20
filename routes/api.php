@@ -67,7 +67,6 @@ Route::get('/specializations', [SpecializationController::class, 'listForRegistr
 // File Uploads (for registration before auth)
 Route::post('/uploads', [UploadController::class, 'uploadFile']);
 Route::post('/uploads/image', [UploadController::class, 'uploadImage']);
-Route::get('/medical-records/attachments/{id}/download', [MedicalRecordController::class, 'downloadAttachment'])->name('medical-record.attachment.download');
 Route::get('/uploads/download/{id}', [UploadController::class, 'downloadFile'])->name('download.file');
 Route::post('/stripe/webhook', [StripeController::class, 'webhook']);
 
@@ -97,6 +96,11 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::get('/{patient_id}/view-details', [MedicalRecordController::class, 'viewDetails']);
         Route::put('/{patient_id}/medical-record/update', [MedicalRecordController::class, 'updateMedicalRecord']);
     });
+
+    // Moved inside auth:sanctum+verified (was public) — downloads a medical
+    // record attachment, so it needs the same authorization as viewing the
+    // record itself (MedicalRecordController::downloadAttachment).
+    Route::get('/medical-records/attachments/{id}/download', [MedicalRecordController::class, 'downloadAttachment'])->name('medical-record.attachment.download');
 
     // Lab analyses, doctor/nurse/physiotherapist view of a specific patient's reports.
     Route::middleware(['role:doctor,care_provider'])

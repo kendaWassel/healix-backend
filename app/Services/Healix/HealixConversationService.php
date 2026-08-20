@@ -3,9 +3,12 @@
 namespace App\Services\Healix;
 
 use App\Exceptions\AI\AIServiceException;
+use App\Models\Assessment;
 use App\Models\Conversation;
+use App\Models\DoctorSummary;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\SpecializationResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -44,7 +47,8 @@ use Illuminate\Support\Facades\Log;
 class HealixConversationService
 {
     public function __construct(
-        protected HealixAiService $healix
+        protected HealixAiService $healix,
+        protected SpecializationResolver $specializationResolver
     ) {}
 
     /**
@@ -202,5 +206,129 @@ class HealixConversationService
     protected function nextTurn(Conversation $conversation): int
     {
         return (int) ($conversation->messages()->max('turn_number') ?? 0) + 1;
+    }
+
+    /**
+     * Persists this turn's safety snapshot onto the conversation
+     * (is_crisis/severity/red_flags — migration
+     * 2026_08_20_114916_add_healix_safety_fields_to_conversations_table),
+     * and, only when this turn actually reached a real differential
+     * (stage=="diagnosis"), the Assessment/DoctorSummary rows the booking
+     * and doctor-facing flows read from.
+     *
+     * Only ever called from sendMessage()'s SUCCESS branch — never from the
+     * AIServiceException catch above, whose neutral defaults
+     * (is_crisis=false, severity=null, red_flags=[]) are explicitly NOT a
+     * real safety verdict (see that branch's own comment: "it did NOT run
+     * this turn, it did not come back 'clear'"). Overwriting a
+     * conversation's last real snapshot with those defaults just because
+     * this turn's call failed would silently erase a genuine prior
+     * crisis/emergency state.
+     */
+    protected function persistTriageOutcome(Conversation $conversation, array $result): void
+    {
+        $conversation->forceFill([
+            'is_crisis' => (bool) ($result['is_crisis'] ?? false),
+            'severity' => $result['severity'] ?? null,
+            'red_flags' => $result['red_flags'] ?? [],
+        ])->save();
+
+        if (($result['stage'] ?? null) === 'diagnosis' && !empty($result['diagnosis'])) {
+            $this->persistDiagnosisOutcome($conversation, $result);
+        }
+    }
+
+    /**
+     * Turns a finished Healix differential into the same Assessment +
+     * DoctorSummary rows the (retired) legacy MedicalAssistantService
+     * pipeline used to produce — MedicalAssistantService::persistAssessment/
+     * persistDoctorSummary is this method's own direct model, field for
+     * field, so booking (AssessmentBookingService) and the doctor-facing
+     * report flow work identically regardless of which pipeline produced
+     * a given Assessment row.
+     *
+     * Only ever called when $result['stage'] === 'diagnosis' (see
+     * persistTriageOutcome above). CLAUDE.md (Python side)'s own graph flow
+     * guarantees check_red_flags runs BEFORE diagnose and routes straight
+     * to emergency_node on any match, so a turn that reaches this point
+     * provably had no red flags this turn — emergency_detected/
+     * emergency_type/risk_reason are set to false/null/null
+     * unconditionally below, not defensively guessed.
+     */
+    protected function persistDiagnosisOutcome(Conversation $conversation, array $result): void
+    {
+        $diagnosis = $result['diagnosis'];
+        $differential = is_array($diagnosis['differential'] ?? null) ? $diagnosis['differential'] : [];
+
+        // Healix's own $result['specialty'] IS specialty_laravel (see
+        // api/main.py on the Python side: ChatResponse.specialty is built
+        // from state["specialty_laravel"], never the raw KB state["specialty"]
+        // string) — already translated into one of Laravel's real
+        // specializations.name_ar values, or the free-text referral phrase
+        // when nothing maps. SpecializationResolver matches name_ar
+        // directly for exactly this reason.
+        $specialtyLaravel = $result['specialty'] ?? null;
+        $specialization = $this->specializationResolver->resolve($specialtyLaravel);
+
+        // match_score is only meaningful WITHIN one disease's own match,
+        // never comparable ACROSS different diseases in this differential —
+        // the knowledge base is still too small/uneven for that comparison
+        // to be valid (CLAUDE.md > Known limitations, Python side). If this
+        // list is ever rendered to a doctor as a ranked/compared set rather
+        // than shown per-entry on its own, that comparison is not
+        // established yet.
+        $possibleDiseases = array_map(static fn (array $entry) => [
+            'disease' => $entry['name_ar'] ?? $entry['name'] ?? '',
+            'score' => $entry['match_score'] ?? 0.0,
+        ], $differential);
+
+        $assessment = Assessment::updateOrCreate(
+            ['conversation_id' => $conversation->id],
+            [
+                'status' => Assessment::STATUS_COMPLETED,
+                // Severity grading for the normal, non-emergency diagnostic
+                // path is unimplemented on the Python side (CLAUDE.md > Known
+                // limitations) — there is no source for this field from
+                // Healix today. Left null rather than guessed.
+                'triage' => null,
+                'recommended_specialty' => $specialtyLaravel,
+                'specialty_id' => $specialization?->id,
+                'specialty_code' => $specialization?->code,
+                'specialty_name_ar' => $specialization?->name_ar,
+                'possible_diseases' => $possibleDiseases,
+                // Not part of api/contracts.py's ChatResponse today — left
+                // empty rather than adding a cross-repo contract change
+                // this close to submission.
+                'extracted_symptoms' => [],
+                'emergency_detected' => false,
+                'emergency_type' => null,
+                'risk_reason' => null,
+            ]
+        );
+
+        $doctorReport = $result['reports']['doctor'] ?? null;
+        if (!is_string($doctorReport) || $doctorReport === '') {
+            Log::warning('Healix diagnosis turn finished without a doctor report', [
+                'conversation_id' => $conversation->id,
+                'assessment_id' => $assessment->id,
+            ]);
+            return;
+        }
+
+        DoctorSummary::updateOrCreate(
+            ['conversation_id' => $conversation->id],
+            [
+                'assessment_id' => $assessment->id,
+                'patient_id' => $conversation->patient_id,
+                // reports.patient stays in the conversation's message
+                // history only (it's already this turn's assistant Message
+                // text) — never copied here. reports.doctor is the
+                // doctor-facing register Healix's own design produces
+                // specifically for this table (CLAUDE.md > Graph flow,
+                // nodes/generate_reports.py).
+                'summary' => $doctorReport,
+                'status' => DoctorSummary::STATUS_DRAFT,
+            ]
+        );
     }
 }

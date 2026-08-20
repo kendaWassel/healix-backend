@@ -26,11 +26,23 @@ class AssessmentBookingFeatureTest extends TestCase
             'status' => 'completed',
         ]);
 
+        // Models a real Assessment row (Healix-sourced, going forward),
+        // which already has its specialty resolved at write time —
+        // specialty_id set directly, not left for
+        // AssessmentBookingService's resolve() fallback to fill in at read
+        // time. That fallback is now name_ar-only (SpecializationResolver)
+        // and exists purely as a safety net for a row that somehow never
+        // resolved at creation, not the expected path.
+        $specialization = Specialization::where('name', $specialtyName)->first();
+
         return Assessment::create([
             'conversation_id' => $conversation->id,
             'status' => Assessment::STATUS_COMPLETED,
             'triage' => 'Medium',
             'recommended_specialty' => $specialtyName,
+            'specialty_id' => $specialization?->id,
+            'specialty_code' => $specialization?->code,
+            'specialty_name_ar' => $specialization?->name_ar,
             'possible_diseases' => [['disease' => 'Bronchitis', 'score' => 0.7]],
             'extracted_symptoms' => [['text' => 'سعال', 'negated' => false, 'confidence' => 0.9]],
             'emergency_detected' => false,
