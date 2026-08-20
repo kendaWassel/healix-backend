@@ -13,10 +13,13 @@ use App\Http\Resources\MedicalRecordResource;
 use App\Notifications\MedicalReportAddedNotification;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Upload;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class MedicalRecordController extends Controller
 {
- 
+    use AuthorizesRequests;
+
+
     /**
      * Doctor, Nurse, Physiotherapist: View patient medical record details.
      */
@@ -32,6 +35,13 @@ class MedicalRecordController extends Controller
 
         // Get the latest medical record for the patient (if any)
         $record = $patient->medicalRecords()->with(['doctor.user', 'uploads'])->latest()->first();
+
+        // Authorize against the real record when one exists; otherwise
+        // against an unsaved stand-in carrying just patient_id, so a patient
+        // with no record yet still gets the same admin/own-patient/
+        // doctor-with-a-consultation check rather than an unguarded read.
+        $this->authorize('view', $record ?? new MedicalRecord(['patient_id' => $patient->id]));
+
         $medicalRecordData = null;
         if ($record) {
             $medicalRecordData = new MedicalRecordResource($record);
@@ -56,6 +66,15 @@ class MedicalRecordController extends Controller
     public function downloadAttachment($id)
     {
         $upload = Upload::findOrFail($id);
+
+        // No medical_record_id (e.g. an upload mid-registration, not yet
+        // attached to any record) means there's nothing to check a
+        // relationship against — deny rather than guess.
+        $medicalRecord = $upload->medicalRecord;
+        if (!$medicalRecord) {
+            abort(404);
+        }
+        $this->authorize('view', $medicalRecord);
 
         $path = Storage::disk('public')->path($upload->file_path);
         if (!file_exists($path)) {

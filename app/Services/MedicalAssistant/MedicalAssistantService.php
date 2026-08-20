@@ -251,7 +251,15 @@ class MedicalAssistantService
         // to build patient_summary. Falls back to a local name match when an
         // older AI service version doesn't send patient_summary yet.
         $specialtyLabel = $assessment['patient_summary']['specialty'] ?? null;
-        $specialization = $this->specializationResolver->resolve($recommendedSpecialty);
+        // SpecializationResolver now matches name_ar only (Healix, the sole
+        // AI backend going forward, sends an Arabic string) — prefer the
+        // Arabic name_ar this AI service already provides in patient_summary
+        // over the English $recommendedSpecialty, which can no longer
+        // resolve. Same fallback-when-absent reasoning as $specialtyLabel's
+        // own comment above: an older AI service response without
+        // patient_summary falls back to the (now likely unresolvable)
+        // English string rather than erroring.
+        $specialization = $this->specializationResolver->resolve($specialtyLabel['name_ar'] ?? $recommendedSpecialty);
 
         $model = Assessment::updateOrCreate(
             ['conversation_id' => $conversation->id],
