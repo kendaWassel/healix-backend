@@ -8,6 +8,7 @@ use App\Models\Doctor;
 use App\Models\Rating;
 use App\Models\Upload;
 use App\Services\DoctorService;
+use App\Support\Locale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -124,6 +125,7 @@ class DoctorController extends Controller
                 'data'    => [
                     'prescription_id' => $prescription->id,
                     'status'          => $prescription->status,
+                    'status_label'    => Locale::label('prescription_status', $prescription->status),
                     'issued_at'       => $prescription->created_at?->toIso8601String(),
                 ],
                 'message' => __('pharmacy.prescription_created'),

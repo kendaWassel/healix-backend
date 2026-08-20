@@ -15,6 +15,15 @@ class MessageResource extends JsonResource
      *
      * `transcribed_text` and `detected_symptoms` come from the AI service and
      * are never translated — they are clinical content, not UI copy.
+     *
+     * is_crisis/severity/diagnosis/specialty/reports: Healix-AI-specific
+     * triage fields (see HealixConversationService::sendMessage(), which
+     * persists them on the assistant Message row). Always present but
+     * false/null on any message from the OTHER assistant
+     * (MedicalAssistantService) or a row older than this field's
+     * migration — never omitted, so a client can check them
+     * unconditionally the same way it already does on a live
+     * storeHealixMessage() response.
      */
     public function toArray(Request $request): array
     {
@@ -33,6 +42,11 @@ class MessageResource extends JsonResource
             'detected_symptoms' => $this->detected_symptoms,
             'status' => $this->status,
             'status_label' => Locale::label('message_status', $this->status),
+            'is_crisis' => (bool) $this->is_crisis,
+            'severity' => $this->severity,
+            'diagnosis' => $this->diagnosis,
+            'specialty' => $this->specialty,
+            'reports' => $this->reports,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

@@ -88,32 +88,62 @@ class MedicalRecordController extends Controller
 
         $user = Auth::user();
         $doctor = $user->doctor;
-        $medicalRecord = MedicalRecord::updateOrCreate(
-            [
-                'patient_id' => $patientId,
-                'doctor_id' => $doctor ? $doctor->id : null,
-            ],
-            [
-                'diagnosis' => $validated['diagnosis'] ?? null,
-                'treatment_plan' => $validated['treatment_plan'] ?? null,
-                'current_medications' => $validated['current_medications'] ?? null,
-                'chronic_diseases' => $validated['chronic_diseases'] ?? null,
-                'other_conditions' => $validated['other_conditions'] ?? null,
-                'previous_surgeries' => $validated['previous_surgeries'] ?? null,
-                'allergies' => $validated['allergies'] ?? null,
-            ]
-        );
+        $careProvider = $user->careProvider;
+
+        // One record per patient, edited in place by whichever authorized
+        // provider (doctor, nurse, or physiotherapist) touches it — same
+        // "find the patient's own latest record, or start one" pattern
+        // already used by updateOwnMedicalRecord()/updatePregnancyInfo()
+        // below. The previous version matched on
+        // ['patient_id', 'doctor_id'], so a second doctor (or any care
+        // provider, whose doctor_id is always null) editing the same
+        // patient created a NEW row instead of updating the existing one.
+        $medicalRecord = $patient->medicalRecords()->latest('id')->first()
+            ?? new MedicalRecord(['patient_id' => $patientId]);
+
+        // True partial update: only touch a field the caller actually sent.
+        // The validation rules below don't all use `sometimes`, so
+        // $validated includes an absent field as null — filling
+        // unconditionally would wipe that field on the shared record every
+        // time a different provider edits without resending it (e.g. a
+        // nurse updating only previous_surgeries would null out the
+        // doctor's diagnosis). Harmless when each provider had their own
+        // row; destructive now that the record is shared.
+        foreach ([
+            'diagnosis', 'treatment_plan', 'current_medications', 'chronic_diseases',
+            'pre_existing_conditions', 'other_conditions', 'previous_surgeries', 'allergies',
+        ] as $field) {
+            if ($request->has($field)) {
+                $medicalRecord->{$field} = $validated[$field] ?? null;
+            }
+        }
+
+        // Track whichever provider made this edit — overwrites the other
+        // (a record edited by a doctor then a nurse shows the nurse as the
+        // most recent editor), which is the same "last touched by" model
+        // most single-shared-record systems use; UpdateMedicalRecordRequest
+        // already guarantees exactly one of these two is non-null.
+        if ($doctor) {
+            $medicalRecord->doctor_id = $doctor->id;
+        } elseif ($careProvider) {
+            $medicalRecord->care_provider_id = $careProvider->id;
+        }
+
+        $medicalRecord->save();
 
         // Update attachments if provided (set medical_record_id on uploads)
         if (isset($validated['attachments_id'])) {
             // First, remove medical_record_id from any uploads that were previously attached to this record
             Upload::where('medical_record_id', $medicalRecord->id)->update(['medical_record_id' => null]);
-            
+
             // Then, attach the new uploads to this medical record
             Upload::whereIn('id', $validated['attachments_id'])->update(['medical_record_id' => $medicalRecord->id]);
         }
 
-        if ($doctor) {
+        // Notify the patient regardless of which provider type made the
+        // edit — previously gated on `if ($doctor)` only, so a care
+        // provider's edit never notified the patient at all.
+        if ($doctor || $careProvider) {
             $patient->loadMissing('user');
             if ($patient->user) {
                 $patient->user->notify(new MedicalReportAddedNotification($medicalRecord));
@@ -126,7 +156,8 @@ class MedicalRecordController extends Controller
             'data' => [
                 'medical_record_id' => $medicalRecord->id,
                 'patient_id' => $medicalRecord->patient_id,
-                'doctor_id' => $doctor ? $doctor->id : null,
+                'doctor_id' => $medicalRecord->doctor_id,
+                'care_provider_id' => $medicalRecord->care_provider_id,
                 'diagnosis' => $medicalRecord->diagnosis,
                 'treatment_plan' => $medicalRecord->treatment_plan,
                 'current_medications' => $medicalRecord->current_medications,

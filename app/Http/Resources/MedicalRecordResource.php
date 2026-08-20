@@ -42,6 +42,7 @@ class MedicalRecordResource extends JsonResource
                 'diagnosis' => $this->diagnosis,
                 'treatment_plan' => $this->treatment_plan,
                 'chronic_diseases' => $this->chronic_diseases,
+                'pre_existing_conditions' => $this->pre_existing_conditions,
                 'other_conditions' => $this->other_conditions,
                 'previous_surgeries' => $this->previous_surgeries,
                 'allergies' => $this->allergies,

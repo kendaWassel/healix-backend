@@ -29,13 +29,13 @@ Route::middleware(['auth:sanctum', 'verified', 'role:pharmacist'])
         Route::get('/my-orders', [PharmacistController::class, 'myOrders']);
         Route::get('/track', [PharmacistController::class, 'trackOrders']);
         Route::get('/{orderId}/track', [PharmacistController::class, 'trackOrder']);
-        Route::get('/history', [PharmacistController::class, 'ordersHistory']);
+        Route::get('orders/history', [PharmacistController::class, 'ordersHistory']);
 
         Route::post('/orders/{id}/ready', [OrderController::class, 'markReadyForDelivery']);
     });
 
 Route::middleware(['auth:sanctum', 'role:patient'])
-    ->prefix('patient')
+    ->prefix('pharmacist')
     ->group(function () {
 
         Route::get('/pharmacies', [PharmacyController::class, 'getPharmacies']);

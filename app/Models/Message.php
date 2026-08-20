@@ -28,10 +28,18 @@ class Message extends Model
         'transcribed_text',
         'detected_symptoms',
         'status',
+        'is_crisis',
+        'severity',
+        'diagnosis',
+        'specialty',
+        'reports',
     ];
 
     protected $casts = [
         'detected_symptoms' => 'array',
+        'is_crisis' => 'boolean',
+        'diagnosis' => 'array',
+        'reports' => 'array',
     ];
 
     public function conversation(): BelongsTo

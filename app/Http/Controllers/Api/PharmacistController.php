@@ -16,6 +16,7 @@ use App\Models\PrescriptionMedication;
 use App\Models\User;
 use App\Notifications\PrescriptionAcceptedNotification;
 use App\Notifications\PrescriptionRejectedNotification;
+use App\Support\Locale;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class PharmacistController extends Controller
@@ -92,10 +93,12 @@ class PharmacistController extends Controller
                     'prescription_id' => $prescription->id,
                     'order_id' => $order ? $order->id : null,
                     'source' => 'doctor',
+                    'source_label' => Locale::label('prescription_source', $prescription->source),
                     'patient' => $patientName,
                     'medicines' => $medicines,
                     'total_quantity' => $prescription->total_quantity ?? $totalBoxes,
                     'status' => $prescription->status, // Use prescription status instead of order status
+                    'status_label' => Locale::label('prescription_status', $prescription->status),
                     // 'created_at' => $prescription->created_at->toIso8601String(),
                 ];
             } else { // patient_upload
@@ -108,9 +111,11 @@ class PharmacistController extends Controller
                     'prescription_id' => $prescription->id,
                     'order_id' => $order ? $order->id : null,
                     'source' => 'patient_upload',
+                    'source_label' => Locale::label('prescription_source', $prescription->source),
                     'patient' => $patientName,
                     'image_url' => $imageUrl,
                     'status' => $prescription->status, // Use prescription status instead of order status
+                    'status_label' => Locale::label('prescription_status', $prescription->status),
                     'created_at' => $prescription->created_at->toIso8601String(),
                 ];
 
@@ -477,6 +482,7 @@ class PharmacistController extends Controller
             $result = [
                 'id' => $order->id,
                 'source' => $prescription->source === 'patient_uploaded' ? 'paper' : 'electronic',
+                'source_label' => Locale::label('prescription_source', $prescription->source),
                 'patient' => $patientName,
                 'medicines' => $medicines,
                 'total_quantity' => $totalQuantity,

@@ -24,6 +24,9 @@ class UpdateMedicalRecordRequest extends FormRequest
             // JSON array of DrugCentral-standard condition names (picker).
             'chronic_diseases' => 'sometimes|nullable|array',
             'chronic_diseases.*' => 'string|max:255',
+            // JSON array of values from the PRE_EXISTING_CONDITIONS picker — feeds lab analysis matching only.
+            'pre_existing_conditions' => 'sometimes|nullable|array',
+            'pre_existing_conditions.*' => 'string|max:255',
             'other_conditions' => 'sometimes|nullable|string|max:1000',
             'previous_surgeries' => 'nullable|string',
             'allergies' => 'nullable|array',
@@ -41,6 +44,8 @@ class UpdateMedicalRecordRequest extends FormRequest
             'current_medications.array' => __('requests.medical_record.current_medications_array'),
             'current_medications.*.string' => __('requests.medical_record.current_medications_string'),
             'chronic_diseases.string' => __('requests.medical_record.chronic_diseases_string'),
+            'pre_existing_conditions.array' => __('requests.medical_record.pre_existing_conditions_array'),
+            'pre_existing_conditions.*.string' => __('requests.medical_record.pre_existing_conditions_string'),
             'previous_surgeries.string' => __('requests.medical_record.previous_surgeries_string'),
             'allergies.array' => __('requests.medical_record.allergies_array'),
             'allergies.*.string' => __('requests.medical_record.allergies_string'),

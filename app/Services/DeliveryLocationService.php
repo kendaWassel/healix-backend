@@ -15,6 +15,9 @@ class DeliveryLocationService
         'on_the_way',
     ];
 
+    // Distance, in kilometers, at which the patient is told the driver is nearby
+    public const NEARBY_THRESHOLD_KM = 0.5;
+
     /**
      * Find a delivery task assigned to the given driver.
      */
@@ -78,6 +81,61 @@ class DeliveryLocationService
     public function getLatestLocationForTask(int $taskId): ?DeliveryLocation
     {
         return DeliveryLocation::where('task_id', $taskId)->first();
+    }
+
+    /**
+     * Notify the patient once the driver's live position comes within
+     * NEARBY_THRESHOLD_KM of theirs. Gated by patient_notified_nearby_at
+     * so it fires once per task, not on every subsequent GPS ping.
+     */
+    public function notifyIfDriverNearby(DeliveryTask $task, float $driverLat, float $driverLng): void
+    {
+        if ($task->patient_notified_nearby_at !== null) {
+            return;
+        }
+
+        $task->loadMissing('order.patient.user');
+        $patient = $task->order?->patient;
+
+        if (!$patient || $patient->latitude === null || $patient->longitude === null) {
+            return;
+        }
+
+        $distanceKm = $this->haversineDistanceKm(
+            $driverLat,
+            $driverLng,
+            (float) $patient->latitude,
+            (float) $patient->longitude
+        );
+
+        if ($distanceKm > self::NEARBY_THRESHOLD_KM) {
+            return;
+        }
+
+        $task->update(['patient_notified_nearby_at' => now()]);
+
+        if ($patient->user) {
+            $patient->user->notify(new \App\Notifications\DeliveryDriverNearbyNotification($task));
+        }
+    }
+
+    /**
+     * Great-circle distance between two points, in kilometers. Same
+     * formula/earth radius used by the SQL-side Haversine queries in
+     * DeliveryAssignmentService/NearbyRequestService, just evaluated in
+     * PHP since both points are already loaded here.
+     */
+    private function haversineDistanceKm(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earthRadiusKm = 6371;
+
+        $latDelta = deg2rad($lat2 - $lat1);
+        $lngDelta = deg2rad($lng2 - $lng1);
+
+        $a = sin($latDelta / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($lngDelta / 2) ** 2;
+
+        return $earthRadiusKm * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 
     /**

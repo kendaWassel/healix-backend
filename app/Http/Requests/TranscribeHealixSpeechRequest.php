@@ -23,8 +23,8 @@ class TranscribeHealixSpeechRequest extends FormRequest
                 'required',
                 'file',
                 'max:10240',
-                'mimes:m4a,mp3,wav,ogg,webm',
-                'mimetypes:audio/mp4,audio/x-m4a,audio/mpeg,audio/wav,audio/x-wav,audio/ogg,audio/webm,video/webm',
+                'mimes:m4a,mp3,wav,ogg,webm,mp4',
+                'mimetypes:audio/mp4,audio/x-m4a,audio/mpeg,audio/wav,audio/x-wav,audio/ogg,audio/webm,video/webm,video/mp4',
             ],
         ];
     }

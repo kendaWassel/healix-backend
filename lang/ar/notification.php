@@ -82,8 +82,15 @@ return [
     | إشعارات السجل الطبي
     */
 
-    'medical_report_added_title' => 'تقرير طبي جديد',
-    'medical_report_added_body' => 'أضاف الطبيب تقريراً طبياً جديداً لملفك.',
+    'medical_report_edit_title' => 'تم تعديل السجل الطبي',
+    'medical_report_edit_body' => 'تم تعديل السجل الطبي من قبل الطبيب.',
+
+    /*
+    | إشعارات التوصيل
+    */
+
+    'delivery_driver_nearby_title' => 'المندوب اقترب منك',
+    'delivery_driver_nearby_body' => 'مندوب التوصيل اقترب من موقعك.',
 
     /*
     | إشعارات السلامة الدوائية

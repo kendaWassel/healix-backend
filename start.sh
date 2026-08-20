@@ -16,6 +16,12 @@ fi
 
 php artisan config:cache
 
+# Idempotent — safe to run on every boot. Without this, every asset('storage/...')
+# URL built by the app (doctor images, prescription uploads, medical record
+# attachments) 404s, because nothing ever creates the public/storage symlink
+# on a fresh container.
+php artisan storage:link
+
 # Visibility: print which DB the app is actually about to use, so a wrong
 # connection/host is obvious in the platform's deploy logs instead of only
 # showing up as "tables are empty".

@@ -69,6 +69,12 @@ class DeliveryLocationController extends Controller
             (float) $request->longitude
         );
 
+        $this->service->notifyIfDriverNearby(
+            $task,
+            (float) $request->latitude,
+            (float) $request->longitude
+        );
+
         return response()->json([
             'status' => 'success',
             'message' => __('delivery.location_updated'),

@@ -11,6 +11,7 @@ use App\Models\Medication;
 use App\Models\Consultation;
 use App\Models\Prescription;
 use App\Models\Specialization;
+use App\Support\Locale;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Models\PrescriptionMedication;
@@ -272,6 +273,7 @@ class DoctorService
             'patient_name' => $user?->full_name,
             'patient_phone' => $user?->phone,
             'status' => $consultation->status,
+            'status_label' => Locale::label('consultation_status', $consultation->status),
             'call_type' => $consultation->type,
             'scheduled_at' => optional($consultation->scheduled_at)->format('Y-m-d H:i'),
         ];

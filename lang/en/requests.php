@@ -122,6 +122,8 @@ return [
         'treatment_plan_string' => 'Treatment plan must be a string.',
         'current_medications_string' => 'Current medications must be a string.',
         'chronic_diseases_string' => 'Chronic diseases must be a string.',
+        'pre_existing_conditions_array' => 'Pre-existing conditions must be a list.',
+        'pre_existing_conditions_string' => 'Each pre-existing condition must be a string.',
         'previous_surgeries_string' => 'Previous surgeries must be a string.',
         'allergies_string' => 'Allergies must be a string.',
         'other_conditions_string' => 'Other conditions must be a string.',

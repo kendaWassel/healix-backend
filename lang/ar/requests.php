@@ -120,6 +120,8 @@ return [
         'treatment_plan_string' => 'يجب أن تكون الخطة العلاجية نصًا.',
         'current_medications_string' => 'يجب أن تكون الأدوية الحالية نصًا.',
         'chronic_diseases_string' => 'يجب أن تكون الأمراض المزمنة نصًا.',
+        'pre_existing_conditions_array' => 'يجب أن تكون الأمراض المسبقة على شكل قائمة.',
+        'pre_existing_conditions_string' => 'يجب أن يكون كل مرض مسبق نصًا.',
         'previous_surgeries_string' => 'يجب أن تكون العمليات الجراحية السابقة نصًا.',
         'allergies_string' => 'يجب أن تكون الحساسية نصًا.',
         'other_conditions_string' => 'يجب أن تكون الحالات الأخرى نصًا.',

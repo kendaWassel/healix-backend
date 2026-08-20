@@ -15,6 +15,7 @@ class MedicalRecord extends Model
         'treatment_plan',
         'diagnosis',
         'chronic_diseases',
+        'pre_existing_conditions',
         'other_conditions',
         'previous_surgeries',
         'allergies',
@@ -25,6 +26,10 @@ class MedicalRecord extends Model
         'is_pregnant' => 'boolean',
         // Stored as a JSON array of DrugCentral-standard condition names.
         'chronic_diseases' => 'array',
+        // Stored as a JSON array of values from the frontend's
+        // PRE_EXISTING_CONDITIONS picker — feeds lab analysis matching only,
+        // see LabAnalysisService::PICKER_CONDITION_MAP.
+        'pre_existing_conditions' => 'array',
         'allergies' => 'array',
         'current_medications' => 'array',
     ];

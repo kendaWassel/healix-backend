@@ -17,12 +17,14 @@ class DeliveryTask extends Model
         'assigned_at',
         'picked_at',
         'delivered_at',
-        'delivery_fee'
+        'delivery_fee',
+        'patient_notified_nearby_at'
     ];
     protected $casts = [
         'assigned_at' => 'datetime',
         'picked_at' => 'datetime',
-        'delivered_at' => 'datetime'
+        'delivered_at' => 'datetime',
+        'patient_notified_nearby_at' => 'datetime'
     ];
 
     public function order()

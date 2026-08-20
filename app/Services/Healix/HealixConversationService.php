@@ -106,6 +106,15 @@ class HealixConversationService
                     'message_type' => Message::TYPE_TEXT,
                     'message' => __('ai.healix_unavailable_notice'),
                     'turn_number' => $turn,
+                    // Explicit, not just relying on the column defaults —
+                    // this turn genuinely produced none of these (Python
+                    // never ran), same "available: false means neutral
+                    // defaults, not a real verdict" reasoning as below.
+                    'is_crisis' => false,
+                    'severity' => null,
+                    'diagnosis' => null,
+                    'specialty' => null,
+                    'reports' => null,
                 ]);
 
                 return [
@@ -133,6 +142,8 @@ class HealixConversationService
             }
 
             $replyText = (string) ($result['reply'] ?? '');
+            $stage = $result['stage'] ?? null;
+            $isCrisis = (bool) ($result['is_crisis'] ?? false);
 
             $assistantMessage = Message::create([
                 'conversation_id' => $conversation->id,
@@ -140,7 +151,28 @@ class HealixConversationService
                 'message_type' => Message::TYPE_TEXT,
                 'message' => $replyText,
                 'turn_number' => $turn,
+                // Persisted so GET .../messages (reopening this
+                // conversation later) still has the diagnosis card,
+                // specialty, and reports — previously only ever returned
+                // in this one POST response, then lost (see
+                // MessageResource's own doc comment).
+                'is_crisis' => $isCrisis,
+                'severity' => $result['severity'] ?? null,
+                'diagnosis' => $result['diagnosis'] ?? null,
+                'specialty' => $result['specialty'] ?? null,
+                'reports' => $result['reports'] ?? null,
             ]);
+
+            // Same "finished" condition the frontend already applies
+            // client-side (stage === 'diagnosis' || isEmergency) — mirrored
+            // here so ended_at (and therefore isFinished on a later
+            // reopen) agrees with what the patient saw live, instead of
+            // silently staying null forever for every Healix conversation
+            // (MedicalAssistantService is the only thing that ever set
+            // this column before).
+            if (($stage === 'diagnosis' || $isCrisis) && $conversation->ended_at === null) {
+                $conversation->forceFill(['ended_at' => now()])->save();
+            }
 
             return [
                 'patient_message' => $patientMessage,
