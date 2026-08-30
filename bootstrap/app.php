@@ -1,8 +1,10 @@
 <?php
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 use App\Http\Middleware\EncodeJsonUnescaped;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\SetLocale;
@@ -22,6 +24,17 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('password-otp:prune')->hourly();
     })
     ->withMiddleware(function (Middleware $middleware) {
+
+    // Never resolve route('login') for an API request. Laravel's default
+    // Authenticate middleware computes redirectTo() EAGERLY (before the
+    // AuthenticationException is even constructed) whenever the request
+    // doesn't send Accept: application/json — and this app has no named
+    // 'login' route (API-only), so that route() call itself threw
+    // RouteNotFoundException, surfacing as a raw 500 instead of the 401
+    // the ->withExceptions() render() callback below is meant to produce.
+    // Returning null here for any api/* path skips the redirect attempt
+    // entirely, regardless of the request's Accept header.
+    $middleware->redirectGuestsTo(fn ($request) => $request->is('api/*') ? null : route('login'));
 
     // The app runs behind an ngrok tunnel in dev: the actual TCP connection to
     // Laravel is plain HTTP on localhost, and ngrok describes the real public
@@ -53,6 +66,21 @@ return Application::configure(basePath: dirname(__DIR__))
     ]);
 })
     ->withExceptions(function (Exceptions $exceptions) {
-        // 
+        // API-only app: there is no named 'login' route for the default
+        // Authenticate middleware to redirect unauthenticated requests to.
+        // Without this, any request under /api/* that arrives without
+        // Accept: application/json (a raw curl/Postman call, a missing or
+        // expired Bearer token from a client that didn't set that header)
+        // hits Laravel's default redirectTo(route('login')), which throws
+        // RouteNotFoundException and surfaces as a misleading 500 instead
+        // of the real 401.
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => __('auth.unauthenticated'),
+                ], 401);
+            }
+        });
     })
     ->create();

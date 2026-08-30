@@ -8,9 +8,12 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Services\DeliveryAssignmentService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class OrderController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(
         protected DeliveryAssignmentService $deliveryAssignmentService
     ) {}
@@ -21,16 +24,22 @@ class OrderController extends Controller
      */
     public function markReadyForDelivery($orderId)
     {
+        $order = Order::find($orderId);
+
+        if (!$order) {
+            return response()->json([
+                'status' => 'error',
+                'message' => __('pharmacy.order_not_found')
+            ], 404);
+        }
+
+        // Outside the try block below on purpose: AuthorizationException
+        // must reach Laravel's default handler as a 403, not get swallowed
+        // by the generic `catch (\Exception $e)` further down and turned
+        // into a misleading 500.
+        $this->authorize('update', $order);
+
         try {
-            $order = Order::find($orderId);
-
-            if (!$order) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => __('pharmacy.order_not_found')
-                ], 404);
-            }
-
             if ($order->status !== 'accepted') {
                 return response()->json([
                     'status' => 'error',

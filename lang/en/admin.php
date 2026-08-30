@@ -14,6 +14,7 @@ return [
     'attachments_retrieved' => 'Attachments retrieved successfully.',
 
     'user_created' => 'Account created successfully',
+    'user_added' => 'Account created successfully',
     'user_updated' => 'Account updated successfully',
     'user_deleted' => 'Account deleted successfully',
     'user_approved' => 'Account approved and activated',
@@ -33,6 +34,7 @@ return [
         'home_visit_nurse' => 'Home Visit - Nurse',
         'home_visit_physiotherapist' => 'Home Visit - Physiotherapist',
         'medication_delivery' => 'Medication Delivery',
+        'pharmacy_order' => 'Pharmacy Order',
     ],
 
     /*

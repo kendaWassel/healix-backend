@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Consultation;
+use App\Models\Conversation;
 use App\Models\CareProvider;
 use App\Models\Delivery;
 use App\Models\DeliveryTask;
@@ -23,6 +24,7 @@ use App\Models\Specialization;
 use App\Models\Upload;
 use App\Policies\CareProviderPolicy;
 use App\Policies\ConsultationPolicy;
+use App\Policies\ConversationPolicy;
 use App\Policies\DeliveryPolicy;
 use App\Policies\DeliveryTaskPolicy;
 use App\Policies\DoctorPolicy;
@@ -52,6 +54,7 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         Patient::class => PatientPolicy::class,
         Consultation::class => ConsultationPolicy::class,
+        Conversation::class => ConversationPolicy::class,
         Prescription::class => PrescriptionPolicy::class,
         MedicalRecord::class => MedicalRecordPolicy::class,
         Order::class => OrderPolicy::class,

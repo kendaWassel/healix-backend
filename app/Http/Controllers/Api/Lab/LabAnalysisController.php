@@ -10,6 +10,7 @@ use App\Models\Consultation;
 use App\Models\LabAnalysis;
 use App\Models\Patient;
 use App\Services\Lab\LabAnalysisService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +18,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class LabAnalysisController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(
         protected LabAnalysisService $labService
     ) {}
@@ -154,9 +157,12 @@ class LabAnalysisController extends Controller
      */
     public function indexForPatient(Request $request, int $patientId): JsonResponse
     {
-        if (! Patient::where('id', $patientId)->exists()) {
+        $patient = Patient::find($patientId);
+        if (! $patient) {
             return $this->patientNotFound();
         }
+
+        $this->authorize('view', $patient);
 
         $analyses = LabAnalysis::where('patient_id', $patientId)
             ->with('upload')
@@ -328,9 +334,12 @@ class LabAnalysisController extends Controller
      */
     protected function findAnalysisForPatient(int $patientId, int $id): LabAnalysis|JsonResponse
     {
-        if (! Patient::where('id', $patientId)->exists()) {
+        $patient = Patient::find($patientId);
+        if (! $patient) {
             return $this->patientNotFound();
         }
+
+        $this->authorize('view', $patient);
 
         $analysis = LabAnalysis::where('id', $id)
             ->where('patient_id', $patientId)

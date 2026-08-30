@@ -9,7 +9,7 @@ use App\Services\AI\FastApiClient;
  *
  * Reuses the FastApiClient transport (timeouts, retries, logging, typed
  * exceptions) and only repoints it at the services.healix configuration —
- * same pattern as LabClient/DdiClient/ClinicalGuidanceClient. The one
+ * same pattern as LabClient/DdiClient. The one
  * difference from those: this service is not internet-facing and gates
  * every route but /health on a shared-secret header (its own CLAUDE.md >
  * Architecture: "Internal network + shared secret in header"), so
@@ -129,6 +129,37 @@ class HealixAiClient extends FastApiClient
     public function synthesize(string $text): string
     {
         return $this->postBinary('/speech/synthesize', ['text' => $text]);
+    }
+
+    /**
+     * POST /health-questions — general Arabic health-education Q&A. A
+     * SEPARATE feature from sendMessage()/POST /chat above: this route
+     * never diagnoses and never touches triage state (that Python
+     * service's own docs/AHD_DATA_PROVENANCE.md documents the full
+     * separation). Field names match
+     * api/health_qa_contracts.py's HealthQuestionRequest exactly
+     * (question, thread_id, locale).
+     *
+     * $threadId here is an audit-correlation tag only, not a conversation
+     * key — this route has no LangGraph checkpointer behind it
+     * (rag/health_education/service.py's answer_health_question() is
+     * stateless per call), so reusing the same id across many calls
+     * carries none of sendMessage()'s thread_id collision risk.
+     *
+     * @throws \App\Exceptions\AI\AIServiceException
+     */
+    public function askHealthQuestion(string $question, ?string $threadId = null, string $locale = 'ar'): array
+    {
+        $payload = [
+            'question' => $question,
+            'locale' => $locale,
+        ];
+
+        if ($threadId !== null) {
+            $payload['thread_id'] = $threadId;
+        }
+
+        return $this->post('/health-questions', $payload);
     }
 
     /**

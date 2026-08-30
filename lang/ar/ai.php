@@ -31,7 +31,6 @@ return [
     'service_label_medical_assistant' => 'خدمة المساعد الطبي',
     'service_label_ddi' => 'خدمة تداخلات الأدوية',
     'service_label_lab' => 'خدمة تحليل المختبر',
-    'service_label_clinical_guidance' => 'خدمة الإرشاد الطبي',
     'service_label_healix' => 'خدمة هيلكس للفرز الطبي بالذكاء الاصطناعي',
 
     /*
@@ -39,8 +38,6 @@ return [
     */
 
     'chat_started' => 'تم بدء جلسة المحادثة بنجاح.',
-    'chat_response' => 'تم توليد رد الذكاء الاصطناعي بنجاح.',
-    'guidance_greeting' => 'مرحباً — أساعدك على فهم أعراضك ومعرفة متى تطلب الرعاية. هذا إرشاد عام وليس تشخيصاً.',
     'healix_unavailable_notice' => 'ما قدرنا نوصل لمساعد الفرز الطبي هلق. رسالتك انحفظت — جرب كمان شوي، أو راجع دكتور مباشرة إذا كانت الأعراض ملحّة.',
     'conversation_created' => 'تم إنشاء المحادثة بنجاح.',
     'conversation_deleted' => 'تم حذف المحادثة بنجاح.',
@@ -59,6 +56,14 @@ return [
 
     'healix_speech_transcribed' => 'تم تحويل الكلام إلى نص بنجاح.',
     'healix_speech_synthesized' => 'تم توليد الصوت بنجاح.',
+
+    /*
+    | Health Education Q&A (POST /health-questions على خدمة هيلكس) — ميزة
+    | منفصلة تماماً عن الفرز الطبي أعلاه، بدون تشخيص وبدون حفظ محادثة.
+    */
+
+    'health_question_answered' => 'تم توليد الإجابة بنجاح.',
+    'health_question_unavailable_notice' => 'ما قدرنا نوصل لخدمة الأسئلة الصحية هلق. جرب كمان شوي، أو راجع دكتور مباشرة إذا كان سؤالك عاجل.',
 
     /*
     | تحويل الكلام إلى نص

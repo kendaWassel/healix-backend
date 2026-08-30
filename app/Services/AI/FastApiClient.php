@@ -39,8 +39,8 @@ class FastApiClient
 
     /**
      * Redact a request payload before it reaches the log sink. No-op by
-     * default — every existing integration (Lab, DDI, ClinicalGuidance,
-     * MedicalAssistant) keeps logging its full payload unchanged. Override
+     * default — every existing integration (Lab, DDI, MedicalAssistant)
+     * keeps logging its full payload unchanged. Override
      * in a subclass whose payload carries raw patient/clinical free text
      * (see HealixAiClient) so that text never lands in storage/logs/*.log,
      * which — unlike the FastAPI side's own audit log (see that project's

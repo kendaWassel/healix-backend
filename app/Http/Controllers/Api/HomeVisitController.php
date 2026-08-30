@@ -86,6 +86,13 @@ class HomeVisitController extends Controller
             ], 404);
         }
 
+        // The class-level authorize('createFollowUp', ...) above only checks
+        // the caller's role; this record-level check is redundant with the
+        // where('care_provider_id', ...) in the query above by construction,
+        // added as a formal backstop for the same reason as elsewhere in
+        // this batch.
+        $this->authorize('update', $originalVisit);
+
         // Create the follow-up visit
         $followUpVisit = HomeVisit::create([
             'consultation_id' => $originalVisit->consultation_id,

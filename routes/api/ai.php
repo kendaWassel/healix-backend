@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Api\AI\ChatController;
+use App\Http\Controllers\Api\AI\HealthQuestionController;
 use App\Http\Controllers\Api\AI\SpeechController;
 use App\Http\Controllers\Api\DDI\DrugInteractionController;
 use App\Http\Controllers\Api\Lab\LabAnalysisController;
@@ -11,10 +11,10 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
     Route::post('/speech-to-text', [SpeechController::class, 'transcribe']);
 
-    Route::prefix('chat')->group(function () {
-        Route::post('/start', [ChatController::class, 'startChat']);
-        Route::post('/send', [ChatController::class, 'sendMessage']);
-    });
+    // Health Education Q&A — separate feature from Healix triage above
+    // (no conversation, no diagnosis; see HealthQuestionController's own
+    // docblock and docs/AHD_DATA_PROVENANCE.md on the Python side).
+    Route::post('/health-questions', [HealthQuestionController::class, 'ask']);
     Route::prefix('lab')->group(function () {
         Route::get('/health', [LabAnalysisController::class, 'health']);
         Route::get('/reference-ranges', [LabAnalysisController::class, 'referenceRanges']);

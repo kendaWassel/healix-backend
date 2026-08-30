@@ -46,9 +46,35 @@ class HealixConversationTest extends TestCase
         return $user->fresh();
     }
 
+    /**
+     * Every real HTTP request Http::fake() doesn't explicitly match still
+     * goes out over the real network (Laravel does NOT stub unmatched
+     * URLs by default) — confirmed directly: without this, the new
+     * classification call HealixConversationService::sendMessage() now
+     * makes to /health-questions (merged health-education Q&A) tried a
+     * real connection to the configured (unrunning) local Healix service,
+     * slow and flaky. Faked here with a category that is neither
+     * 'educational' nor 'out_of_scope', so every existing test's
+     * assumption that the turn falls through to the real /chat call below
+     * keeps holding exactly as before.
+     */
+    private function fakeHealthQuestionsClassifyOnly(): array
+    {
+        return [
+            '*/health-questions' => Http::response([
+                'answer' => 'redirect message',
+                'category' => 'triage_redirect',
+                'sources' => [],
+                'grounded' => false,
+                'disclaimer' => '',
+                'retrieval_status' => 'insufficient',
+            ]),
+        ];
+    }
+
     private function fakeHealixChat(array $overrides = []): void
     {
-        Http::fake([
+        Http::fake(array_merge($this->fakeHealthQuestionsClassifyOnly(), [
             '*/chat' => Http::response(array_merge([
                 'thread_id' => '1',
                 'reply' => 'بناءً على الأعراض يلي ذكرتها، في احتمال أولي واحد بس مش تشخيص نهائي.',
@@ -60,7 +86,81 @@ class HealixConversationTest extends TestCase
                 'specialty' => 'عصبية',
                 'reports' => ['patient' => 'fake patient report', 'doctor' => 'fake doctor report'],
             ], $overrides)),
+        ]));
+    }
+
+    /**
+     * Merged health-education Q&A (HealixConversationService::sendMessage()'s
+     * new classify-first step): an 'educational' classification is answered
+     * directly, through the SAME /healix-messages endpoint the frontend
+     * already calls — no separate route, no frontend change. Confirms the
+     * real /chat triage call is never made for this turn.
+     */
+    public function test_an_educational_question_is_answered_directly_without_touching_triage(): void
+    {
+        $user = $this->patientUser();
+
+        Http::fake([
+            '*/health-questions' => Http::response([
+                'answer' => 'الفيتامين د بيلعب دور بصحة العظام والمناعة.',
+                'category' => 'educational',
+                'sources' => [['dataset' => 'AHD: Arabic Healthcare Dataset', 'category' => 'Nutrition', 'license' => 'CC BY 4.0']],
+                'grounded' => true,
+                'disclaimer' => 'هاد معلومات تثقيفية عامة فقط.',
+                'retrieval_status' => 'sufficient',
+            ]),
+            // Deliberately NOT faking /chat — if the code wrongly fell
+            // through to it, this would attempt a real network call and
+            // the test would fail/hang, proving the short-circuit works.
         ]);
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
+            ->json('data.id');
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
+                'message' => 'شو فوائد فيتامين د؟',
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('available', true)
+            ->assertJsonPath('stage', null)
+            ->assertJsonPath('reply', 'الفيتامين د بيلعب دور بصحة العظام والمناعة.');
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '/chat'));
+
+        $this->assertDatabaseHas('messages', [
+            'conversation_id' => $conversationId,
+            'sender' => 'assistant',
+            'message' => 'الفيتامين د بيلعب دور بصحة العظام والمناعة.',
+        ]);
+    }
+
+    /**
+     * The mirror case: a 'triage_redirect' classification (the message
+     * looks like a personal symptom, not a general question) falls
+     * through to the real, unmodified triage call exactly as before the
+     * merge — proving the new classify step never blocks a real triage
+     * turn, it only intercepts genuine general-knowledge questions.
+     */
+    public function test_a_personal_symptom_classification_still_reaches_real_triage(): void
+    {
+        $user = $this->patientUser();
+        $this->fakeHealixChat(); // classifies as 'triage_redirect' by default
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
+            ->json('data.id');
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
+                'message' => 'عندي صداع شديد من يومين',
+            ]);
+
+        $response->assertStatus(201)->assertJsonPath('stage', 'diagnosis');
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/chat'));
     }
 
     public function test_a_healix_turn_persists_both_messages_and_returns_the_right_shape(): void
@@ -103,12 +203,15 @@ class HealixConversationTest extends TestCase
             'message' => 'بناءً على الأعراض يلي ذكرتها، في احتمال أولي واحد بس مش تشخيص نهائي.',
         ]);
 
-        // thread_id sent to Python is the conversation's own id, not
-        // session_id (that field belongs to the OTHER assistant) —
-        // verifies the actual wiring, not just the response shape.
-        Http::assertSent(function (\Illuminate\Http\Client\Request $request) use ($conversationId) {
+        // thread_id sent to Python is the conversation's own healix_thread_id
+        // (a UUID, assigned once at creation) — never the raw auto-increment
+        // id, which is resettable and was the root cause of a real,
+        // reproduced cross-conversation state-leak bug (see
+        // HealixConversationService::sendMessage()'s own comment).
+        $expectedThreadId = Conversation::find($conversationId)->healix_thread_id;
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request) use ($expectedThreadId) {
             return str_contains($request->url(), '/chat')
-                && $request['thread_id'] === (string) $conversationId;
+                && $request['thread_id'] === $expectedThreadId;
         });
     }
 
@@ -134,16 +237,25 @@ class HealixConversationTest extends TestCase
         $conversationId = $this->actingAs($user, 'sanctum')
             ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
             ->json('data.id');
+        $threadId = Conversation::find($conversationId)->healix_thread_id;
 
         $this->actingAs($user, 'sanctum')
             ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
                 'message' => 'عندي صداع نابض من جهة وحدة مع غثيان',
             ]);
 
+        // The turn now also makes a first, separate call to /health-questions
+        // to classify the message (merged health-education Q&A — see
+        // HealixConversationService::sendMessage()'s own comment) before the
+        // real /chat call below — both log identical generic message text
+        // via the shared FastApiClient::send(), so these closures check the
+        // URL too, to isolate the assertion to the real triage call this
+        // test is actually about.
         Log::shouldHaveReceived('info')
-            ->withArgs(function (string $message, array $context) use ($conversationId) {
+            ->withArgs(function (string $message, array $context) use ($threadId) {
                 return $message === 'Healix AI triage service request'
-                    && $context['payload'] === ['thread_id' => (string) $conversationId]
+                    && str_contains($context['url'], '/chat')
+                    && $context['payload'] === ['thread_id' => $threadId]
                     && ! str_contains(json_encode($context), 'صداع');
             })
             ->once();
@@ -151,6 +263,7 @@ class HealixConversationTest extends TestCase
         Log::shouldHaveReceived('info')
             ->withArgs(function (string $message, array $context) {
                 return $message === 'Healix AI triage service response'
+                    && str_contains($context['url'], '/chat')
                     && $context['status'] === 200
                     && is_int($context['latency_ms'])
                     && $context['body'] === ['thread_id' => '1']
@@ -169,9 +282,9 @@ class HealixConversationTest extends TestCase
         // 500, exhausting FastApiClient's retries and surfacing as
         // AIServiceException — which HealixConversationService must catch,
         // not let bubble up as an unhandled 500 to the patient.
-        Http::fake([
+        Http::fake(array_merge($this->fakeHealthQuestionsClassifyOnly(), [
             '*/chat' => Http::response(['detail' => 'internal server error'], 500),
-        ]);
+        ]));
 
         $conversationId = $this->actingAs($user, 'sanctum')
             ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
@@ -521,7 +634,7 @@ class HealixConversationTest extends TestCase
         // version's resolution order (verified directly: it did not take
         // effect when tried), so this is the correct tool, not a style
         // preference.
-        Http::fake([
+        Http::fake(array_merge($this->fakeHealthQuestionsClassifyOnly(), [
             '*/chat' => Http::sequence()
                 ->push([
                     'thread_id' => '1',
@@ -539,7 +652,7 @@ class HealixConversationTest extends TestCase
                 // whenEmpty() keeps returning 500 for every retry attempt,
                 // not just the first.
                 ->whenEmpty(Http::response(['detail' => 'internal server error'], 500)),
-        ]);
+        ]));
 
         $conversationId = $this->actingAs($user, 'sanctum')
             ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])

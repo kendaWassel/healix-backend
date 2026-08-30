@@ -3,103 +3,59 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use Database\Seeders\Data\DemoScenarioData;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
+    /**
+     * Exactly seven accounts — one per role, no extra "fleet" accounts.
+     * Every other seeder in this pass hangs its scenario data off these
+     * same seven instead of creating its own throwaway accounts.
+     */
     public function run(): void
     {
-        // Admin
-        User::create([
-            'full_name' => 'Admin',
-            'email' => 'admin@gmail.com',
-            'phone' => '1234567890',
-            'password' => Hash::make('password'),
-            'role' => 'admin',
-            'status' => 'approved',
-            'is_active' => true,
-            'approved_at' => now(),
-            'admin_note' => 'Initial admin',
-            'email_verified_at' => now(),
-        ]);
+        $accounts = [
+            ['full_name' => 'Admin', 'email' => DemoScenarioData::ADMIN_EMAIL, 'phone' => '1234567890', 'role' => 'admin'],
+            ['full_name' => 'Patient', 'email' => DemoScenarioData::PATIENT_EMAIL, 'phone' => '234567890', 'role' => 'patient'],
+            ['full_name' => 'Doctor', 'email' => DemoScenarioData::DOCTOR_EMAIL, 'phone' => '3456789012', 'role' => 'doctor'],
+            ['full_name' => 'Pharmacist', 'email' => DemoScenarioData::PHARMACIST_EMAIL, 'phone' => '4567890123', 'role' => 'pharmacist'],
+            ['full_name' => 'Nurse', 'email' => DemoScenarioData::NURSE_EMAIL, 'phone' => '5678901234', 'role' => 'care_provider'],
+            ['full_name' => 'Physiotherapist', 'email' => DemoScenarioData::PHYSIOTHERAPIST_EMAIL, 'phone' => '6789012345', 'role' => 'care_provider'],
+            ['full_name' => 'Delivery', 'email' => DemoScenarioData::DELIVERY_EMAIL, 'phone' => '7890123456', 'role' => 'delivery'],
+        ];
 
-        // Patient
-        User::create([
-            'full_name' => 'Patient',
-            'email' => 'patient@gmail.com',
-            'phone' => '234567890',
-            'password' => Hash::make('password'),
-            'role' => 'patient',
-            'status' => 'approved',
-            'is_active' => true,
-            'approved_at' => now(),
-            'email_verified_at' => now(),
-        ]);
+        foreach ($accounts as $row) {
+            $this->createApproved($row['full_name'], $row['email'], $row['phone'], $row['role']);
+        }
 
-        // Doctor
-        User::create([
-            'full_name' => 'Doctor',
-            'email' => 'doctor@gmail.com',
-            'phone' => '3456789012',
-            'password' => Hash::make('password'),
-            'role' => 'doctor',
-            'status' => 'approved',
-            'is_active' => true,
-            'approved_at' => now(),
-            'email_verified_at' => now(),
-        ]);
+        // One doctor per remaining specialization (DOCTOR_EMAIL/Cardiology
+        // above already covers one) — so every specialty is bookable.
+        // Phone is derived from the email (crc32), not an incrementing
+        // counter — a counter reassigns different numbers to different
+        // accounts whenever this list's order or length changes, colliding
+        // with numbers already claimed by existing rows.
+        foreach (DemoScenarioData::SPECIALIST_DOCTORS as $email => $specializationName) {
+            $phone = '39' . str_pad((string) (crc32($email) % 100000000), 8, '0', STR_PAD_LEFT);
+            $this->createApproved("Dr. {$specializationName}", $email, $phone, 'doctor');
+        }
+    }
 
-        // Pharmacist
-        User::create([
-            'full_name' => 'Pharmacist',
-            'email' => 'pharmacist@gmail.com',
-            'phone' => '4567890123',
-            'password' => Hash::make('password'),
-            'role' => 'pharmacist',
-            'status' => 'approved',
-            'is_active' => true,
-            'approved_at' => now(),
-            'email_verified_at' => now(),
-        ]);
-
-        // Nurse
-        User::create([
-            'full_name' => 'Nurse',
-            'email' => 'nurse@gmail.com',
-            'phone' => '5678901234',
-            'password' => Hash::make('password'),
-            'role' => 'care_provider',
-            'status' => 'approved',
-            'is_active' => true,
-            'approved_at' => now(),
-            'email_verified_at' => now(),
-        ]);
-
-        // Physiotherapist
-        User::create([
-            'full_name' => 'Physiotherapist',
-            'email' => 'physiotherapist@gmail.com',
-            'phone' => '6789012345',
-            'password' => Hash::make('password'),
-            'role' => 'care_provider',
-            'status' => 'approved',
-            'is_active' => true,
-            'approved_at' => now(),
-            'email_verified_at' => now(),
-        ]);
-
-        // Delivery
-        User::create([
-            'full_name' => 'Delivery',
-            'email' => 'delivery@gmail.com',
-            'phone' => '7890123456',
-            'password' => Hash::make('password'),
-            'role' => 'delivery',
-            'status' => 'approved',
-            'is_active' => true,
-            'approved_at' => now(),
-            'email_verified_at' => now(),
-        ]);
+    protected function createApproved(string $fullName, string $email, string $phone, string $role): User
+    {
+        return User::firstOrCreate(
+            ['email' => $email],
+            [
+                'full_name' => $fullName,
+                'phone' => $phone,
+                'password' => Hash::make(DemoScenarioData::DEMO_PASSWORD),
+                'role' => $role,
+                'status' => 'approved',
+                'is_active' => true,
+                'approved_at' => now(),
+                'email_verified_at' => now(),
+            ]
+        );
     }
 }

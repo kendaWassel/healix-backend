@@ -8,19 +8,6 @@ use App\Models\Patient;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 
-/**
- * Doctor-facing view of the Healix/AI-generated report for a patient —
- * previously nonexistent: this class was an empty, unrouted stub, and
- * ConversationPolicy hard-codes patient-only ownership on the
- * conversation/report data itself, so no doctor could see any Healix
- * output at all before this.
- *
- * Deliberately scoped to "one patient this doctor has a real Consultation
- * with" (DoctorSummaryPolicy::view), never a general "all patients in my
- * specialty" browse — a doctor with no booked relationship to a patient
- * gets a 403, the same as MedicalRecordController::viewDetails now
- * enforces for medical records.
- */
 class DoctorSummaryController extends Controller
 {
     use AuthorizesRequests;

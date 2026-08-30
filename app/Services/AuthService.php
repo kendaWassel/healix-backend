@@ -53,12 +53,30 @@ class AuthService
         return response()->json(['message' => __('auth.logout_failed')], 400);
     }
 
-    public function register(array $data): array
+    /**
+     * @param bool $adminCreated When true (Admin::addUser), the account is
+     *   approved/activated/verified immediately instead of going through the
+     *   normal self-registration approval + email-verification flow — the
+     *   admin creating it directly IS the approval. Setting
+     *   email_verified_at before sendVerificationEmail() runs makes that
+     *   call's own hasVerifiedEmail() guard skip sending a "verify your
+     *   email" mail the account no longer needs.
+     */
+    public function register(array $data, bool $adminCreated = false): array
     {
         DB::beginTransaction();
 
         try {
             $user = $this->createUser($data);
+
+            if ($adminCreated) {
+                $user->status = 'approved';
+                $user->is_active = true;
+                $user->approved_at = now();
+                $user->email_verified_at = now();
+                $user->admin_note = 'Created directly by admin ID: ' . auth()->id();
+                $user->save();
+            }
 
             // Create role-specific profile
             $this->createRoleProfile($user, $data);
@@ -68,16 +86,19 @@ class AuthService
 
             // Send verification email. A failure here must not roll back an
             // otherwise-successful registration — it's reported honestly below
-            // instead (and logged inside sendVerificationEmail()).
+            // instead (and logged inside sendVerificationEmail()). No-op when
+            // $adminCreated already marked the email verified above.
             $emailSent = VerifyEmailController::sendVerificationEmail($user);
 
             DB::commit();
 
             return [
                 'status' => 'success',
-                'message' => $emailSent
-                    ? 'User registered successfully. Please check your email for verification.'
-                    : 'User registered successfully, but we could not send the verification email. Please request a new one.',
+                'message' => $adminCreated
+                    ? 'User created successfully.'
+                    : ($emailSent
+                        ? 'User registered successfully. Please check your email for verification.'
+                        : 'User registered successfully, but we could not send the verification email. Please request a new one.'),
                 'user_id' => $user->id,
                 'email_sent' => $emailSent,
             ];
@@ -88,7 +109,7 @@ class AuthService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            throw $e; 
+            throw $e;
         }
     }
 

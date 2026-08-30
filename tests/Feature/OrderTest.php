@@ -34,6 +34,10 @@ class OrderTest extends TestCase
             'consultation_id' => $consultation->id,
             'patient_id' => $patient->id,
             'doctor_id' => $doctor->id,
+            // Real rule (PharmacistController::accept/reject): the check is
+            // against the PRESCRIPTION's own pharmacist_id, not the order's —
+            // this was missing here and every request 403'd as "not authorized".
+            'pharmacist_id' => $pharmacist->id,
             'status' => 'sent_to_pharmacy',
         ]);
 
@@ -83,6 +87,10 @@ class OrderTest extends TestCase
             'consultation_id' => $consultation->id,
             'patient_id' => $patient->id,
             'doctor_id' => $doctor->id,
+            // Real rule (PharmacistController::accept/reject): the check is
+            // against the PRESCRIPTION's own pharmacist_id, not the order's —
+            // this was missing here and every request 403'd as "not authorized".
+            'pharmacist_id' => $pharmacist->id,
             'status' => 'sent_to_pharmacy',
         ]);
 
@@ -95,8 +103,11 @@ class OrderTest extends TestCase
 
         $this->actingAs($pharmacist->user);
 
+        // The controller validates a `reason` field (required|string|max:500)
+        // — added after this test was first written; `rejection_reason` was
+        // never a real request field.
         $response = $this->postJson("/api/pharmacist/prescriptions/{$prescription->id}/reject", [
-            'rejection_reason' => 'Out of stock',
+            'reason' => 'Out of stock',
         ]);
 
         $response->assertStatus(200)

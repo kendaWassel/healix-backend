@@ -101,6 +101,12 @@ return [
         'message_max' => 'Message must not exceed 5000 characters.',
     ],
 
+    'health_question' => [
+        'question_required' => 'Question content is required.',
+        'question_string' => 'Question must be a string.',
+        'question_max' => 'Question must not exceed 2000 characters.',
+    ],
+
     'speech' => [
         'conversation_id_required' => 'Conversation ID is required.',
         'conversation_id_exists' => 'The selected conversation does not exist.',

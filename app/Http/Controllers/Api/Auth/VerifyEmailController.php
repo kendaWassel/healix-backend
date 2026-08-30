@@ -29,11 +29,17 @@ class VerifyEmailController extends Controller
             return false;
         }
 
-        // Generate a signed verification URL valid for 60 minutes
+        // Generate a signed verification URL valid for 60 minutes.
+        // `lang` is included so the landing page (opened from a mail client
+        // that cannot send Accept-Language) follows the user's preference.
         $verificationUrl = URL::temporarySignedRoute(
             'verification.verify',
             now()->addMinutes(60),
-            ['id' => $user->id, 'hash' => sha1($user->email)]
+            [
+                'id' => $user->id,
+                'hash' => sha1($user->email),
+                'lang' => $user->preferredLocale(),
+            ]
         );
 
         try {
@@ -53,6 +59,20 @@ class VerifyEmailController extends Controller
         }
     }
 
+    /**
+     * Browser landing page after email verification. Tries to open the
+     * Healix app via deep link; shows a tap-to-open fallback if that fails.
+     */
+    public function openApp(Request $request)
+    {
+        return response()
+            ->view('auth.verify-email', [
+                'token' => $request->query('token'),
+                'role' => $request->query('role'),
+            ])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+
     public function verify(Request $request, $id, $hash)
     {
         $user = User::findOrFail($id);
@@ -61,21 +81,22 @@ class VerifyEmailController extends Controller
             if ($request->wantsJson()) {
                 return response()->json(['message' => __('auth.verification_link_expired')], 400);
             }
-            return redirect(env('FRONTEND_URL') . '?verified=false&message=Invalid+or+expired+verification+link');
+            return $this->redirectToLanding($user);
         }
 
         if (!hash_equals((string) $hash, sha1($user->email))) {
             if ($request->wantsJson()) {
                 return response()->json(['message' => __('auth.verification_link_invalid')], 400);
             }
-            return redirect(env('FRONTEND_URL') . '?verified=false&message=Invalid+verification+link');
+            return $this->redirectToLanding($user);
         }
 
         if ($user->hasVerifiedEmail()) {
             if ($request->wantsJson()) {
                 return response()->json(['message' => __('auth.email_already_verified')], 400);
             }
-            return redirect(env('FRONTEND_URL') . '?verified=true&message=Email+already+verified');
+
+            return $this->redirectToApp($user);
         }
 
         if ($user->markEmailAsVerified()) {
@@ -98,17 +119,13 @@ class VerifyEmailController extends Controller
                 return response()->json([
                     'verified' => true,
                     'token' => $token,
+                    'role' => $this->clientRole($user),
                     'email' => $user->email,
                     'message' => __('auth.email_verified'),
                 ]);
             }
 
-            return redirect(env('FRONTEND_URL') . 'api/auth/login?' . http_build_query([
-                'verified' => 'true',
-                'token' => $token,
-                'email' => $user->email,
-                'message' => __('auth.email_verified')
-            ]));
+            return $this->redirectToLanding($user, $token);
         }
 
         if ($request->wantsJson()) {
@@ -118,11 +135,39 @@ class VerifyEmailController extends Controller
             ], 500);
         }
 
-        return redirect(env('FRONTEND_URL') . 'api/auth/login?' . http_build_query([
-            'verified' => 'false',
-            'message' => __('auth.verification_failed')
+        return $this->redirectToLanding($user);
+    }
+
+    private function redirectToApp(User $user)
+    {
+        $token = $user->createToken('Email Verification Token')->plainTextToken;
+
+        return $this->redirectToLanding($user, $token);
+    }
+
+    private function redirectToLanding(User $user, ?string $token = null)
+    {
+        return redirect()->route('verify-email', array_filter([
+            'token' => $token,
+            'role' => $token ? $this->clientRole($user) : null,
+            'lang' => $user->preferredLocale(),
         ]));
     }
 
-    
+    /**
+     * Role string the mobile client navigates on (see VerifyEmailScreen).
+     * Users stored as care_provider are nurse or physiotherapist there.
+     */
+    private function clientRole(User $user): string
+    {
+        if ($user->role !== 'care_provider') {
+            return (string) $user->role;
+        }
+
+        $type = $user->careProvider?->type;
+
+        return in_array($type, ['nurse', 'physiotherapist'], true)
+            ? $type
+            : 'care_provider';
+    }
 }

@@ -11,9 +11,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Services\DeliveryAssignmentService;
 use App\Services\OSRMService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class DeliveryController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(
         protected DeliveryAssignmentService $deliveryAssignmentService,
         protected OSRMService $osrmService
@@ -267,6 +270,12 @@ class DeliveryController extends Controller
         return response()->json(['message' => 'Task not found'], 404);
     }
 
+    // Redundant with the where('delivery_id', ...) above by construction —
+    // added as a formal backstop so a future change to that query can't
+    // silently drop the ownership scoping without DeliveryTaskPolicy still
+    // catching it.
+    $this->authorize('update', $task);
+
     if ($task->delivery_fee !== null) {
         return response()->json(['message' => 'Delivery fee already set'], 400);
     }
@@ -368,6 +377,8 @@ class DeliveryController extends Controller
         if (!$task) {
             return response()->json(['message' => 'Task not found'], 404);
         }
+
+        $this->authorize('update', $task);
 
         $allowed = [
             'pending' => ['picking_up_the_order'],

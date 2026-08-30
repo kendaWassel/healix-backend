@@ -35,6 +35,10 @@ return [
     'verification_failed' => 'فشل التحقق من البريد الإلكتروني',
     'verification_sent' => 'تم إرسال رابط التحقق إلى بريدك الإلكتروني.',
 
+    'verify_open_app_title' => 'جارٍ فتح التطبيق...',
+    'verify_open_app_fallback' => 'لم يُفتح التطبيق تلقائيًا؟',
+    'verify_open_app_action' => 'اضغط هنا لفتح التطبيق',
+
     /*
     | اعتماد الحساب وتفعيله
     */

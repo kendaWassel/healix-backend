@@ -24,7 +24,7 @@ return [
     'allowed_origins' => [
         'https://healix-admin-kappa.vercel.app',
         'http://localhost:5173',
-        'https://healix-admin-only.vercel.app/',
+        'https://healix-admin-only.vercel.app/','*'
     ],
 
     'allowed_origins_patterns' => [],

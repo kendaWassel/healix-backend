@@ -81,15 +81,94 @@ class HealixConversationService
                 'turn_number' => $turn,
             ]);
 
-            // thread_id: the conversation's own primary key, NOT session_id.
-            // session_id already belongs to the OTHER assistant's session
-            // concept (MedicalAssistantService -> InterviewService /
+            // thread_id: the conversation's own healix_thread_id (a UUID
+            // assigned once at creation, Conversation::booted()), NOT the
+            // auto-increment id and NOT session_id. session_id already
+            // belongs to the OTHER assistant's session concept
+            // (MedicalAssistantService -> InterviewService /
             // AssessmentService — confirmed directly by reading that class
-            // before reusing anything here, not assumed safe). Healix's
-            // checkpointer only needs a stable, unique-per-conversation
-            // string; the conversation's own id already guarantees both,
-            // with nothing else to coordinate or collide with.
-            $threadId = (string) $conversation->id;
+            // before reusing anything here, not assumed safe).
+            //
+            // Using the raw auto-increment id here was a real, reproduced
+            // bug: Laravel's conversations.id resets on migrate:fresh, but
+            // the Python side's LangGraph checkpointer file
+            // (healix_checkpoints.sqlite) is never cleared, so a brand-new
+            // conversation reusing an old small integer id would silently
+            // inherit that old thread's entire accumulated state — including
+            // an already-completed diagnosis — and could immediately
+            // re-emit it via reiterate_terminal_outcome regardless of what
+            // the new message actually said. A UUID can never collide with
+            // a prior thread_id across any number of database resets, which
+            // permanently closes off this class of bug.
+            $threadId = $conversation->healix_thread_id;
+
+            // Merged health-education Q&A into this same turn (single API
+            // for the frontend — no separate endpoint, no frontend change).
+            // Classifies via the ALREADY-ISOLATED health-education feature
+            // (rag/health_education/ on the Python side, called exactly as
+            // POST /health-questions already does) — deliberately NOT
+            // touching graph.py or any triage node, per that module's own
+            // "never touches graph.py... POST /chat cannot be affected"
+            // design rule (rag/health_education/service.py's docstring).
+            //
+            // Only "educational" and "out_of_scope" are answered directly
+            // here — both are real, standalone answers. "medication_safety",
+            // "triage_redirect" and "emergency_redirect" all normally reply
+            // with "please use the Healix assessment chat instead", which
+            // makes no sense now that there is only one chat — those three
+            // fall through to the real, unmodified triage call below
+            // instead, exactly as if this classification step never ran.
+            // thread_id here is the USER's id, not the conversation id —
+            // matching HealthQuestionController::ask()'s own convention
+            // (this feature is stateless per call, so reusing a ourselves
+            // id across turns carries none of the triage thread_id's
+            // collision risk — see HealixAiClient::askHealthQuestion()'s
+            // own doc comment).
+            $qaCategory = null;
+            $qaAnswer = null;
+            try {
+                $qa = $this->healix->askHealthQuestion($text, (string) $user->id);
+                $qaCategory = $qa['category'] ?? null;
+                $qaAnswer = $qa['answer'] ?? null;
+            } catch (AIServiceException $e) {
+                // Classification unavailable — fail OPEN toward the more
+                // critical triage path below rather than blocking this
+                // turn on a secondary feature's outage.
+                Log::info('Health-question classification unavailable, proceeding straight to triage', [
+                    'conversation_id' => $conversation->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            if (in_array($qaCategory, ['educational', 'out_of_scope'], true)) {
+                $assistantMessage = Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender' => Message::SENDER_ASSISTANT,
+                    'message_type' => Message::TYPE_TEXT,
+                    'message' => (string) $qaAnswer,
+                    'turn_number' => $turn,
+                    'is_crisis' => false,
+                    'severity' => null,
+                    'diagnosis' => null,
+                    'specialty' => null,
+                    'reports' => null,
+                ]);
+
+                return [
+                    'patient_message' => $patientMessage,
+                    'assistant_message' => $assistantMessage,
+                    'reply' => (string) $qaAnswer,
+                    'stage' => null,
+                    'assessment_id' => null,
+                    'is_crisis' => false,
+                    'severity' => null,
+                    'red_flags' => [],
+                    'diagnosis' => null,
+                    'specialty' => null,
+                    'reports' => null,
+                    'available' => true,
+                ];
+            }
 
             try {
                 $result = $this->healix->sendMessage($user->patient, $threadId, $text);

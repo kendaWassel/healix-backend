@@ -82,8 +82,8 @@ return [
     | Medical record notifications
     */
 
-    'medical_report_added_title' => 'New medical report',
-    'medical_report_added_body' => 'Your doctor added a new medical report to your file.',
+    'medical_report_edit_title' => 'Medical record updated',
+    'medical_report_edit_body' => 'Your medical record has been updated.',
 
     /*
     | Delivery notifications

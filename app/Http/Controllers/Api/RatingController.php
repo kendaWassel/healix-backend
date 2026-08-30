@@ -18,12 +18,20 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\RateRequest;
- 
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
 
 class RatingController extends Controller
 {
+    use AuthorizesRequests;
+
     public function rateDoctor(RateRequest $request, int $consultationId, int $doctorId)
     {
+        // Outside the try/catch below on purpose: it uses a broad
+        // `catch (\Exception $e)` which would otherwise swallow
+        // AuthorizationException into a misleading 500 instead of 403.
+        $this->authorize('create', Rating::class);
+
         $validated = $request->validated();
 
         try {
@@ -110,6 +118,8 @@ class RatingController extends Controller
 
     public function rateDelivery(RateRequest $request, int $taskId, int $deliveryId)
     {
+        $this->authorize('create', Rating::class);
+
         $validated = $request->validated();
 
         try {
@@ -213,6 +223,8 @@ class RatingController extends Controller
     
     public function ratePharmacy(RateRequest $request, int $orderId, int $pharmacyId)
     {
+        $this->authorize('create', Rating::class);
+
         $validated = $request->validated();
 
         try {
@@ -295,6 +307,8 @@ class RatingController extends Controller
     }
     public function rateCareProvider(RateRequest $request, int $sessionId, int $careProviderId)
     {
+        $this->authorize('create', Rating::class);
+
         $validated = $request->validated();
 
         try {

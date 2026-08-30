@@ -33,7 +33,6 @@ Route::middleware(['auth:sanctum', 'verified', 'role:patient'])
         // available doctors + slots) — one call for the AssessmentResultScreen.
         Route::get('/assessments/{id}/booking', [AssessmentController::class, 'bookingOptions']);
 
-        Route::post('/home-visits/{visit_id}/re-request', [HomeVisitController::class, 'reRequestHomeVisit']);
         Route::post('/home-visits/{visit_id}/request-new-care-provider', [PatientController::class, 'requestNewCareProvider']);
 
         Route::get('/medical-record', [MedicalRecordController::class, 'getPatientMedicalRecord']);
