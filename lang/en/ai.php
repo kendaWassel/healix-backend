@@ -32,7 +32,6 @@ return [
     'service_label_medical_assistant' => 'Medical Assistant service',
     'service_label_ddi' => 'Drug interaction service',
     'service_label_lab' => 'Lab analysis service',
-    'service_label_clinical_guidance' => 'Clinical guidance service',
     'service_label_healix' => 'Healix AI triage service',
 
     /*
@@ -40,8 +39,6 @@ return [
     */
 
     'chat_started' => 'Chat session started successfully.',
-    'chat_response' => 'AI response generated successfully.',
-    'guidance_greeting' => 'Hello — I can help you understand your symptoms and know when to seek care. This is general guidance, not a diagnosis.',
     // Fallback assistant message when the Healix triage service is
     // unreachable (HealixConversationService catches AIServiceException
     // and persists this instead of losing the turn) — same treatment as
@@ -64,6 +61,15 @@ return [
 
     'healix_speech_transcribed' => 'Speech transcribed successfully.',
     'healix_speech_synthesized' => 'Speech synthesized successfully.',
+
+    /*
+    | Health Education Q&A (POST /health-questions on the Healix service) —
+    | a separate feature from triage above: no diagnosis, no conversation
+    | persisted.
+    */
+
+    'health_question_answered' => 'Answer generated successfully.',
+    'health_question_unavailable_notice' => "We couldn't reach the health-question service right now. Please try again shortly, or consult a doctor directly if your question is urgent.",
 
     /*
     | Speech to text

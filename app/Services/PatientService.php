@@ -322,7 +322,18 @@ class PatientService
      */
     public function getPrescriptionStatus(int $prescriptionId): array
     {
-        $prescription = Prescription::find($prescriptionId);
+        $patient = Auth::user()?->patient;
+        if (!$patient) {
+            throw new \Exception(__('messages.patient_not_found_for_user'), 404);
+        }
+
+        // Scoped to the caller's own patient_id — not currently reachable
+        // from any route, but unscoped would let one patient read another
+        // patient's order/pharmacy status by guessing a prescription id if
+        // this method is ever wired up later.
+        $prescription = Prescription::where('id', $prescriptionId)
+            ->where('patient_id', $patient->id)
+            ->first();
 
         if (!$prescription) {
             throw new \Exception(__('pharmacy.prescription_not_found'), 404);

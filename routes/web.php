@@ -1,6 +1,7 @@
 <?php
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\InterviewChatController;
+use App\Http\Controllers\Api\Auth\VerifyEmailController;
 
 
 
@@ -24,6 +25,14 @@ use App\Http\Controllers\InterviewChatController;
 Route::get('/', function () {
     return view('welcome');
 });
+
+/*
+| Email verification deep-link landing page.
+| The signed API verify endpoint redirects here with ?token= so the browser
+| can hand the session off to the Healix mobile app.
+*/
+Route::get('/verify-email', [VerifyEmailController::class, 'openApp'])
+    ->name('verify-email');
 
 /*
 | History-taking interview — simple Blade test page.

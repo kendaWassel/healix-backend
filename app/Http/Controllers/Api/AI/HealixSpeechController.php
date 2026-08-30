@@ -100,6 +100,7 @@ class HealixSpeechController extends Controller
      */
     public function synthesize(SynthesizeHealixSpeechRequest $request): JsonResponse|Response
     {
+        // 60 seconds is plenty for a single text-to-speech call, and the
         set_time_limit(60);
 
         try {

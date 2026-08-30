@@ -7,11 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Doctor\VerifyDraftPrescriptionRequest;
 use App\Models\Patient;
 use App\Services\DDI\PrescriptionSafetyService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
 class PrescriptionSafetyController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(
         protected PrescriptionSafetyService $safetyService
     ) {}
@@ -38,6 +41,11 @@ class PrescriptionSafetyController extends Controller
                 'message' => __('messages.patient_not_found'),
             ], 404);
         }
+
+        // Outside the try/catch below on purpose: AuthorizationException
+        // would otherwise be caught by `catch (\Throwable $e)` and turned
+        // into a misleading 500 instead of reaching Laravel's 403 handler.
+        $this->authorize('view', $patient);
 
         try {
             $report = $this->safetyService->verifyDraft(

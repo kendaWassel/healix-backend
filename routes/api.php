@@ -64,10 +64,11 @@ Route::get('/faqs', [FaqController::class, 'index']);
 Route::get('/first-aid', [FirstAidController::class, 'index']);
 Route::get('/specializations', [SpecializationController::class, 'listForRegistration']);
 
-// File Uploads (for registration before auth)
+// File Uploads (for registration before auth — uploadFile/uploadImage only;
+// downloading was moved into the authenticated group below, since unlike
+// uploading, download needs a UploadPolicy::view ownership check)
 Route::post('/uploads', [UploadController::class, 'uploadFile']);
 Route::post('/uploads/image', [UploadController::class, 'uploadImage']);
-Route::get('/uploads/download/{id}', [UploadController::class, 'downloadFile'])->name('download.file');
 Route::post('/stripe/webhook', [StripeController::class, 'webhook']);
 
 
@@ -75,7 +76,14 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
     Route::post('/auth/logout', [LoginController::class, 'logout']);
 
-    // PAYMENTS 
+    // Was public ("for registration before auth") alongside the upload
+    // routes above — but downloading needs an ownership check
+    // (UploadPolicy::view), which uploading doesn't. Any authenticated
+    // user could otherwise download any other user's certificate/license/
+    // prescription-image file by guessing a sequential Upload id.
+    Route::get('/uploads/download/{id}', [UploadController::class, 'downloadFile'])->name('download.file');
+
+    // PAYMENTS
     Route::prefix('payments')->group(function () {
         Route::post('/intent', [StripeController::class, 'createIntent']);
         Route::get('/status/{payment_intent_id}', [StripeController::class, 'status']);

@@ -14,6 +14,7 @@ return [
     'attachments_retrieved' => 'تم جلب المرفقات بنجاح.',
 
     'user_created' => 'تم إنشاء الحساب بنجاح',
+    'user_added' => 'تم إنشاء الحساب بنجاح',
     'user_updated' => 'تم تحديث الحساب بنجاح',
     'user_deleted' => 'تم حذف الحساب بنجاح',
     'user_approved' => 'تمت الموافقة على الحساب وتفعيله',
@@ -33,6 +34,7 @@ return [
         'home_visit_nurse' => 'زيارة منزلية - تمريض',
         'home_visit_physiotherapist' => 'زيارة منزلية - علاج فيزيائي',
         'medication_delivery' => 'توصيل أدوية',
+        'pharmacy_order' => 'طلبية صيدلية',
     ],
 
     /*

@@ -19,6 +19,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Requests\RegisterRequest;
+use App\Services\AuthService;
 
 
 
@@ -106,13 +108,47 @@ class AdminController extends Controller
                 DB::raw("'delivery' as service_type"),
             ]);
 
+        // Query for pharmacy-order ratings — this branch didn't exist
+        // before at all, so a rated pharmacist could never appear here
+        // regardless of the merge bug below.
+        $pharmacyQuery = Rating::query()
+            ->where('target_type', 'pharmacist')
+            ->whereNotNull('order_id')
+            ->join('orders', 'orders.id', '=', 'ratings.order_id')
+            ->join('patients', 'patients.id', '=', 'orders.patient_id')
+            ->join('users as patient_users', 'patient_users.id', '=', 'patients.user_id')
+            ->join('pharmacists', 'pharmacists.id', '=', 'ratings.target_id')
+            ->join('users as pharmacist_users', 'pharmacist_users.id', '=', 'pharmacists.user_id')
+            ->where('orders.status', 'delivered')
+            ->select([
+                'ratings.id as rating_id',
+                'ratings.stars',
+                'ratings.created_at',
+                'orders.id as service_id',
+                'orders.updated_at as completed_at',
+                'patient_users.full_name as patient_name',
+                'patient_users.phone as patient_phone',
+                'pharmacist_users.full_name as provider_name',
+                DB::raw("'pharmacy_order' as service_type"),
+            ]);
+
         // Get all results
         $consultationResults = $consultationQuery->get();
         $homeVisitResults = $homeVisitQuery->get();
         $deliveryResults = $deliveryQuery->get();
+        $pharmacyResults = $pharmacyQuery->get();
 
-        // Merge and sort by created_at desc
-        $allResults = $consultationResults->merge($homeVisitResults)->merge($deliveryResults)
+        // concat(), not merge() — Collection::merge() on Eloquent models
+        // merges BY PRIMARY KEY, and none of the four queries above select
+        // the raw `ratings.id` under its own name (it's aliased to
+        // `rating_id`), so every hydrated row's key is null. merge() then
+        // treats every row across all four queries as "the same" (null)
+        // key and overwrites down to a single row — this is why the
+        // endpoint was returning only 1 result despite 5 real ratings on
+        // completed services. concat() just appends, which is what a
+        // "combine these four independent result sets" merge actually
+        // needs.
+        $allResults = $consultationResults->concat($homeVisitResults)->concat($deliveryResults)->concat($pharmacyResults)
             ->sortByDesc('created_at');
 
         // Paginate the collection
@@ -127,7 +163,16 @@ class AdminController extends Controller
                     : __('admin.service_names.home_visit_physiotherapist');
             } elseif ($r->service_type === 'delivery') {
                 $serviceName = __('admin.service_names.medication_delivery');
+            } elseif ($r->service_type === 'pharmacy_order') {
+                $serviceName = __('admin.service_names.pharmacy_order');
             }
+
+            $providerTypeMap = [
+                'home_visit' => 'care_provider',
+                'consultation' => 'doctor',
+                'delivery' => 'delivery',
+                'pharmacy_order' => 'pharmacist',
+            ];
 
             return [
                 'id' => $r->service_id,
@@ -135,9 +180,13 @@ class AdminController extends Controller
                 'patient_phone' => $r->patient_phone,
                 'service_name' => $serviceName,
                 'service_provider' => $r->provider_name,
-                'provider_type' => $r->service_type === 'home_visit' ? 'care_provider' : $r->service_type,
+                'provider_type' => $providerTypeMap[$r->service_type] ?? $r->service_type,
                 'rating' => (int) $r->stars,
-                'date' => optional($r->completed_at)->toDateString(),
+                // optional()->toDateString() silently returns null here —
+                // Optional::__call only forwards to the wrapped value when
+                // it's an object, and a raw joined SQL timestamp column
+                // hydrates as a plain string, not a Carbon instance.
+                'date' => $r->completed_at ? \Illuminate\Support\Carbon::parse($r->completed_at)->toDateString() : null,
             ];
         })->values();
 
@@ -336,6 +385,35 @@ class AdminController extends Controller
 				'total' => $usersPaginated->total(),
 			],
 		]);
+	}
+
+	/**
+	 * POST /api/admin/users
+	 * Admin creates a service-provider/patient account directly. Reuses the
+	 * same RegisterRequest validation and AuthService::register() the public
+	 * self-registration flow (POST /auth/register) uses — same required
+	 * fields per role (see RegisterRequest::rules()), including uploading
+	 * files first via POST /uploads(/image) to get the *_file_id/*_image_id
+	 * values this expects. The only difference: $adminCreated=true skips the
+	 * pending-approval + email-verification steps, since the admin creating
+	 * it directly already is the approval.
+	 */
+	public function addUser(RegisterRequest $request, AuthService $authService)
+	{
+		try {
+			$result = $authService->register($request->validated(), adminCreated: true);
+
+			return response()->json([
+				'status' => 'success',
+				'message' => __('admin.user_added'),
+				'user_id' => $result['user_id'],
+			], 201);
+		} catch (\Exception $e) {
+			return response()->json([
+				'status' => 'error',
+				'message' => $e->getMessage(),
+			], 500);
+		}
 	}
 
 	/**

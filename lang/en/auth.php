@@ -45,6 +45,10 @@ return [
     'verification_failed' => 'Failed to verify email',
     'verification_sent' => 'A verification link has been sent to your email address.',
 
+    'verify_open_app_title' => 'Opening the app...',
+    'verify_open_app_fallback' => "Didn't the app open automatically?",
+    'verify_open_app_action' => 'Tap here to open the app',
+
     /*
     | Account approval / activation
     */

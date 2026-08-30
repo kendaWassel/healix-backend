@@ -40,6 +40,22 @@ class HealixAiService
     }
 
     /**
+     * Passthrough to the separate, isolated health-education feature
+     * (rag/health_education/ on the Python side) — used by
+     * HealixConversationService::sendMessage() to classify a chat turn
+     * before deciding whether to answer it directly or route it into the
+     * real triage call above. Deliberately calls the client directly with
+     * no patient-profile enrichment (unlike sendMessage() above): this
+     * feature is stateless and generic by design (api/health_qa_contracts.py).
+     *
+     * @throws AIServiceException
+     */
+    public function askHealthQuestion(string $question, string $threadId): array
+    {
+        return $this->client->askHealthQuestion($question, $threadId);
+    }
+
+    /**
      * Maps Patient::gender to api/contracts.py's ChatRequest.patient_sex —
      * Literal["male", "female"] | None on the Python side, consumed by
      * nodes/rag_retrieve.py to gate sex-specific knowledge-base entries

@@ -161,6 +161,8 @@ class PharmacistController extends Controller
             ], 404);
         }
 
+        $this->authorize('view', $order);
+
         $medicines = $order->prescription ? $order->prescription->medications->map(function ($item) {
             return [
                 'name' => $item->medication->name,
@@ -306,6 +308,7 @@ class PharmacistController extends Controller
 
             $pharmacist = Auth::user()->pharmacist;
             if (!$pharmacist) {
+                DB::rollBack();
                 return response()->json([
                     'status' => 'error',
                     'message' => __('messages.pharmacist_profile_not_found')
@@ -319,6 +322,7 @@ class PharmacistController extends Controller
                 ->first();
 
             if (!$order) {
+                DB::rollBack();
                 return response()->json([
                     'status' => 'error',
                     'message' => __('pharmacy.prescription_not_authorized')
@@ -328,6 +332,7 @@ class PharmacistController extends Controller
 
             // Check if prescription is already priced
             if ($prescription->status === 'priced') {
+                DB::rollBack();
                 return response()->json([
                     'status' => 'error',
                     'message' => __('pharmacy.already_priced')
@@ -336,6 +341,7 @@ class PharmacistController extends Controller
 
             // Only allow pricing when prescription is accepted
             if ($prescription->status !== 'accepted') {
+                DB::rollBack();
                 return response()->json([
                     'status' => 'error',
                     'message' => __('pharmacy.must_accept_before_pricing')

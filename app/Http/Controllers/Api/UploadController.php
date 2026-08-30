@@ -6,11 +6,14 @@ use App\Models\Upload;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UploadRequest;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Symfony\Component\HttpFoundation\Response;
 
 class UploadController extends Controller
 {
-    
+    use AuthorizesRequests;
+
+
     public function uploadFile(UploadRequest $request)
     {
         return $this->handleUpload(
@@ -64,6 +67,8 @@ class UploadController extends Controller
        public function downloadFile($id): Response
     {
         $upload = Upload::findOrFail($id);
+
+        $this->authorize('view', $upload);
 
         // Resolve the actual filesystem path for the stored file on the public disk
         $path = Storage::disk('public')->path($upload->file_path);

@@ -29,7 +29,10 @@ class ConsultationFeatureTest extends TestCase
 
         $this->actingAs($user);
 
-        $service = new ConsultationService();
+        // ConsultationService now requires GoogleMeetService (added after
+        // this test was first written) — resolve through the container so
+        // the real dependency is injected, same as production.
+        $service = app(ConsultationService::class);
 
         $scheduledAt = Carbon::now()->addDays(1)->setTime(10, 0, 0)->toDateTimeString();
 
@@ -71,7 +74,10 @@ class ConsultationFeatureTest extends TestCase
             'scheduled_at' => Carbon::now(),
         ]);
 
-        $service = new ConsultationService();
+        // ConsultationService now requires GoogleMeetService (added after
+        // this test was first written) — resolve through the container so
+        // the real dependency is injected, same as production.
+        $service = app(ConsultationService::class);
 
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Doctor is currently busy with another consultation.');

@@ -99,6 +99,12 @@ return [
         'message_max' => 'يجب ألا تتجاوز الرسالة 5000 حرف.',
     ],
 
+    'health_question' => [
+        'question_required' => 'محتوى السؤال مطلوب.',
+        'question_string' => 'يجب أن يكون السؤال نصًا.',
+        'question_max' => 'يجب ألا يتجاوز السؤال 2000 حرف.',
+    ],
+
     'speech' => [
         'conversation_id_required' => 'معرّف المحادثة مطلوب.',
         'conversation_id_exists' => 'المحادثة المحددة غير موجودة.',

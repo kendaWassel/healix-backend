@@ -16,7 +16,7 @@ class BookConsultationRequest extends FormRequest
         return [
             'doctor_id' => 'required|exists:doctors,id',
             'call_type' => 'required|in:call_now,schedule',
-            'scheduled_at' => 'nullable|date',
+            'scheduled_at' => 'nullable',
             // Optional: only present when booking originates from the AI
             // assessment result screen ("book with recommended specialty").
             // The plain direct-booking flow (no AI involved) omits both.

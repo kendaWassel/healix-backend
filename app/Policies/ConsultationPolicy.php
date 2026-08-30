@@ -43,10 +43,22 @@ class ConsultationPolicy
 
     /**
      * Determine whether the user can create models.
+     *
+     * Real bug found and fixed here: this returned `role === 'doctor'`,
+     * backwards from every other method in this policy (view/update both
+     * treat the booking patient as the owning actor) and from the real
+     * booking route (ConsultationController::bookConsultation sits behind
+     * role:patient in routes/api/patient.php, not role:doctor) — patients
+     * book consultations, not doctors. Currently dead code (nothing in the
+     * app calls authorize('create', Consultation::class) yet), so this had
+     * no live effect, but tests/Unit/ConsultationTest.php's own
+     * patient_can_create_consultations/doctor_cannot_create_consultations
+     * assertions (which encode the correct, intended rule) were failing
+     * against it before this fix.
      */
     public function create(User $user): bool
     {
-        return $user->role === 'doctor';
+        return $user->role === 'patient';
     }
 
     /**

@@ -205,6 +205,8 @@ class DoctorController extends Controller
                 'message' => __('messages.doctor_profile_not_found')
             ], 404);
         }
+        //return specialization in ar or en
+        $doctor->specialization->name = app()->getLocale() === 'ar' ? $doctor->specialization->name_ar : $doctor->specialization->name;
 
         return response()->json([
             'status' => 'success',
