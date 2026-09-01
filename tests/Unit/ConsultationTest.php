@@ -14,6 +14,7 @@ class ConsultationTest extends TestCase
 {
     /**
      * UNIT TEST: Permission rules for viewing consultations
+     * run php artisan test --filter=ConsultationTest to confirm this file is exercised and passes.
      */
     public function test_patient_can_view_own_consultation()
     {
