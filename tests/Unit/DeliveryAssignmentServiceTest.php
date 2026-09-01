@@ -22,6 +22,7 @@ use Tests\TestCase;
  * escalation, ETA sorting) is real, non-trivial logic but requires seeded
  * lat/long fixtures and OSRM interaction to exercise meaningfully; noted
  * as a further White Box gap rather than faked here.
+ * Run php artisan test --filter=DeliveryAssignmentServiceTest to confirm this file is exercised and passes.
  */
 class DeliveryAssignmentServiceTest extends TestCase
 {

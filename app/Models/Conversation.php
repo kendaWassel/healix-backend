@@ -21,6 +21,7 @@ class Conversation extends Model
         'is_crisis',
         'severity',
         'red_flags',
+        'last_stage',
     ];
 
     /**

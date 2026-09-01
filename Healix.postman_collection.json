@@ -17,16 +17,6 @@
             {
               "name": "image",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "14|aaMQ6FG8qtWnfEdsrBIWL9qrpNHONdYaYf4yf2atbb8c59a0",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "POST",
                 "header": [
                   {
@@ -568,6 +558,259 @@
               }
             }
           ]
+        },
+        {
+          "name": "Auth",
+          "item": [
+            {
+              "name": "Verify Email (Signed Link)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/auth/email/verify/1/replace-with-real-hash-from-email",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "email",
+                    "verify",
+                    "1",
+                    "replace-with-real-hash-from-email"
+                  ]
+                },
+                "description": "This is a Laravel signed URL — id and hash (and the signature query params) must come verbatim from the real verification email link. This example will 403 'Invalid signature' since the hash here is a placeholder."
+              },
+              "response": []
+            },
+            {
+              "name": "Forgot Password (Request OTP)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/api/auth/forgot-password",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "forgot-password"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"patient@gmail.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Step 1 of 3 in OTP password reset. Always returns a generic success response (never reveals whether the email exists) and emails a real OTP code."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Verify Reset OTP",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/api/auth/verify-reset-otp",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "verify-reset-otp"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"patient@gmail.com\",\n  \"otp\": \"123456\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Step 2 of 3. Requires the real OTP code emailed by Forgot Password above — this placeholder otp will return 422 invalid/expired."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Reset Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/api/auth/reset-password",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "reset-password"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"patient@gmail.com\",\n  \"reset_token\": \"replace-with-real-reset-token\",\n  \"password\": \"newPassword123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Step 3 of 3. Requires the real reset_token returned by Verify Reset OTP above — this placeholder will return 422 invalid token, so it will NOT actually change the seeded password."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Downloads",
+          "item": [
+            {
+              "name": "Download Uploaded File",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/uploads/download/11",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "uploads",
+                    "download",
+                    "11"
+                  ]
+                },
+                "description": "Moved into the authenticated group (ownership check via UploadPolicy::view) — needs a Bearer token belonging to the uploader.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{patient_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -1063,6 +1306,62 @@
                   "body": "{\n    \"status\": \"success\",\n    \"data\": [\n        {\n            \"id\": 48,\n            \"file_name\": \"ipsum.wmlc\",\n            \"category\": \"prescription\",\n            \"file_url\": \"http://127.0.0.1:8000/api/uploads/download/48\",\n            \"uploaded_at\": \"2026-01-22\"\n        }\n    ]\n}"
                 }
               ],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Add User (Admin Created)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/api/admin/users",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "users"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"role\": \"patient\",\n  \"full_name\": \"Admin Created Patient\",\n  \"email\": \"admin.created.patient@example.com\",\n  \"phone\": \"+963900000099\",\n  \"password\": \"password123\",\n  \"birth_date\": \"1995-05-01\",\n  \"gender\": \"female\",\n  \"address\": \"Damascus\",\n  \"latitude\": 33.5138,\n  \"longitude\": 36.2765\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Reuses RegisterRequest validation (same required fields per role as public POST /api/auth/register), but adminCreated=true skips pending-approval + email verification. See AdminController::addUser."
+              },
+              "response": [],
               "event": [
                 {
                   "listen": "test",
@@ -1972,13 +2271,54 @@
           "name": "Profile",
           "item": [
             {
+              "name": "Patient - Get Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/patient/profile",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "patient",
+                    "profile"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
               "name": "Patient - Update Profile",
               "request": {
                 "method": "PUT",
                 "header": [
                   {
                     "key": "Content-Type",
-                    "value": "application/json"
+                    "value": "application/json",
+                    "type": "text"
                   }
                 ],
                 "body": {
@@ -1991,17 +2331,17 @@
                   }
                 },
                 "url": {
-                  "raw": "{{url}}/api/users/me",
+                  "raw": "{{url}}/api/patient/profile",
                   "host": [
                     "{{url}}"
                   ],
                   "path": [
                     "api",
-                    "users",
-                    "me"
+                    "patient",
+                    "profile"
                   ]
                 },
-                "description": "Generated from cURL: curl --location '{{url}}/api/users/me' --header 'Content-Type: application/json' --request PUT --data '{\"full_name\":\"John Doe\",\"phone\":\"+1234567890\",\"address\":\"123 Main St\"}'"
+                "description": "PUT /api/patient/profile (UserController::updateProfile). Was previously pointed at the non-existent /api/users/me."
               },
               "response": [
                 {
@@ -3601,6 +3941,105 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Verify Prescription Safety (Self-Check)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/api/patient/prescriptions/verify",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "patient",
+                    "prescriptions",
+                    "verify"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"medications\": [\n    \"Warfarin\",\n    \"Aspirin\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Read-only decision-support check against the authenticated patient’s own allergies/pregnancy/chronic conditions. Creates/saves nothing."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Export Prescription (FHIR)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/prescriptions/33/fhir",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "prescriptions",
+                    "33",
+                    "fhir"
+                  ]
+                },
+                "description": "Cross-role route (patient/doctor/pharmacist/admin) gated by PrescriptionPolicy::view; prescription_id=33 belongs to the demo patient."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
             }
           ],
           "auth": {
@@ -3608,7 +4047,7 @@
             "bearer": [
               {
                 "key": "token",
-                "value": "6|UrOYGX8pV75thCdJSacqr44UgkkdJOjPnMeue3pEdecf95d8",
+                "value": "{{patient_token}}",
                 "type": "string"
               }
             ]
@@ -3886,31 +4325,21 @@
           "name": "Order",
           "item": [
             {
-              "name": "Track Prescription Order",
+              "name": "Get delivery info for a specific order",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "10|Ayfg2xILvKtiSwnJR496t8RA6h909Ywbt0qpXLFd97c6111b",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{url}}/api/patient/prescriptions/43/status",
+                  "raw": "{{url}}/api/patient/orders/1/delivery-info",
                   "host": [
                     "{{url}}"
                   ],
                   "path": [
                     "api",
                     "patient",
-                    "prescriptions",
-                    "43",
-                    "status"
+                    "orders",
+                    "1",
+                    "delivery-info"
                   ]
                 }
               },
@@ -3938,12 +4367,12 @@
               ]
             },
             {
-              "name": "Get delivery info for a specific order",
+              "name": "Get Delivery Info (All Active Orders)",
               "request": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{url}}/api/patient/orders/1/delivery-info",
+                  "raw": "{{url}}/api/patient/orders/delivery-info",
                   "host": [
                     "{{url}}"
                   ],
@@ -3951,10 +4380,53 @@
                     "api",
                     "patient",
                     "orders",
-                    "1",
                     "delivery-info"
                   ]
+                },
+                "description": "PatientController::getDeliveryInfo — general delivery info without a specific order_id, unlike \"Get delivery info for a specific order\" below."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
                 }
+              ]
+            },
+            {
+              "name": "Track Delivery Location",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/patient/delivery/location/8",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "patient",
+                    "delivery",
+                    "location",
+                    "8"
+                  ]
+                },
+                "description": "DeliveryLocationController::getLocation for task_id=8, an active delivery task (status=picking_up_the_order)."
               },
               "response": [],
               "event": [
@@ -4751,6 +5223,316 @@
                 }
               ],
               "response": []
+            },
+            {
+              "name": "Ask Health Question",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/api/health-questions",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "health-questions"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"question\": \"What are the symptoms of the flu?\",\n  \"locale\": \"en\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Stateless Health Education Q&A — separate feature from Healix triage, no conversation/diagnosis persisted."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Speech to Text (Interview Voice Message)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/speech-to-text",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "speech-to-text"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "audio",
+                      "type": "file",
+                      "src": []
+                    },
+                    {
+                      "key": "conversation_id",
+                      "value": "{{conversation_id}}",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "description": "Legacy MedicalAssistantService interview pipeline voice turn (distinct from the Healix-speech transcribe route above, which drives the Healix triage chatbot instead)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Medical Record",
+          "item": [
+            {
+              "name": "Get My Medical Record",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/patient/medical-record",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "patient",
+                    "medical-record"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update My Medical Record",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/api/patient/medical-record",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "patient",
+                    "medical-record"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"chronic_diseases\": [\n    \"Diabetes\"\n  ],\n  \"allergies\": [\n    \"Penicillin\"\n  ],\n  \"current_medications\": [\n    \"Metformin 500mg daily\"\n  ],\n  \"previous_surgeries\": \"Appendectomy\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Patient self-edit — everything except doctor-only clinical fields (diagnosis/treatment_plan). See UpdatePatientMedicalRecordRequest."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Pregnancy Info",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/api/patient/medical-record/pregnancy",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "patient",
+                    "medical-record",
+                    "pregnancy"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"is_pregnant\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Female patients only — see UpdatePregnancyInfoRequest."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Download Medical Record Attachment",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/medical-records/attachments/11/download",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "medical-records",
+                    "attachments",
+                    "11",
+                    "download"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
             }
           ]
         }
@@ -5413,7 +6195,7 @@
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "6|UrOYGX8pV75thCdJSacqr44UgkkdJOjPnMeue3pEdecf95d8",
+                      "value": "{{patient_token}}",
                       "type": "string"
                     }
                   ]
@@ -5660,6 +6442,91 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "My Patients' Lab Analyses",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/doctor/patients/lab-analyses",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "doctor",
+                    "patients",
+                    "lab-analyses"
+                  ]
+                },
+                "description": "Every patient this doctor has a Consultation with, each with their lab analyses embedded."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get AI Doctor Summary for Patient",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/doctor/patients/1/doctor-summaries",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "doctor",
+                    "patients",
+                    "1",
+                    "doctor-summaries"
+                  ]
+                },
+                "description": "Healix/AI-generated report for a patient this doctor has a real Consultation with (DoctorSummaryPolicy::view)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
             }
           ]
         },
@@ -5758,6 +6625,89 @@
                   "body": "{\n    \"status\": \"success\",\n    \"message\": \"Home visit request created successfully.\",\n    \"data\": {\n        \"consultation_id\": 1,\n        \"patient_id\": 1,\n        \"doctor_id\": 1,\n        \"service_type\": \"physiotherapist\",\n        \"reason\": \"hhghjg\",\n        \"scheduled_at\": \"2026-01-22T02:29:00.000000Z\",\n        \"status\": \"pending\",\n        \"updated_at\": \"2026-01-22T20:43:52.000000Z\",\n        \"created_at\": \"2026-01-22T20:43:52.000000Z\",\n        \"id\": 72\n    }\n}"
                 }
               ],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Start Consultation (Doctor)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/consultations/204/call",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "consultations",
+                    "204",
+                    "call"
+                  ]
+                },
+                "description": "Same cross-role route as the patient-side Start Consultation; consultation_id=204 is a still-pending consultation."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "End Consultation (Doctor)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/consultations/204/end",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "consultations",
+                    "204",
+                    "end"
+                  ]
+                }
+              },
+              "response": [],
               "event": [
                 {
                   "listen": "test",
@@ -5919,6 +6869,63 @@
                   ],
                   "cookie": [],
                   "body": "{\n    \"status\": \"success\",\n    \"data\": {\n        \"prescription_id\": 82,\n        \"status\": \"created\",\n        \"issued_at\": \"2026-01-22T23:44:53+03:00\"\n    },\n    \"message\": \"Prescription created\"\n}"
+                }
+              ]
+            },
+            {
+              "name": "Verify Draft Prescription Safety",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/api/doctor/prescriptions/verify",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "doctor",
+                    "prescriptions",
+                    "verify"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"patient_id\": 1,\n  \"medications\": [\n    \"Warfarin\",\n    \"Aspirin\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Decision-support: verify a draft prescription BEFORE creating it. Read-only."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
                 }
               ]
             }
@@ -6203,7 +7210,7 @@
         "bearer": [
           {
             "key": "token",
-            "value": "7|6FchrrStTfi8KE5MHuSodoeNR3jkhSvukDOmOqb30dd0f7a0",
+            "value": "{{doctor_token}}",
             "type": "string"
           }
         ]
@@ -7171,6 +8178,145 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Get Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/provider/nurse/profile",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "provider",
+                    "nurse",
+                    "profile"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Profile",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/api/provider/nurse/profile",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "provider",
+                    "nurse",
+                    "profile"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"session_fee\": 150,\n  \"latitude\": 33.5138,\n  \"longitude\": 36.2765\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "PUT works for JSON-only updates; POST is required instead when uploading image/license_file (multipart)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Nearby Requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/provider/nurse/nearby-requests",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "provider",
+                    "nurse",
+                    "nearby-requests"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
             }
           ],
           "auth": {
@@ -7178,7 +8324,7 @@
             "bearer": [
               {
                 "key": "token",
-                "value": "1|2nyAgqz7IrIZBo74vwkq1TichOjd52iPCSrDlSaTe67e86d7",
+                "value": "{{care_provider_token}}",
                 "type": "string"
               }
             ]
@@ -7754,6 +8900,145 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Get Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/provider/physiotherapist/profile",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "provider",
+                    "physiotherapist",
+                    "profile"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Profile",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/api/provider/physiotherapist/profile",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "provider",
+                    "physiotherapist",
+                    "profile"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"session_fee\": 150,\n  \"latitude\": 33.5138,\n  \"longitude\": 36.2765\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "PUT works for JSON-only updates; POST is required instead when uploading image/license_file (multipart)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Nearby Requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/provider/physiotherapist/nearby-requests",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "provider",
+                    "physiotherapist",
+                    "nearby-requests"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
             }
           ],
           "auth": {
@@ -7761,7 +9046,7 @@
             "bearer": [
               {
                 "key": "token",
-                "value": "9|iituNRauEWA1A4R52t1QCSzM2dqMWQzuAciBkuCncc368565",
+                "value": "{{care_provider_token}}",
                 "type": "string"
               }
             ]
@@ -7799,7 +9084,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "1|2nyAgqz7IrIZBo74vwkq1TichOjd52iPCSrDlSaTe67e86d7",
+                  "value": "{{care_provider_token}}",
                   "type": "string"
                 }
               ]
@@ -7893,6 +9178,63 @@
               "body": "{\n    \"status\": \"success\",\n    \"message\": \"Follow-up home visit created successfully.\",\n    \"data\": {\n        \"consultation_id\": 1,\n        \"patient_id\": 1,\n        \"doctor_id\": 1,\n        \"service_type\": \"nurse\",\n        \"reason\": \"Insulin injection + Blood pressure\",\n        \"scheduled_at\": \"2025-12-05T07:00:00.000000Z\",\n        \"status\": \"accepted\",\n        \"updated_at\": \"2026-01-22T21:52:15.000000Z\",\n        \"created_at\": \"2026-01-22T21:52:15.000000Z\",\n        \"id\": 72\n    }\n}"
             }
           ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('Response time is reasonable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Live Location",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/api/provider/location/update",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "provider",
+                "location",
+                "update"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 33.5138,\n  \"longitude\": 36.2765\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Lightweight location ping shared across nurse/physiotherapist — role determined by the logged-in care_provider account."
+          },
+          "response": [],
           "event": [
             {
               "listen": "test",
@@ -8949,6 +10291,240 @@
               ]
             }
           ]
+        },
+        {
+          "name": "Offers",
+          "item": [
+            {
+              "name": "Get Current Offer",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/delivery/offers/current",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "delivery",
+                    "offers",
+                    "current"
+                  ]
+                },
+                "description": "Point-to-point automatic assignment: the system offers a task to one nearest driver at a time."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Accept Task Offer",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/delivery/tasks/8/accept-offer",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "delivery",
+                    "tasks",
+                    "8",
+                    "accept-offer"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Reject Task Offer",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/delivery/tasks/8/reject",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "delivery",
+                    "tasks",
+                    "8",
+                    "reject"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Tracking",
+          "item": [
+            {
+              "name": "Update Delivery Location",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/api/delivery/location/update",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "delivery",
+                    "location",
+                    "update"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"latitude\": 33.5138,\n  \"longitude\": 36.2765,\n  \"task_id\": 8\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "task_id is optional — omit it to update the idle-driver location instead of an active task."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Delivery Location",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/delivery/location/8",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "delivery",
+                    "location",
+                    "8"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
         }
       ],
       "auth": {
@@ -9925,6 +11501,64 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Verify Prescription Safety",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/api/pharmacist/prescriptions/33/verify",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pharmacist",
+                    "prescriptions",
+                    "33",
+                    "verify"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"medications\": [\n    \"Warfarin\",\n    \"Aspirin\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Persists the pharmacist-confirmed medication list, then runs the safety check. Must run BEFORE add-price. prescription_id=33 is still sent_to_pharmacy."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
             }
           ]
         },
@@ -10366,74 +12000,61 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{url}}/api/pharmacist/orders/track",
+                  "raw": "{{url}}/api/pharmacist/track",
                   "host": [
                     "{{url}}"
                   ],
                   "path": [
                     "api",
                     "pharmacist",
-                    "orders",
                     "track"
                   ]
-                }
+                },
+                "description": "Fixed: was pointed at the non-existent /api/pharmacist/orders/track. Real route is PharmacistController::trackOrders (list of all this pharmacist’s trackable orders)."
               },
-              "response": [
+              "response": [],
+              "event": [
                 {
-                  "name": "Track Orders",
-                  "originalRequest": {
-                    "method": "GET",
-                    "header": [],
-                    "url": {
-                      "raw": "{{url}}/api/pharmacist/orders/track",
-                      "host": [
-                        "{{url}}"
-                      ],
-                      "path": [
-                        "api",
-                        "pharmacist",
-                        "orders",
-                        "track"
-                      ]
-                    }
-                  },
-                  "status": "OK",
-                  "code": 200,
-                  "_postman_previewlanguage": null,
-                  "header": [
-                    {
-                      "key": "Host",
-                      "value": "127.0.0.1:8000"
-                    },
-                    {
-                      "key": "Connection",
-                      "value": "close"
-                    },
-                    {
-                      "key": "X-Powered-By",
-                      "value": "PHP/8.2.12"
-                    },
-                    {
-                      "key": "Cache-Control",
-                      "value": "no-cache, private"
-                    },
-                    {
-                      "key": "Date",
-                      "value": "Thu, 22 Jan 2026 23:03:52 GMT"
-                    },
-                    {
-                      "key": "Content-Type",
-                      "value": "application/json"
-                    },
-                    {
-                      "key": "Vary",
-                      "value": "Origin"
-                    }
-                  ],
-                  "cookie": [],
-                  "body": "{\n    \"status\": \"success\",\n    \"data\": [\n        {\n            \"order_id\": 8,\n            \"created_at\": \"2026-01-23 00:40:22\",\n            \"medications\": [\n                {\n                    \"name\": \"Ibuprofen\",\n                    \"quantity\": 2,\n                    \"price\": 44643.67,\n                    \"dosage\": \"625mg\"\n                },\n                {\n                    \"name\": \"Panadol\",\n                    \"quantity\": 3,\n                    \"price\": 48885.67,\n                    \"dosage\": \"625mg\"\n                },\n                {\n                    \"name\": \"Augmentin\",\n                    \"quantity\": 1,\n                    \"price\": 35000,\n                    \"dosage\": \"625mg\"\n                },\n                {\n                    \"name\": \"Cough Syrup\",\n                    \"quantity\": 1,\n                    \"price\": 10000,\n                    \"dosage\": \"1g\"\n                }\n            ],\n            \"delivery\": null,\n            \"message\": \"No delivery agent has accepted this order yet\"\n        }\n    ],\n    \"meta\": {\n        \"current_page\": 1,\n        \"last_page\": 1,\n        \"per_page\": 10,\n        \"total\": 1\n    }\n}"
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
                 }
-              ],
+              ]
+            },
+            {
+              "name": "Track Specific Order",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/pharmacist/17/track",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pharmacist",
+                    "17",
+                    "track"
+                  ]
+                },
+                "description": "PharmacistController::trackOrder — single-order tracking detail. order_id=17 is a delivered demo order."
+              },
+              "response": [],
               "event": [
                 {
                   "listen": "test",
@@ -10495,21 +12116,778 @@
       ]
     },
     {
+      "name": "Lab Analysis",
+      "item": [
+        {
+          "name": "My Reports (Patient)",
+          "item": [
+            {
+              "name": "Analyze Lab Report (Upload)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/lab/analyze",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "lab",
+                    "analyze"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": []
+                    },
+                    {
+                      "key": "age",
+                      "value": "35",
+                      "type": "text"
+                    },
+                    {
+                      "key": "gender",
+                      "value": "female",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "description": "Upload a CSV/Excel/PDF lab report; runs AI analysis and persists it for the authenticated patient."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "List My Lab Analyses",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/lab/analyses?per_page=15",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "lab",
+                    "analyses"
+                  ],
+                  "query": [
+                    {
+                      "key": "per_page",
+                      "value": "15"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Supported Tests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/lab/supported-tests",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "lab",
+                    "supported-tests"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Reference Ranges",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/lab/reference-ranges",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "lab",
+                    "reference-ranges"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Lab Service Health Check",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/lab/health",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "lab",
+                    "health"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Download Lab Report PDF (Doctor Version)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/lab/analyses/1/pdf",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "lab",
+                    "analyses",
+                    "1",
+                    "pdf"
+                  ]
+                },
+                "description": "lab_analysis_id=1"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Download Lab Report PDF (Patient Version)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/lab/analyses/1/patient-pdf",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "lab",
+                    "analyses",
+                    "1",
+                    "patient-pdf"
+                  ]
+                },
+                "description": "lab_analysis_id=1"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "key": "token",
+                "value": "{{patient_token}}",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Patient Reports (Doctor / Care Provider View)",
+          "item": [
+            {
+              "name": "List a Patient's Lab Analyses",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/patients/1/lab/analyses",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "patients",
+                    "1",
+                    "lab",
+                    "analyses"
+                  ]
+                },
+                "description": "role:doctor,care_provider — patient_id=1."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get a Patient's Lab Analysis",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/patients/1/lab/analyses/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "patients",
+                    "1",
+                    "lab",
+                    "analyses",
+                    "1"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Download a Patient's Lab Report PDF (Doctor Version)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/patients/1/lab/analyses/1/pdf",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "patients",
+                    "1",
+                    "lab",
+                    "analyses",
+                    "1",
+                    "pdf"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Download a Patient's Lab Report PDF (Patient Version)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/patients/1/lab/analyses/1/patient-pdf",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "patients",
+                    "1",
+                    "lab",
+                    "analyses",
+                    "1",
+                    "patient-pdf"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('Response is valid JSON', function () {",
+                      "    pm.response.to.be.json;",
+                      "});",
+                      "",
+                      "pm.test('Response time is reasonable', function () {",
+                      "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "key": "token",
+                "value": "{{doctor_token}}",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Get All Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/notifications",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('Response time is reasonable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Unread Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/notifications/unread",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "unread"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('Response time is reasonable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/notifications/unread-count",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "unread-count"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('Response time is reasonable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/notifications/1/read",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "1",
+                "read"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('Response time is reasonable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/notifications/read-all",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "read-all"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('Response time is reasonable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/notifications/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "1"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('Response time is reasonable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Rating",
       "item": [
         {
           "name": "Rate Doctor",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "6|UrOYGX8pV75thCdJSacqr44UgkkdJOjPnMeue3pEdecf95d8",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -10528,15 +12906,15 @@
               }
             },
             "url": {
-              "raw": "{{url}}/api/patient/consultation/1/rate/1",
+              "raw": "{{url}}/api/patient/consultations/155/rate/1",
               "host": [
                 "{{url}}"
               ],
               "path": [
                 "api",
                 "patient",
-                "consultation",
-                "1",
+                "consultations",
+                "155",
                 "rate",
                 "1"
               ]
@@ -10640,16 +13018,6 @@
         {
           "name": "Rate Pharmacy",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "6|UrOYGX8pV75thCdJSacqr44UgkkdJOjPnMeue3pEdecf95d8",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [
               {
@@ -10898,16 +13266,6 @@
         {
           "name": "Rate Delivery",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "3|IA266trObp5MGDEZ5JyYxixFm84ZblLQyY972DK147433a56",
-                  "type": "string"
-                }
-              ]
-            },
             "method": "POST",
             "header": [],
             "body": {
@@ -11029,7 +13387,7 @@
         "bearer": [
           {
             "key": "token",
-            "value": "6|UrOYGX8pV75thCdJSacqr44UgkkdJOjPnMeue3pEdecf95d8",
+            "value": "{{patient_token}}",
             "type": "string"
           }
         ]
@@ -11882,6 +14240,317 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Auth - Logout (Run Last)",
+      "item": [
+        {
+          "name": "Admin - Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/auth/logout",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Deliberately placed in this LAST folder, not next to the matching _login request, so running the whole collection top-to-bottom does not revoke the token before the rest of that role’s requests run.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('Response time is reasonable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Patient - Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/auth/logout",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Deliberately placed in this LAST folder, not next to the matching _login request, so running the whole collection top-to-bottom does not revoke the token before the rest of that role’s requests run.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('Response time is reasonable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Doctor - Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/auth/logout",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Deliberately placed in this LAST folder, not next to the matching _login request, so running the whole collection top-to-bottom does not revoke the token before the rest of that role’s requests run.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{doctor_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('Response time is reasonable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Care Provider - Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/auth/logout",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Deliberately placed in this LAST folder, not next to the matching _login request, so running the whole collection top-to-bottom does not revoke the token before the rest of that role’s requests run.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{care_provider_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('Response time is reasonable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delivery - Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/auth/logout",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Deliberately placed in this LAST folder, not next to the matching _login request, so running the whole collection top-to-bottom does not revoke the token before the rest of that role’s requests run.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{delivery_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('Response time is reasonable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pharmacist - Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/auth/logout",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Deliberately placed in this LAST folder, not next to the matching _login request, so running the whole collection top-to-bottom does not revoke the token before the rest of that role’s requests run.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pharmacist_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test('Response time is reasonable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [
@@ -11911,7 +14580,7 @@
   "variable": [
     {
       "key": "url",
-      "value": "http://localhost/healix-backend/public",
+      "value": "http://127.0.0.1:8000",
       "disabled": false
     },
     {

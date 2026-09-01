@@ -34,6 +34,7 @@ class PatientService
 
         return Consultation::with(['doctor.user', 'doctor.specialization'])
             ->where('patient_id', $patient->id)
+            ->orderBy('status')
             ->paginate($perPage);
     }
     /**
@@ -85,7 +86,7 @@ class PatientService
 
         return Prescription::with(['doctor.user', 'prescriptionImage'])
             ->where('patient_id', $patient->id)
-            ->orderByDesc('created_at')
+            ->orderBy('status')
             ->paginate($perPage);
     }
 

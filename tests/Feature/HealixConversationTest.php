@@ -49,12 +49,12 @@ class HealixConversationTest extends TestCase
     /**
      * Every real HTTP request Http::fake() doesn't explicitly match still
      * goes out over the real network (Laravel does NOT stub unmatched
-     * URLs by default) — confirmed directly: without this, the new
-     * classification call HealixConversationService::sendMessage() now
-     * makes to /health-questions (merged health-education Q&A) tried a
-     * real connection to the configured (unrunning) local Healix service,
-     * slow and flaky. Faked here with a category that is neither
-     * 'educational' nor 'out_of_scope', so every existing test's
+     * URLs by default) — confirmed directly: without this, the
+     * classify-before-triage call HealixConversationService::sendMessage()
+     * makes to /health-questions (whenever last_stage !== 'followup')
+     * tried a real connection to the configured (unrunning) local Healix
+     * service, slow and flaky. Faked here with a category that is
+     * neither 'educational' nor 'out_of_scope', so every existing test's
      * assumption that the turn falls through to the real /chat call below
      * keeps holding exactly as before.
      */
@@ -91,10 +91,10 @@ class HealixConversationTest extends TestCase
 
     /**
      * Merged health-education Q&A (HealixConversationService::sendMessage()'s
-     * new classify-first step): an 'educational' classification is answered
-     * directly, through the SAME /healix-messages endpoint the frontend
-     * already calls — no separate route, no frontend change. Confirms the
-     * real /chat triage call is never made for this turn.
+     * classify-before-triage step): an 'educational' classification is
+     * answered directly, through the SAME /healix-messages endpoint the
+     * frontend already calls — no separate route, no frontend change.
+     * Confirms the real /chat triage call is never made for this turn.
      */
     public function test_an_educational_question_is_answered_directly_without_touching_triage(): void
     {
@@ -142,8 +142,8 @@ class HealixConversationTest extends TestCase
      * The mirror case: a 'triage_redirect' classification (the message
      * looks like a personal symptom, not a general question) falls
      * through to the real, unmodified triage call exactly as before the
-     * merge — proving the new classify step never blocks a real triage
-     * turn, it only intercepts genuine general-knowledge questions.
+     * merge — proving the classify step never blocks a real triage turn,
+     * it only intercepts genuine general-knowledge questions.
      */
     public function test_a_personal_symptom_classification_still_reaches_real_triage(): void
     {
@@ -161,6 +161,71 @@ class HealixConversationTest extends TestCase
 
         $response->assertStatus(201)->assertJsonPath('stage', 'diagnosis');
         Http::assertSent(fn ($request) => str_contains($request->url(), '/chat'));
+    }
+
+    /**
+     * Reproduced directly (a live, non-mocked call to safety_gate.classify()):
+     * a bare mid-conversation reply like "نعم"/"لا" — answering a real
+     * follow-up question, but carrying no content on its own — gets
+     * misclassified as a contentless general question and hijacks the
+     * turn with an "insufficient information" reply instead of continuing
+     * the real assessment. classify() only ever sees the raw message with
+     * no conversation history, so it cannot tell an elliptical reply from
+     * a genuinely new question. Fixed by skipping classification for
+     * exactly the one turn where the previous reply is pending
+     * (last_stage === 'followup') — this test locks in that guard at the
+     * Laravel boundary: a turn that follows a follow-up question must
+     * never reach /health-questions at all, while the turn AFTER that one
+     * (once the loop resolves) is classified again normally.
+     */
+    public function test_a_reply_to_a_pending_followup_skips_classification_but_the_next_turn_is_classified_again(): void
+    {
+        $user = $this->patientUser();
+        $this->fakeHealixChat(['stage' => 'followup', 'diagnosis' => null, 'specialty' => null]);
+
+        $conversationId = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/patient/conversations', ['title' => 'Symptom Check'])
+            ->json('data.id');
+
+        // Turn 1: fresh conversation (last_stage starts null) -> classified,
+        // falls through to /chat, which answers with stage="followup".
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
+                'message' => 'عندي صداع',
+            ])
+            ->assertStatus(201);
+
+        // Turn 2: last_stage is now "followup" -> classification must be
+        // skipped entirely, straight to /chat.
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", [
+                'message' => 'نعم',
+            ]);
+        $response->assertStatus(201)->assertJsonPath('available', true);
+
+        $healthQuestionCallsAfterTurn2 = collect(Http::recorded(
+            fn ($request) => str_contains($request->url(), '/health-questions')
+        ));
+        $this->assertCount(
+            1,
+            $healthQuestionCallsAfterTurn2,
+            '/health-questions must be called exactly once (turn 1 only) — turn 2 was classified too, despite a pending follow-up.'
+        );
+
+        // Turn 3: still stage="followup" from turn 2's fake response, so
+        // this must ALSO skip classification — the guard is not a one-time
+        // "only the first turn" rule, it re-evaluates every turn.
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/patient/conversations/{$conversationId}/healix-messages", ['message' => 'ماشي'])
+            ->assertStatus(201);
+
+        $healthQuestionCallsAfterTurn3 = collect(Http::recorded(
+            fn ($request) => str_contains($request->url(), '/health-questions')
+        ));
+        $this->assertCount(1, $healthQuestionCallsAfterTurn3, 'turn 3 must also skip classification while a follow-up is still pending.');
+
+        $chatCalls = collect(Http::recorded(fn ($request) => str_contains($request->url(), '/chat')));
+        $this->assertCount(3, $chatCalls, 'all three turns must reach the real triage call');
     }
 
     public function test_a_healix_turn_persists_both_messages_and_returns_the_right_shape(): void
@@ -244,13 +309,13 @@ class HealixConversationTest extends TestCase
                 'message' => 'عندي صداع نابض من جهة وحدة مع غثيان',
             ]);
 
-        // The turn now also makes a first, separate call to /health-questions
-        // to classify the message (merged health-education Q&A — see
-        // HealixConversationService::sendMessage()'s own comment) before the
-        // real /chat call below — both log identical generic message text
-        // via the shared FastApiClient::send(), so these closures check the
-        // URL too, to isolate the assertion to the real triage call this
-        // test is actually about.
+        // This turn also makes a first, separate call to /health-questions
+        // to classify the message (see HealixConversationService::
+        // sendMessage()'s own comment) before the real /chat call below —
+        // both log identical generic message text via the shared
+        // FastApiClient::send(), so these closures check the URL too, to
+        // isolate the assertion to the real triage call this test is
+        // actually about.
         Log::shouldHaveReceived('info')
             ->withArgs(function (string $message, array $context) use ($threadId) {
                 return $message === 'Healix AI triage service request'

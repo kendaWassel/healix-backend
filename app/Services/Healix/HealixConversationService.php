@@ -102,72 +102,66 @@ class HealixConversationService
             // permanently closes off this class of bug.
             $threadId = $conversation->healix_thread_id;
 
-            // Merged health-education Q&A into this same turn (single API
-            // for the frontend — no separate endpoint, no frontend change).
-            // Classifies via the ALREADY-ISOLATED health-education feature
-            // (rag/health_education/ on the Python side, called exactly as
-            // POST /health-questions already does) — deliberately NOT
-            // touching graph.py or any triage node, per that module's own
-            // "never touches graph.py... POST /chat cannot be affected"
-            // design rule (rag/health_education/service.py's docstring).
-            //
-            // Only "educational" and "out_of_scope" are answered directly
-            // here — both are real, standalone answers. "medication_safety",
-            // "triage_redirect" and "emergency_redirect" all normally reply
-            // with "please use the Healix assessment chat instead", which
-            // makes no sense now that there is only one chat — those three
-            // fall through to the real, unmodified triage call below
-            // instead, exactly as if this classification step never ran.
-            // thread_id here is the USER's id, not the conversation id —
-            // matching HealthQuestionController::ask()'s own convention
-            // (this feature is stateless per call, so reusing a ourselves
-            // id across turns carries none of the triage thread_id's
-            // collision risk — see HealixAiClient::askHealthQuestion()'s
-            // own doc comment).
-            $qaCategory = null;
-            $qaAnswer = null;
-            try {
-                $qa = $this->healix->askHealthQuestion($text, (string) $user->id);
-                $qaCategory = $qa['category'] ?? null;
-                $qaAnswer = $qa['answer'] ?? null;
-            } catch (AIServiceException $e) {
-                // Classification unavailable — fail OPEN toward the more
-                // critical triage path below rather than blocking this
-                // turn on a secondary feature's outage.
-                Log::info('Health-question classification unavailable, proceeding straight to triage', [
-                    'conversation_id' => $conversation->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            // Health-education Q&A is classified on this same turn/endpoint
+            // — EXCEPT when a follow-up question is currently pending
+            // (last_stage === 'followup'). classify() only ever sees the
+            // raw message text with no conversation history, so a bare
+            // elliptical reply like "نعم"/"لا" answering a real follow-up
+            // question gets misread as a contentless general question and
+            // would hijack the turn with an "insufficient information"
+            // reply instead of continuing the assessment — reproduced
+            // directly against the live classify() endpoint. Every other
+            // turn (the first message, or one following a completed
+            // diagnosis/crisis/emergency) is still classified, so an
+            // educational question can be answered directly through this
+            // same chat at any point except mid-follow-up.
+            if ($conversation->last_stage !== 'followup') {
+                $qaResult = null;
 
-            if (in_array($qaCategory, ['educational', 'out_of_scope'], true)) {
-                $assistantMessage = Message::create([
-                    'conversation_id' => $conversation->id,
-                    'sender' => Message::SENDER_ASSISTANT,
-                    'message_type' => Message::TYPE_TEXT,
-                    'message' => (string) $qaAnswer,
-                    'turn_number' => $turn,
-                    'is_crisis' => false,
-                    'severity' => null,
-                    'diagnosis' => null,
-                    'specialty' => null,
-                    'reports' => null,
-                ]);
+                try {
+                    $qaResult = $this->healix->askHealthQuestion($text, $threadId);
+                } catch (AIServiceException $e) {
+                    // Fail open: classification is a convenience
+                    // short-circuit, not a safety-critical path — if it's
+                    // unavailable, fall through to the real triage call
+                    // below instead of denying the turn entirely.
+                    Log::warning('Healix health-question classification failed, falling through to triage', [
+                        'conversation_id' => $conversation->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
 
-                return [
-                    'patient_message' => $patientMessage,
-                    'assistant_message' => $assistantMessage,
-                    'reply' => (string) $qaAnswer,
-                    'stage' => null,
-                    'assessment_id' => null,
-                    'is_crisis' => false,
-                    'severity' => null,
-                    'red_flags' => [],
-                    'diagnosis' => null,
-                    'specialty' => null,
-                    'reports' => null,
-                    'available' => true,
-                ];
+                $qaCategory = $qaResult['category'] ?? null;
+
+                if (in_array($qaCategory, ['educational', 'out_of_scope'], true)) {
+                    $assistantMessage = Message::create([
+                        'conversation_id' => $conversation->id,
+                        'sender' => Message::SENDER_ASSISTANT,
+                        'message_type' => Message::TYPE_TEXT,
+                        'message' => (string) ($qaResult['answer'] ?? ''),
+                        'turn_number' => $turn,
+                        'is_crisis' => false,
+                        'severity' => null,
+                        'diagnosis' => null,
+                        'specialty' => null,
+                        'reports' => null,
+                    ]);
+
+                    return [
+                        'patient_message' => $patientMessage,
+                        'assistant_message' => $assistantMessage,
+                        'reply' => $assistantMessage->message,
+                        'stage' => null,
+                        'is_crisis' => false,
+                        'severity' => null,
+                        'red_flags' => [],
+                        'diagnosis' => null,
+                        'specialty' => null,
+                        'reports' => null,
+                        'available' => true,
+                        'assessment_id' => null,
+                    ];
+                }
             }
 
             try {
@@ -333,6 +327,14 @@ class HealixConversationService
             'is_crisis' => (bool) ($result['is_crisis'] ?? false),
             'severity' => $result['severity'] ?? null,
             'red_flags' => $result['red_flags'] ?? [],
+            // Read back by sendMessage() next turn to decide whether to
+            // classify() this conversation's next message — see that
+            // method's own comment. 'followup' is the one value that
+            // skips classification (the Python side's ask_followup node
+            // sets stage="followup" for every kind of pending question:
+            // sufficiency, red-flag verification, and sex clarification
+            // alike — graph.py routes all three through that same node).
+            'last_stage' => $result['stage'] ?? null,
         ])->save();
 
         if (($result['stage'] ?? null) === 'diagnosis' && !empty($result['diagnosis'])) {
